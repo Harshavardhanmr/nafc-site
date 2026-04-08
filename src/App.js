@@ -67,9 +67,13 @@ function MatchModal({ match, onClose }) {
     <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:16, backdropFilter:"blur(16px)" }}>
       <div onClick={e=>e.stopPropagation()} style={{ background:"#ffffff", border:`1px solid ${T_BORDER}`, borderTop:`4px solid ${ac}`, borderRadius:20, width:"100%", maxWidth:560, maxHeight:"90vh", overflowY:"auto", animation:"fadeUp 0.25s ease", boxShadow:"0 32px 80px rgba(0,0,0,0.35)" }}>
         <div style={{ padding:"18px 20px", display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:`1px solid ${T_BORDER}` }}>
+          {/* ── Modal header: result + competition + fmt badge ── */}
           <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
             <span style={{ background:`${ac}15`, border:`1px solid ${ac}40`, borderRadius:6, padding:"3px 12px", fontFamily:"'Bebas Neue',sans-serif", color:ac, fontSize:12, letterSpacing:3 }}>{label}</span>
             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, color:"rgba(0,0,0,0.4)", letterSpacing:2 }}>{match.competition?.toUpperCase()}</span>
+            {match.fmt && (
+              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, color:"white", background:"#0033a0", padding:"2px 10px", borderRadius:12, letterSpacing:2 }}>{match.fmt}</span>
+            )}
           </div>
           <button onClick={onClose} style={{ background:"rgba(0,0,0,0.06)", border:`1px solid ${T_BORDER}`, color:"#111", width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>✕</button>
         </div>
@@ -734,13 +738,17 @@ function AppShell() {
                           <div style={{ height:3, background:`linear-gradient(90deg,${ac},${ac}50,transparent)` }} />
                           <div style={{ padding: isMobile?"14px":"18px 22px" }}>
                             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, flexWrap:"wrap", gap:6 }}>
-                              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                              {/* ── Result + competition + FMT BADGE ── */}
+                              <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
                                 <div style={{ display:"flex", alignItems:"center", gap:5, background:`${ac}12`, border:`1px solid ${ac}30`, borderRadius:20, padding:"3px 12px" }}>
                                   <div style={{ width:5, height:5, borderRadius:"50%", background:ac, flexShrink:0 }} />
                                   <span style={{ fontFamily:"'Bebas Neue',sans-serif", color:ac, fontSize:10, letterSpacing:3 }}>{rl}</span>
                                 </div>
                                 {m.competition && (
                                   <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:9, color:"rgba(0,0,0,0.35)", letterSpacing:2, background:"rgba(0,0,0,0.05)", padding:"3px 10px", borderRadius:20 }}>{m.competition.toUpperCase()}</span>
+                                )}
+                                {m.fmt && (
+                                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:9, color:"white", letterSpacing:2, background:"#0033a0", padding:"3px 10px", borderRadius:20 }}>{m.fmt}</span>
                                 )}
                               </div>
                               <span style={{ fontSize:10, color:"rgba(0,0,0,0.38)", fontWeight:500 }}>{m.date}{m.venue ? ` · ${m.venue}` : ""}</span>
