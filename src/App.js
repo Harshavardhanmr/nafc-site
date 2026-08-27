@@ -592,7 +592,7 @@ function AppShell() {
                     <div style={{ width:52, height:3, background:`linear-gradient(90deg,${pc},transparent)`, marginBottom:20, borderRadius:2 }} />
                     {isMobile && sel.photoURL && (
                       <div style={{ width:"100%", height:260, borderRadius:14, overflow:"hidden", marginBottom:20, border:`1px solid ${pc}30` }}>
-                        <img src={sel.photoURL} alt={sel.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top" }} />
+                        <img src={sel.photoURL} alt={sel.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }} />
                       </div>
                     )}
                     {isMobile && !sel.photoURL && (
@@ -622,7 +622,7 @@ function AppShell() {
                   <div style={{ position:"relative", overflow:"hidden", minHeight: isTablet?380:500, background:"#111" }}>
                     {sel.photoURL ? (
                       <>
-                        <img src={sel.photoURL} alt={sel.name} style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center center", display:"block" }} crossOrigin="anonymous" />
+                        <img src={sel.photoURL} alt={sel.name} style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%", display:"block" }} />
                         <div style={{ position:"absolute", inset:0, background:"linear-gradient(to right, rgba(10,10,10,0.55) 0%, rgba(10,10,10,0.15) 30%, transparent 55%)" }} />
                         <div style={{ position:"absolute", inset:0, background:"linear-gradient(to bottom, transparent 55%, rgba(10,10,10,0.5) 100%)" }} />
                       </>
