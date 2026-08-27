@@ -1,6 +1,6 @@
 /* NAFC FC — Service Worker for PWA offline support */
 const CACHE = "nafc-v1";
-const PRECACHE = ["/", "/index.html", "/manifest.json", "/favicon.ico", "/logo192.png", "/logo512.png"];
+const PRECACHE = ["/", "/index.html", "/manifest.json", "/logo.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(

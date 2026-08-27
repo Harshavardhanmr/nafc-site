@@ -3,8 +3,7 @@
   "name": "NAFC Football Club",
   "description": "Official app of NAFC FC — squad, results, stats, gallery",
   "icons": [
-    { "src": "logo192.png", "type": "image/png", "sizes": "192x192", "purpose": "any maskable" },
-    { "src": "logo512.png", "type": "image/png", "sizes": "512x512", "purpose": "any maskable" }
+    { "src": "logo.png", "type": "image/png", "sizes": "any", "purpose": "any maskable" }
   ],
   "start_url": ".",
   "display": "standalone",
