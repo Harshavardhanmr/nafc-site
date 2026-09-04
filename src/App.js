@@ -96,7 +96,7 @@ function useWindowWidth() {
   return w;
 }
 
-function MatchModal({ match, onClose, T = THEMES.light }) {
+function MatchModal({ match, onClose, T = THEMES.dark }) {
   const isW = match.result === "W", isD = match.result === "D", isUpc = match.result === "upcoming";
   const ac = isUpc ? "#2563eb" : isW ? "#16a34a" : isD ? T_GOLD : T_RED;
   const label = isUpc ? "UPCOMING" : isW ? "WIN" : isD ? "DRAW" : "LOSS";
@@ -108,61 +108,61 @@ function MatchModal({ match, onClose, T = THEMES.light }) {
 
   return (
     <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.80)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:16, backdropFilter:"blur(12px)" }}>
-      <div onClick={e=>e.stopPropagation()} style={{ background:T.cardBg, border:`1px solid ${T.border}`, borderTop:`4px solid ${ac}`, borderRadius:20, width:"100%", maxWidth:560, maxHeight:"90vh", overflowY:"auto", animation:"fadeUp 0.25s ease", boxShadow:"0 32px 80px rgba(0,0,0,0.4)" }}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:T.cardBg, border:`1px solid ${T.border}`, borderTop:`4px solid ${ac}`, borderRadius:20, width:"100%", maxWidth:560, maxHeight:"90vh", overflowY:"auto", animation:"fadeUp 0.25s ease", boxShadow:"0 32px 80px rgba(0,0,0,0.5)" }}>
         <div style={{ padding:"18px 20px", display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:`1px solid ${T.borderLight}`, background:T.bg2 }}>
           {/* ── Modal header: result + competition + fmt badge ── */}
           <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
-            <span style={{ background:`${ac}15`, border:`1px solid ${ac}40`, borderRadius:6, padding:"3px 12px", fontFamily:"'Bebas Neue',sans-serif", color:ac, fontSize:12, letterSpacing:3 }}>{label}</span>
-            {match.competition && <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, color:T.textDim, letterSpacing:2 }}>{match.competition.toUpperCase()}</span>}
+            <span style={{ background:`${ac}15`, border:`1px solid ${ac}40`, borderRadius:6, padding:"4px 12px", fontFamily:"'Bebas Neue',sans-serif", color:ac, fontSize:13, letterSpacing:2.5 }}>{label}</span>
+            {match.competition && <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, color:T.textDim, letterSpacing:2 }}>{match.competition.toUpperCase()}</span>}
             {match.fmt && (
-              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, color:"white", background:"#0033a0", padding:"2px 10px", borderRadius:12, letterSpacing:2 }}>{match.fmt}</span>
+              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, color:"white", background:"#0033a0", padding:"3px 10px", borderRadius:12, letterSpacing:2 }}>{match.fmt}</span>
             )}
           </div>
-          <button onClick={onClose} style={{ background:T.hoverBg, border:`1px solid ${T.border}`, color:T.text, width:32, height:32, borderRadius:6, cursor:"pointer", fontSize:15, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>✕</button>
+          <button onClick={onClose} style={{ background:T.hoverBg, border:`1px solid ${T.border}`, color:T.text, width:34, height:34, borderRadius:6, cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>✕</button>
         </div>
         <div style={{ padding:"24px 20px", textAlign:"center", borderBottom:`1px solid ${T.borderLight}` }}>
-          <div style={{ fontSize:10, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginBottom:18 }}>{match.date}{match.venue ? ` · ${match.venue}` : ""}</div>
+          <div style={{ fontSize:12, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginBottom:18 }}>{match.date}{match.venue ? ` · ${match.venue}` : ""}</div>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:12 }}>
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, flex:1 }}>
-              <div style={{ width:44, height:44, borderRadius:10, background:T.hoverBg, border:`1px solid ${T.borderLight}`, display:"flex", alignItems:"center", justifyContent:"center" }}><img src={LOGO} alt="NAFC" style={{ width:30 }} /></div>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:T.text, letterSpacing:2 }}>NAFC</div>
+              <div style={{ width:48, height:48, borderRadius:12, background:T.hoverBg, border:`1px solid ${T.borderLight}`, display:"flex", alignItems:"center", justifyContent:"center" }}><img src={LOGO} alt="NAFC" style={{ width:34 }} /></div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:T.text, letterSpacing:2 }}>NAFC</div>
             </div>
             {isUpc
-              ? <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:"#2563eb", letterSpacing:4, padding:"8px 16px", background:"rgba(37,99,235,0.08)", border:"1px solid rgba(37,99,235,0.2)", borderRadius:10 }}>VS</div>
-              : <div style={{ display:"flex", alignItems:"center", gap:8, background:`${ac}10`, border:`1px solid ${ac}30`, borderRadius:12, padding:"8px 16px" }}>
-                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:52, color:T.text, lineHeight:1 }}>{match.nafcScore}</span>
-                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:T.textDim, lineHeight:1 }}>—</span>
-                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:52, color:T.textMuted, lineHeight:1 }}>{match.opponentScore}</span>
+              ? <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:"#2563eb", letterSpacing:4, padding:"8px 18px", background:"rgba(37,99,235,0.08)", border:"1px solid rgba(37,99,235,0.2)", borderRadius:10 }}>VS</div>
+              : <div style={{ display:"flex", alignItems:"center", gap:8, background:`${ac}10`, border:`1px solid ${ac}30`, borderRadius:12, padding:"8px 18px" }}>
+                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:54, color:T.text, lineHeight:1 }}>{match.nafcScore}</span>
+                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:24, color:T.textDim, lineHeight:1 }}>—</span>
+                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:54, color:T.textMuted, lineHeight:1 }}>{match.opponentScore}</span>
                 </div>
             }
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, flex:1 }}>
-              <div style={{ width:44, height:44, borderRadius:10, background:T.hoverBg, border:`1px solid ${T.borderLight}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>🛡️</div>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:T.textMuted, letterSpacing:1 }}>{match.opponent}</div>
+              <div style={{ width:48, height:48, borderRadius:12, background:T.hoverBg, border:`1px solid ${T.borderLight}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 }}>🛡️</div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:15, color:T.textMuted, letterSpacing:1 }}>{match.opponent}</div>
             </div>
           </div>
         </div>
         <div style={{ padding:"20px" }}>
           {scorers.length > 0 && (
             <div style={{ marginBottom:16 }}>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, letterSpacing:4, color:T_RED, marginBottom:10 }}>⚽ GOALS ({totalGoals})</div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:3, color:T_RED, marginBottom:10 }}>⚽ GOALS ({totalGoals})</div>
               {scorers.map((s,i) => {
                 const sName = typeof s==="string"?s:s.name;
                 const sGoals = typeof s==="object"&&s.goals?s.goals:1;
                 const isGuest = typeof s==="object"?(s.isGuest||(s.id&&String(s.id).startsWith("guest_"))||sName.toLowerCase().includes("guest")):sName.toLowerCase().includes("guest");
                 return (
-                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 12px", background:T.bg2, borderRadius:8, border:`1px solid ${T.borderLight}`, marginBottom:5 }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <div style={{ width:26, height:26, borderRadius:"50%", background:"rgba(232,0,45,0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12 }}>⚽</div>
-                      <span style={{ fontWeight:600, color:T.text, fontSize:13 }}>{sName}</span>
-                      {isGuest && <span style={{ background:T.hoverBg, color:T.textMuted, border:`1px solid ${T.border}`, fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4 }}>GUEST</span>}
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", background:T.bg2, borderRadius:8, border:`1px solid ${T.borderLight}`, marginBottom:6 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <div style={{ width:28, height:28, borderRadius:"50%", background:"rgba(232,0,45,0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13 }}>⚽</div>
+                      <span style={{ fontWeight:600, color:T.text, fontSize:14 }}>{sName}</span>
+                      {isGuest && <span style={{ background:T.hoverBg, color:T.textMuted, border:`1px solid ${T.border}`, fontSize:10, fontWeight:700, padding:"2px 7px", borderRadius:4, letterSpacing:1 }}>GUEST</span>}
                     </div>
-                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                       {sGoals > 1 && (
-                        <span style={{ fontFamily:"'Bebas Neue',sans-serif", color:T_RED, background:"rgba(232,0,45,0.1)", border:"1px solid rgba(232,0,45,0.2)", padding:"2px 8px", borderRadius:6, fontSize:11, letterSpacing:1 }}>
+                        <span style={{ fontFamily:"'Bebas Neue',sans-serif", color:T_RED, background:"rgba(232,0,45,0.1)", border:"1px solid rgba(232,0,45,0.2)", padding:"3px 10px", borderRadius:6, fontSize:12, letterSpacing:1 }}>
                           {sGoals} GOALS
                         </span>
                       )}
-                      {typeof s==="object"&&s.minute&&<span style={{ fontFamily:"'Bebas Neue',sans-serif", color:T.textDim, fontSize:12 }}>{s.minute}'</span>}
+                      {typeof s==="object"&&s.minute&&<span style={{ fontFamily:"'Bebas Neue',sans-serif", color:T.textDim, fontSize:13 }}>{s.minute}'</span>}
                     </div>
                   </div>
                 );
@@ -171,20 +171,20 @@ function MatchModal({ match, onClose, T = THEMES.light }) {
           )}
           {assists.length > 0 && (
             <div style={{ marginBottom:16 }}>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, letterSpacing:4, color:T_GOLD, marginBottom:10 }}>🅰️ ASSISTS ({totalAssists})</div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:3, color:T_GOLD, marginBottom:10 }}>🅰️ ASSISTS ({totalAssists})</div>
               {assists.map((a,i) => {
                 const aName = typeof a==="string"?a:a.name;
                 const aCount = typeof a==="object"&&a.assists?a.assists:1;
                 const isGuest = typeof a==="object"?(a.isGuest||(a.id&&String(a.id).startsWith("guest_"))||aName.toLowerCase().includes("guest")):aName.toLowerCase().includes("guest");
                 return (
-                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 12px", background:T.bg2, borderRadius:8, border:`1px solid ${T.borderLight}`, marginBottom:5 }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <div style={{ width:26, height:26, borderRadius:"50%", background:"rgba(217,119,6,0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12 }}>🅰️</div>
-                      <span style={{ fontWeight:600, color:T.text, fontSize:13 }}>{aName}</span>
-                      {isGuest && <span style={{ background:T.hoverBg, color:T.textMuted, border:`1px solid ${T.border}`, fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4 }}>GUEST</span>}
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", background:T.bg2, borderRadius:8, border:`1px solid ${T.borderLight}`, marginBottom:6 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <div style={{ width:28, height:28, borderRadius:"50%", background:"rgba(217,119,6,0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13 }}>🅰️</div>
+                      <span style={{ fontWeight:600, color:T.text, fontSize:14 }}>{aName}</span>
+                      {isGuest && <span style={{ background:T.hoverBg, color:T.textMuted, border:`1px solid ${T.border}`, fontSize:10, fontWeight:700, padding:"2px 7px", borderRadius:4, letterSpacing:1 }}>GUEST</span>}
                     </div>
                     {aCount > 1 && (
-                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", color:T_GOLD, background:"rgba(217,119,6,0.1)", border:"1px solid rgba(217,119,6,0.2)", padding:"2px 8px", borderRadius:6, fontSize:11, letterSpacing:1 }}>
+                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", color:T_GOLD, background:"rgba(217,119,6,0.1)", border:"1px solid rgba(217,119,6,0.2)", padding:"3px 10px", borderRadius:6, fontSize:12, letterSpacing:1 }}>
                         {aCount} ASSISTS
                       </span>
                     )}
@@ -195,11 +195,11 @@ function MatchModal({ match, onClose, T = THEMES.light }) {
           )}
           {summary
             ? <div>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, letterSpacing:4, color:T.textDim, marginBottom:8 }}>MATCH SUMMARY</div>
-                <p style={{ fontSize:13, color:T.textMuted, lineHeight:1.8, background:T.bg2, borderRadius:8, padding:"12px 14px", border:`1px solid ${T.borderLight}` }}>{summary}</p>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:3, color:T.textDim, marginBottom:8 }}>MATCH SUMMARY</div>
+                <p style={{ fontSize:14, color:T.textMuted, lineHeight:1.8, background:T.bg2, borderRadius:8, padding:"14px 16px", border:`1px solid ${T.borderLight}` }}>{summary}</p>
               </div>
             : (!isUpc && scorers.length===0 && assists.length===0 &&
-                <div style={{ textAlign:"center", padding:"16px 0", color:T.textDim, fontSize:13 }}>No match details yet.</div>)
+                <div style={{ textAlign:"center", padding:"16px 0", color:T.textDim, fontSize:14 }}>No match details yet.</div>)
           }
           {isUpc && <div style={{ textAlign:"center", padding:"14px 0", color:T.textMuted, fontSize:14 }}>This match hasn't been played yet!</div>}
         </div>
@@ -208,14 +208,14 @@ function MatchModal({ match, onClose, T = THEMES.light }) {
   );
 }
 
-function PlayerModal({ player, onClose, T = THEMES.light }) {
+function PlayerModal({ player, onClose, T = THEMES.dark }) {
   const p = player;
   const pc = POS_COLOR[p.pos] || T_RED;
   const isGK = p.pos === "Goalkeeper";
   return (
     <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.80)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:16, backdropFilter:"blur(12px)" }}>
       <div onClick={e=>e.stopPropagation()} style={{ background:T.cardBg, borderRadius:20, width:"100%", maxWidth:420, overflow:"hidden", animation:"fadeUp 0.25s ease", boxShadow:"0 30px 80px rgba(0,0,0,0.5)", border:`1px solid ${T.border}` }}>
-        <div style={{ position:"relative", height:240, background:T.bg2, overflow:"hidden" }}>
+        <div style={{ position:"relative", height:250, background:T.bg2, overflow:"hidden" }}>
           <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg,${pc},transparent)` }} />
           {p.photoURL
             ? <img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top" }} />
@@ -224,13 +224,13 @@ function PlayerModal({ player, onClose, T = THEMES.light }) {
               </div>
           }
           <div style={{ position:"absolute", inset:0, background:`linear-gradient(to top, ${T.cardBg} 0%, rgba(0,0,0,0.2) 60%, transparent 100%)` }} />
-          <button onClick={onClose} style={{ position:"absolute", top:12, right:12, background:T.hoverBg, border:`1px solid ${T.border}`, color:T.text, width:32, height:32, borderRadius:"50%", cursor:"pointer", fontSize:15, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
-          <div style={{ position:"absolute", top:12, left:12, background:pc, borderRadius:5, padding:"3px 12px" }}>
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:9, color:"white", letterSpacing:3 }}>{p.pos.toUpperCase()}</span>
+          <button onClick={onClose} style={{ position:"absolute", top:12, right:12, background:T.hoverBg, border:`1px solid ${T.border}`, color:T.text, width:34, height:34, borderRadius:"50%", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
+          <div style={{ position:"absolute", top:12, left:12, background:pc, borderRadius:5, padding:"4px 12px" }}>
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, color:"white", letterSpacing:2.5 }}>{p.pos.toUpperCase()}</span>
           </div>
           <div style={{ position:"absolute", bottom:14, left:16 }}>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:9, color:T.textDim, letterSpacing:4, marginBottom:2 }}>#{p.jersey}</div>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:38, color:T.text, lineHeight:0.9 }}>{p.name}</div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:T.textDim, letterSpacing:3, marginBottom:2 }}>#{p.jersey}</div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:40, color:T.text, lineHeight:0.9 }}>{p.name}</div>
           </div>
         </div>
         <div style={{ padding:"18px 18px 22px" }}>
@@ -240,16 +240,16 @@ function PlayerModal({ player, onClose, T = THEMES.light }) {
               : [["GOALS",p.goals,T_RED],["ASSISTS",p.assists,"#fbbf24"],["APPS",p.appearances,T.textMuted]]
             ).map(([l,v,c]) => (
               <div key={l} style={{ background:T.bg2, border:`1px solid ${T.borderLight}`, borderRadius:10, padding:"12px 8px", textAlign:"center", borderTop:`2px solid ${c}` }}>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:30, color:c, lineHeight:1 }}>{v||0}</div>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:7, letterSpacing:2, color:T.textDim, marginTop:3 }}>{l}</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, color:c, lineHeight:1 }}>{v||0}</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, letterSpacing:2, color:T.textDim, marginTop:4 }}>{l}</div>
               </div>
             ))}
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
             {[["POSITION",p.pos],["JERSEY",`#${p.jersey}`],["CLUB","NAFC"],["SEASON","2026"]].map(([l,v]) => (
-              <div key={l} style={{ background:T.bg2, borderRadius:7, padding:"8px 12px", border:`1px solid ${T.borderLight}` }}>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:7, letterSpacing:3, color:T.textDim, marginBottom:3 }}>{l}</div>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:T.textMuted, letterSpacing:1 }}>{v}</div>
+              <div key={l} style={{ background:T.bg2, borderRadius:8, padding:"10px 14px", border:`1px solid ${T.borderLight}` }}>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, letterSpacing:2.5, color:T.textDim, marginBottom:3 }}>{l}</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:T.textMuted, letterSpacing:1 }}>{v}</div>
               </div>
             ))}
           </div>
@@ -462,7 +462,7 @@ function AppShell() {
         .btn-red:hover{background:#c8002a;box-shadow:0 6px 24px rgba(232,0,45,0.4);transform:translateY(-1px);}
         .btn-outline{background:transparent;color:${T.text};cursor:pointer;font-family:'Bebas Neue',sans-serif;letter-spacing:3px;border:2px solid ${T.border};transition:all 0.2s;}
         .btn-outline:hover{border-color:${T.text};background:${T.hoverBg};}
-        .section-label{font-family:'Bebas Neue',sans-serif;letter-spacing:5px;font-size:11px;color:${T_RED};}
+        .section-label{font-family:'Bebas Neue',sans-serif;letter-spacing:4px;font-size:12px;color:${T_RED};}
         .lb-row{display:flex;justify-content:space-between;align-items:center;padding:10px 8px;border-bottom:1px solid ${T.borderLight};cursor:pointer;transition:all 0.2s;border-radius:8px;}
         .lb-row:hover{background:${T.hoverBg};}
         .lb-row:last-child{border-bottom:none;}
@@ -549,57 +549,57 @@ function AppShell() {
 
       {/* ── NAV ── */}
       <nav style={{ position:"fixed", top:0, left:0, right:0, zIndex:200, backdropFilter:"blur(24px)", background:T.navBg, borderBottom:`1px solid ${T.border}`, boxShadow:"0 2px 16px rgba(0,0,0,0.15)" }}>
-        <div style={{ background:`linear-gradient(90deg,${T_RED} 0%,#c00024 100%)`, display:"flex", justifyContent:"space-between", alignItems:"center", padding:`4px ${px}`, fontSize:"9px", letterSpacing:"2px", fontFamily:"'Bebas Neue',sans-serif" }}>
+        <div style={{ background:`linear-gradient(90deg,${T_RED} 0%,#c00024 100%)`, display:"flex", justifyContent:"space-between", alignItems:"center", padding:`5px ${px}`, fontSize:"11px", letterSpacing:"2px", fontFamily:"'Bebas Neue',sans-serif" }}>
           <span style={{ opacity:0.95, color:"white" }}>NAFC · BENGALURU · EST. 2025</span>
           <div style={{ display:"flex", gap:isMobile?12:20, alignItems:"center" }}>
             <a href="https://www.instagram.com/nafc.blr?igsh=MTJvNzV1cXFyNzRxMA==" target="_blank" rel="noreferrer" style={{ color:"white", textDecoration:"none", display:"flex", alignItems:"center", gap:5, opacity:0.95 }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-              {!isMobile && "@NAFC.BLR"}
-            </a>
-            {!isMobile && (user ? (
-              <>
-                <span onClick={() => setAVw(true)} style={{ cursor:"pointer", color:T_GOLD, fontWeight:600 }}>DASHBOARD</span>
-                <span onClick={logout} style={{ cursor:"pointer", color:"white", opacity:0.85 }}>LOGOUT</span>
-              </>
-            ) : (
-              <span onClick={() => setSLgn(true)} style={{ cursor:"pointer", color:"white" }}>TEAM LOGIN</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+            {!isMobile && "@NAFC.BLR"}
+          </a>
+          {!isMobile && (user ? (
+            <>
+              <span onClick={() => setAVw(true)} style={{ cursor:"pointer", color:T_GOLD, fontWeight:600 }}>DASHBOARD</span>
+              <span onClick={logout} style={{ cursor:"pointer", color:"white", opacity:0.85 }}>LOGOUT</span>
+            </>
+          ) : (
+            <span onClick={() => setSLgn(true)} style={{ cursor:"pointer", color:"white" }}>TEAM LOGIN</span>
+          ))}
+        </div>
+      </div>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:`0 ${px}`, height:isMobile?54:isTablet?60:66 }}>
+        <div onClick={() => go("Home")} style={{ cursor:"pointer", display:"flex", alignItems:"center", gap:10 }}>
+          <img src={LOGO} alt="NAFC" style={{ width:isMobile?34:isTablet?40:44, height:isMobile?34:isTablet?40:44, objectFit:"contain" }} />
+          <div>
+            <div className="bebas" style={{ fontSize:isMobile?17:isTablet?20:22, lineHeight:1, color:T.text }}>NAFC</div>
+            <div style={{ fontSize:9, letterSpacing:3, color:T.textDim, fontWeight:600 }}>FOOTBALL CLUB</div>
+          </div>
+        </div>
+        {/* Desktop & Tablet links */}
+        {!isMobile && (
+          <div style={{ display:"flex", gap:isTablet?20:36, alignItems:"center" }}>
+            {PGS.map(p => (
+              <span key={p} className={`nav-link ${pg===p?"active":""}`} onClick={() => go(p)} style={{ fontSize:isTablet?14:15 }}>{p}</span>
             ))}
           </div>
-        </div>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:`0 ${px}`, height:isMobile?54:isTablet?60:66 }}>
-          <div onClick={() => go("Home")} style={{ cursor:"pointer", display:"flex", alignItems:"center", gap:10 }}>
-            <img src={LOGO} alt="NAFC" style={{ width:isMobile?34:isTablet?40:44, height:isMobile?34:isTablet?40:44, objectFit:"contain" }} />
-            <div>
-              <div className="bebas" style={{ fontSize:isMobile?17:isTablet?20:22, lineHeight:1, color:T.text }}>NAFC</div>
-              <div style={{ fontSize:7, letterSpacing:4, color:T.textDim, fontWeight:500 }}>FOOTBALL CLUB</div>
-            </div>
-          </div>
-          {/* Desktop & Tablet links */}
-          {!isMobile && (
-            <div style={{ display:"flex", gap:isTablet?20:36, alignItems:"center" }}>
-              {PGS.map(p => (
-                <span key={p} className={`nav-link ${pg===p?"active":""}`} onClick={() => go(p)} style={{ fontSize:isTablet?13:15 }}>{p}</span>
-              ))}
-            </div>
-          )}
-          
-          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            {/* Theme Toggle Button */}
-            <button onClick={toggleTheme} title={`Switch to ${themeMode === "dark" ? "Light" : "Dark"} Mode`} style={{ background:T.hoverBg, border:`1px solid ${T.border}`, color:T.text, borderRadius:20, padding: isMobile?"5px 9px":"6px 14px", fontFamily:"'Bebas Neue',sans-serif", fontSize:isMobile?11:13, letterSpacing:1.5, cursor:"pointer", display:"flex", alignItems:"center", gap:5, transition:"all 0.2s" }}>
-              <span>{themeMode === "dark" ? "☀️" : "🌙"}</span>
-              <span className="hide-mobile">{themeMode === "dark" ? "LIGHT" : "DARK"}</span>
-            </button>
+        )}
+        
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          {/* Theme Toggle Button */}
+          <button onClick={toggleTheme} title={`Switch to ${themeMode === "dark" ? "Light" : "Dark"} Mode`} style={{ background:T.hoverBg, border:`1px solid ${T.border}`, color:T.text, borderRadius:20, padding: isMobile?"5px 10px":"6px 14px", fontFamily:"'Bebas Neue',sans-serif", fontSize:isMobile?11:13, letterSpacing:1.5, cursor:"pointer", display:"flex", alignItems:"center", gap:5, transition:"all 0.2s" }}>
+            <span>{themeMode === "dark" ? "☀️" : "🌙"}</span>
+            <span className="hide-mobile">{themeMode === "dark" ? "LIGHT" : "DARK"}</span>
+          </button>
 
-            {isMobile ? (
-              <button onClick={() => setMobileNav(true)} style={{ background:"none", border:`1.5px solid ${T.border}`, borderRadius:8, padding:"6px 10px", cursor:"pointer", display:"flex", flexDirection:"column", gap:4 }}>
-                {[0,1,2].map(i => <div key={i} style={{ width:20, height:2, background:T.text, borderRadius:1 }} />)}
-              </button>
-            ) : (
-              <button onClick={() => go("Players")} className="btn-red bebas" style={{ padding:isTablet?"8px 18px":"9px 24px", fontSize:isTablet?12:13, borderRadius:6 }}>THE SQUAD</button>
-            )}
-          </div>
+          {isMobile ? (
+            <button onClick={() => setMobileNav(true)} style={{ background:"none", border:`1.5px solid ${T.border}`, borderRadius:8, padding:"6px 10px", cursor:"pointer", display:"flex", flexDirection:"column", gap:4 }}>
+              {[0,1,2].map(i => <div key={i} style={{ width:20, height:2, background:T.text, borderRadius:1 }} />)}
+            </button>
+          ) : (
+            <button onClick={() => go("Players")} className="btn-red bebas" style={{ padding:isTablet?"8px 18px":"9px 24px", fontSize:isTablet?13:14, borderRadius:6 }}>THE SQUAD</button>
+          )}
         </div>
-      </nav>
+      </div>
+    </nav>
 
       <div style={{ paddingTop: pg==="Home" ? 0 : (isMobile ? 80 : isTablet ? 88 : 96) }}>
 
@@ -644,8 +644,8 @@ function AppShell() {
                         </div>
                       </div>
                       <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap" }}>
-                        <span style={{ background:lastM.result==="W"?"rgba(22,163,74,0.12)":lastM.result==="L"?"rgba(232,0,45,0.10)":"rgba(217,119,6,0.10)", color:lastM.result==="W"?"#16a34a":lastM.result==="L"?T_RED:T_GOLD, fontSize:8, letterSpacing:3, padding:"3px 8px", fontFamily:"'Bebas Neue',sans-serif", borderRadius:4 }}>{lastM.result==="W"?"WIN":lastM.result==="L"?"LOSS":"DRAW"}</span>
-                        <span style={{ fontSize:10, color:T.textDim }}>{lastM.opponent} · {lastM.date}</span>
+                        <span style={{ background:lastM.result==="W"?"rgba(22,163,74,0.12)":lastM.result==="L"?"rgba(232,0,45,0.10)":"rgba(217,119,6,0.10)", color:lastM.result==="W"?"#16a34a":lastM.result==="L"?T_RED:T_GOLD, fontSize:10, letterSpacing:2, padding:"3px 10px", fontFamily:"'Bebas Neue',sans-serif", borderRadius:4 }}>{lastM.result==="W"?"WIN":lastM.result==="L"?"LOSS":"DRAW"}</span>
+                        <span style={{ fontSize:12, color:T.textDim }}>{lastM.opponent} · {lastM.date}</span>
                       </div>
                     </div>
                   ) : <div style={{ color:T.textDim, fontSize:13 }}>No matches yet.</div>}
@@ -658,11 +658,11 @@ function AppShell() {
                     <div>
                       <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
                         <img src={LOGO} alt="NAFC" style={{ width:isMobile?20:24 }} />
-                        <div className="bebas" style={{ fontSize:12, color:T.textDim }}>VS</div>
+                        <div className="bebas" style={{ fontSize:13, color:T.textDim }}>VS</div>
                         <div style={{ fontSize:16 }}>🛡️</div>
-                        <div className="bebas" style={{ fontSize:isMobile?14:16, color:T.text }}>{upc[0].opponent}</div>
+                        <div className="bebas" style={{ fontSize:isMobile?15:17, color:T.text }}>{upc[0].opponent}</div>
                       </div>
-                      <div style={{ fontSize:11, color:T.textMuted, lineHeight:1.9 }}>
+                      <div style={{ fontSize:12, color:T.textMuted, lineHeight:1.8 }}>
                         <span style={{ color:T_GOLD, fontWeight:600 }}>{upc[0].date}</span> · {upc[0].competition}
                         {upc[0].venue&&<><br />{upc[0].venue}</>}
                       </div>
@@ -677,7 +677,7 @@ function AppShell() {
                     {[["PLAYERS",plrs.length],["GOALS",plrs.reduce((a,p)=>a+(p.goals||0),0)],["GAMES",played.length]].map(([l,v]) => (
                       <div key={l}>
                         <div className="bebas" style={{ fontSize:isMobile?28:isTablet?34:40, color:T.text, lineHeight:1 }}>{v}</div>
-                        <div style={{ fontSize:8, letterSpacing:3, color:T.textDim, marginTop:4 }}>{l}</div>
+                        <div style={{ fontSize:10, letterSpacing:2, color:T.textDim, marginTop:4, fontFamily:"'Bebas Neue',sans-serif" }}>{l}</div>
                       </div>
                     ))}
                   </div>
@@ -698,9 +698,9 @@ function AppShell() {
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems: isMobile?"flex-start":"flex-end", flexWrap:"wrap", gap:12 }}>
                   <div className="bebas" style={{ fontSize: isMobile?40:isTablet?52:64, color:T.text, lineHeight:0.88 }}>THE <span style={{ color:T_RED }}>SQUAD</span></div>
                   {/* Position filter */}
-                  <div className="pos-filter-bar" style={{ display:"flex", gap:3, background:T.subtleBg, border:`1px solid ${T.border}`, padding:3, borderRadius:8, flexWrap:"wrap" }}>
+                  <div className="pos-filter-bar" style={{ display:"flex", gap:4, background:T.subtleBg, border:`1px solid ${T.border}`, padding:4, borderRadius:8, flexWrap:"wrap" }}>
                     {["All","Goalkeeper","Defender","Midfielder","Winger","Forward","Striker"].map(pos => (
-                      <button key={pos} onClick={() => setPFltr(pos)} className="bebas" style={{ background:pFltr===pos?T_RED:"transparent", color:pFltr===pos?"#fff":T.textMuted, border:"none", padding: isMobile?"5px 8px":isTablet?"6px 10px":"7px 14px", fontSize:isMobile?9:10, cursor:"pointer", letterSpacing:2, borderRadius:5, transition:"all 0.2s" }}>
+                      <button key={pos} onClick={() => setPFltr(pos)} className="bebas" style={{ background:pFltr===pos?T_RED:"transparent", color:pFltr===pos?"#fff":T.textMuted, border:"none", padding: isMobile?"6px 10px":isTablet?"7px 12px":"8px 16px", fontSize:isMobile?11:12, cursor:"pointer", letterSpacing:2, borderRadius:5, transition:"all 0.2s" }}>
                         {pos==="All"?"ALL":pos.slice(0,3).toUpperCase()}
                       </button>
                     ))}
@@ -723,23 +723,23 @@ function AppShell() {
                             : <svg width="70" height="70" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="28" r="18" fill={T.text} opacity="0.15" /><path d="M6 76c0-18.778 15.222-34 34-34s34 15.222 34 34" fill={T.text} opacity="0.10" /></svg>
                           }
                           <div style={{ position:"absolute", inset:0, background:`linear-gradient(to top, ${T.cardBg} 0%, transparent 50%)` }} />
-                          <div style={{ position:"absolute", top:10, left:12, background:POS_COLOR[p.pos]||T_RED, borderRadius:4, padding:"2px 8px" }}>
-                            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:9, color:"white", letterSpacing:2 }}>{p.pos.slice(0,3).toUpperCase()}</span>
+                          <div style={{ position:"absolute", top:10, left:12, background:POS_COLOR[p.pos]||T_RED, borderRadius:4, padding:"3px 10px" }}>
+                            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, color:"white", letterSpacing:2 }}>{p.pos.slice(0,3).toUpperCase()}</span>
                           </div>
                         </div>
-                        <div style={{ padding:"10px 12px 14px", background:T.cardBg }}>
-                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+                        <div style={{ padding:"12px 14px 16px", background:T.cardBg }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
                             <div>
-                              <div className="bebas" style={{ fontSize:isMobile?16:isTablet?18:20, color:T.text, letterSpacing:1, lineHeight:1.1 }}>{p.name}</div>
-                              <div style={{ fontSize:8, color:T.textDim, letterSpacing:3, marginTop:3, fontFamily:"'Bebas Neue',sans-serif" }}>{p.pos.toUpperCase()}</div>
+                              <div className="bebas" style={{ fontSize:isMobile?18:isTablet?20:22, color:T.text, letterSpacing:1, lineHeight:1.1 }}>{p.name}</div>
+                              <div style={{ fontSize:10, color:T.textDim, letterSpacing:2, marginTop:3, fontFamily:"'Bebas Neue',sans-serif" }}>{p.pos.toUpperCase()}</div>
                             </div>
-                            <div className="bebas" style={{ fontSize:20, color:T.textDim }}>#{p.jersey}</div>
+                            <div className="bebas" style={{ fontSize:22, color:T.textDim }}>#{p.jersey}</div>
                           </div>
-                          <div style={{ display:"flex", gap:0, borderTop:`1px solid ${T.borderLight}`, paddingTop:8 }}>
+                          <div style={{ display:"flex", gap:0, borderTop:`1px solid ${T.borderLight}`, paddingTop:10 }}>
                             {(p.pos==="Goalkeeper"?[["SVS",p.saves,"#2563eb"],["CS",p.cleanSheets,"#16a34a"]]:[ ["G",p.goals,T_RED],["A",p.assists,T_GOLD]]).concat([["APP",p.appearances,T.textMuted]]).map(([l,v,c],idx,arr) => (
                               <div key={l} style={{ flex:1, textAlign:"center", borderRight:idx<arr.length-1?`1px solid ${T.borderLight}`:"none" }}>
-                                <div className="bebas" style={{ fontSize:16, color:c||T.text }}>{v||0}</div>
-                                <div style={{ fontSize:7, letterSpacing:2, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{l}</div>
+                                <div className="bebas" style={{ fontSize:18, color:c||T.text }}>{v||0}</div>
+                                <div style={{ fontSize:10, letterSpacing:2, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{l}</div>
                               </div>
                             ))}
                           </div>
@@ -765,15 +765,15 @@ function AppShell() {
                   <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 49px,rgba(255,255,255,0.014) 49px,rgba(255,255,255,0.014) 50px),repeating-linear-gradient(90deg,transparent,transparent 49px,rgba(255,255,255,0.014) 49px,rgba(255,255,255,0.014) 50px)", pointerEvents:"none" }} />
                   <div style={{ position:"absolute", top:"20%", left:"-5%", width:300, height:300, borderRadius:"50%", background:`radial-gradient(circle, ${pc}22 0%, transparent 70%)`, pointerEvents:"none" }} />
                   <div style={{ position:"absolute", top:0, left:0, bottom:0, width:3, background:`linear-gradient(to bottom, ${pc}, ${pc}60, transparent)` }} />
-                  <button onClick={() => setSel(null)} className="bebas" style={{ position:"absolute", top:isMobile?72:18, left:isMobile?14:18, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", color:"rgba(255,255,255,0.75)", padding:"7px 18px", fontSize:10, letterSpacing:3, borderRadius:6, cursor:"pointer", zIndex:5 }}>← BACK</button>
+                  <button onClick={() => setSel(null)} className="bebas" style={{ position:"absolute", top:isMobile?72:18, left:isMobile?14:18, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", color:"rgba(255,255,255,0.75)", padding:"8px 20px", fontSize:12, letterSpacing:2, borderRadius:6, cursor:"pointer", zIndex:5 }}>← BACK</button>
                   <div style={{ position:"relative", zIndex:2 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-                      <div style={{ background:pc, borderRadius:5, padding:"3px 12px" }}>
-                        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, color:"white", letterSpacing:3 }}>{sel.pos.toUpperCase()}</span>
+                      <div style={{ background:pc, borderRadius:5, padding:"4px 14px" }}>
+                        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, color:"white", letterSpacing:2.5 }}>{sel.pos.toUpperCase()}</span>
                       </div>
-                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:9, color:"rgba(255,255,255,0.4)", letterSpacing:3 }}>NAFC · 2026</span>
+                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, color:"rgba(255,255,255,0.5)", letterSpacing:2 }}>NAFC · 2026</span>
                     </div>
-                    <div className="bebas" style={{ fontSize:isMobile?18:isTablet?20:22, color:pc, letterSpacing:4, lineHeight:1, marginBottom:4 }}>#{sel.jersey}</div>
+                    <div className="bebas" style={{ fontSize:isMobile?20:isTablet?22:24, color:pc, letterSpacing:4, lineHeight:1, marginBottom:4 }}>#{sel.jersey}</div>
                     <div className="bebas" style={{ fontSize: isMobile?"clamp(32px,9vw,48px)":isTablet?"clamp(36px,5vw,56px)":"clamp(40px,4vw,64px)", color:"#fff", lineHeight:0.9, letterSpacing:1, marginBottom:14 }}>{sel.name}</div>
                     <div style={{ width:52, height:3, background:`linear-gradient(90deg,${pc},transparent)`, marginBottom:20, borderRadius:2 }} />
                     {isMobile && sel.photoURL && (
@@ -785,7 +785,7 @@ function AppShell() {
                       <div style={{ width:"100%", height:180, borderRadius:14, background:"rgba(255,255,255,0.04)", border:`1px solid rgba(255,255,255,0.08)`, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:20 }}>
                         <div style={{ textAlign:"center" }}>
                           <svg width="60" height="60" viewBox="0 0 80 80" fill="none" style={{ opacity:0.15 }}><circle cx="40" cy="28" r="18" fill="white"/><path d="M6 76c0-18.778 15.222-34 34-34s34 15.222 34 34" fill="white"/></svg>
-                          <div className="bebas" style={{ fontSize:10, color:"rgba(255,255,255,0.3)", letterSpacing:3, marginTop:8 }}>PHOTO COMING SOON</div>
+                          <div className="bebas" style={{ fontSize:11, color:"rgba(255,255,255,0.35)", letterSpacing:3, marginTop:8 }}>PHOTO COMING SOON</div>
                         </div>
                       </div>
                     )}
@@ -795,8 +795,8 @@ function AppShell() {
                         :[["GOALS",sel.goals,T_RED],["ASSISTS",sel.assists,"#fbbf24"]]
                       ).concat([["APPS",sel.appearances,"rgba(255,255,255,0.7)"]]).map(([l,v,c],idx,arr) => (
                         <div key={l} style={{ flex:1, padding: isMobile?"12px 6px":"16px 10px", textAlign:"center", borderRight:idx<arr.length-1?"1px solid rgba(255,255,255,0.07)":"none", borderTop:`2px solid ${c}` }}>
-                          <div className="bebas" style={{ fontSize: isMobile?28:34, color:c, lineHeight:1 }}>{v||0}</div>
-                          <div style={{ fontSize:7, letterSpacing:2, color:"rgba(255,255,255,0.45)", fontFamily:"'Bebas Neue',sans-serif", marginTop:4 }}>{l}</div>
+                          <div className="bebas" style={{ fontSize: isMobile?30:36, color:c, lineHeight:1 }}>{v||0}</div>
+                          <div style={{ fontSize:10, letterSpacing:2, color:"rgba(255,255,255,0.6)", fontFamily:"'Bebas Neue',sans-serif", marginTop:4 }}>{l}</div>
                         </div>
                       ))}
                     </div>
@@ -815,7 +815,7 @@ function AppShell() {
                     ) : (
                       <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:12 }}>
                         <svg width="100" height="100" viewBox="0 0 80 80" fill="none" style={{ opacity:0.06 }}><circle cx="40" cy="28" r="18" fill="white"/><path d="M6 76c0-18.778 15.222-34 34-34s34 15.222 34 34" fill="white"/></svg>
-                        <div className="bebas" style={{ fontSize:12, color:"rgba(255,255,255,0.18)", letterSpacing:4 }}>PHOTO COMING SOON</div>
+                        <div className="bebas" style={{ fontSize:13, color:"rgba(255,255,255,0.22)", letterSpacing:4 }}>PHOTO COMING SOON</div>
                       </div>
                     )}
                     <div style={{ position:"absolute", top:0, left:0, bottom:0, width:100, background:"linear-gradient(135deg, #0a0a0a 0%, #141414 100%)", clipPath:"polygon(0 0, 70% 0, 30% 100%, 0 100%)", zIndex:4, pointerEvents:"none" }} />
@@ -827,10 +827,10 @@ function AppShell() {
                 {!isMobile && (
                   <div style={{ position:"absolute", bottom:0, left:0, right:0, zIndex:10, background:T.cardBg, borderTop:`1px solid ${T.border}`, display:"flex" }}>
                     {[["POSITION",sel.pos],["JERSEY",`#${sel.jersey}`],["CLUB","NAFC"],["SEASON","2026"]].map(([l,v],i,arr) => (
-                      <div key={l} style={{ flex:1, padding: isTablet?"10px 14px":"13px 24px", borderRight:i<arr.length-1?`1px solid ${T.borderLight}`:"none" }}>
-                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", letterSpacing:3, fontSize:7, color:T.textDim, marginBottom:3 }}>{l}</div>
-                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", letterSpacing:2, fontSize:isTablet?11:13, color:l==="JERSEY"?pc:T.text, display:"flex", alignItems:"center", gap:5 }}>
-                          {l==="CLUB"&&<img src={LOGO} alt="NAFC" style={{ width:11 }} />}
+                      <div key={l} style={{ flex:1, padding: isTablet?"12px 16px":"14px 24px", borderRight:i<arr.length-1?`1px solid ${T.borderLight}`:"none" }}>
+                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", letterSpacing:2.5, fontSize:10, color:T.textDim, marginBottom:3 }}>{l}</div>
+                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", letterSpacing:2, fontSize:isTablet?13:15, color:l==="JERSEY"?pc:T.text, display:"flex", alignItems:"center", gap:6 }}>
+                          {l==="CLUB"&&<img src={LOGO} alt="NAFC" style={{ width:14 }} />}
                           {v}
                         </div>
                       </div>
@@ -843,9 +843,9 @@ function AppShell() {
               {isMobile && (
                 <div style={{ background:T.cardBg, borderTop:`1px solid ${T.border}`, display:"grid", gridTemplateColumns:"1fr 1fr" }}>
                   {[["POSITION",sel.pos],["JERSEY",`#${sel.jersey}`],["CLUB","NAFC"],["SEASON","2026"]].map(([l,v],i) => (
-                    <div key={l} style={{ padding:"10px 14px", borderRight:i%2===0?`1px solid ${T.borderLight}`:"none", borderBottom:i<2?`1px solid ${T.borderLight}`:"none" }}>
-                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", letterSpacing:3, fontSize:7, color:T.textDim, marginBottom:3 }}>{l}</div>
-                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", letterSpacing:2, fontSize:12, color:l==="JERSEY"?pc:T.text }}>{v}</div>
+                    <div key={l} style={{ padding:"12px 14px", borderRight:i%2===0?`1px solid ${T.borderLight}`:"none", borderBottom:i<2?`1px solid ${T.borderLight}`:"none" }}>
+                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", letterSpacing:2.5, fontSize:10, color:T.textDim, marginBottom:3 }}>{l}</div>
+                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", letterSpacing:2, fontSize:14, color:l==="JERSEY"?pc:T.text }}>{v}</div>
                     </div>
                   ))}
                 </div>
@@ -860,25 +860,25 @@ function AppShell() {
                       :[["GOALS",sel.goals,T_RED,"Goals this season"],["ASSISTS",sel.assists,T_GOLD,"Assists provided"]]
                     ).concat([["APPEARANCES",sel.appearances,T.text,"Games played"]]).map(([l,v,c,desc]) => (
                       <div key={l} className="profile-stat-box" style={{ borderTop:`3px solid ${c}` }}>
-                        <div className="bebas" style={{ fontSize: isMobile?38:48, color:c, lineHeight:1, marginBottom:4 }}><StatNum value={v||0} /></div>
-                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:isMobile?9:11, color:T.textMuted, letterSpacing:3, marginBottom:3 }}>{l}</div>
-                        <div style={{ fontSize:10, color:T.textDim }}>{desc}</div>
+                        <div className="bebas" style={{ fontSize: isMobile?44:54, color:c, lineHeight:1, marginBottom:4 }}><StatNum value={v||0} /></div>
+                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:isMobile?12:14, color:T.text, letterSpacing:2, marginBottom:4 }}>{l}</div>
+                        <div style={{ fontSize:12, color:T.textDim }}>{desc}</div>
                       </div>
                     ))}
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
                     <div style={{ width:3, height:18, background:T_RED, borderRadius:2 }} />
-                    <div className="bebas" style={{ fontSize:14, color:T.textMuted, letterSpacing:3 }}>OTHER SQUAD MEMBERS</div>
+                    <div className="bebas" style={{ fontSize:16, color:T.text, letterSpacing:2 }}>OTHER SQUAD MEMBERS</div>
                   </div>
                   <div style={{ display:"grid", gridTemplateColumns:`repeat(auto-fill,minmax(${isMobile?"140px":"180px"},1fr))`, gap:8 }}>
                     {plrs.filter(p=>p.id!==sel.id).map(p => (
                       <div key={p.id} onClick={() => { setSel(p); window.scrollTo(0,0); }} style={{ background:T.cardBg, border:`1px solid ${T.border}`, borderRadius:10, padding:"10px 12px", cursor:"pointer", transition:"all 0.2s", display:"flex", alignItems:"center", gap:8 }} onMouseEnter={e=>{e.currentTarget.style.borderColor=`${T_RED}60`;e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.transform="none";}}>
-                        <div style={{ width:32, height:32, borderRadius:"50%", background:`${POS_COLOR[p.pos]||T_RED}20`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", flexShrink:0, border:`2px solid ${POS_COLOR[p.pos]||T_RED}30` }}>
-                          {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top" }} />:<span className="bebas" style={{ fontSize:10, color:T.textDim }}>#{p.jersey}</span>}
+                        <div style={{ width:34, height:34, borderRadius:"50%", background:`${POS_COLOR[p.pos]||T_RED}20`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", flexShrink:0, border:`2px solid ${POS_COLOR[p.pos]||T_RED}30` }}>
+                          {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top" }} />:<span className="bebas" style={{ fontSize:12, color:T.textDim }}>#{p.jersey}</span>}
                         </div>
                         <div style={{ minWidth:0 }}>
-                          <div style={{ fontWeight:600, fontSize:12, color:T.text, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{p.name}</div>
-                          <div style={{ fontSize:8, color:POS_COLOR[p.pos]||T_RED, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:1 }}>{p.pos.slice(0,3).toUpperCase()} · #{p.jersey}</div>
+                          <div style={{ fontWeight:600, fontSize:14, color:T.text, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{p.name}</div>
+                          <div style={{ fontSize:10, color:POS_COLOR[p.pos]||T_RED, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:1 }}>{p.pos.slice(0,3).toUpperCase()} · #{p.jersey}</div>
                         </div>
                       </div>
                     ))}
@@ -896,14 +896,14 @@ function AppShell() {
               <div style={{ position:"absolute", inset:0, backgroundImage:`repeating-linear-gradient(45deg,transparent,transparent 24px,${T.borderLight} 24px,${T.borderLight} 25px)` }} />
               <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg,${T_RED},#ff4060,transparent)` }} />
               <div style={{ maxWidth:900, margin:"0 auto", position:"relative", zIndex:1 }}>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", letterSpacing:5, fontSize:10, color:T.textDim, marginBottom:8 }}>SCHEDULE · 2026</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", letterSpacing:3, fontSize:12, color:T.textDim, marginBottom:8 }}>SCHEDULE · 2026</div>
                 <div className="bebas" style={{ fontSize: isMobile?38:isTablet?52:64, color:T.text, lineHeight:0.85, marginBottom:20 }}>FIXTURES <span style={{ color:T_RED }}>& RESULTS</span></div>
                 {played.length > 0 && (
                   <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                     {[["WINS",wins,"#16a34a","rgba(22,163,74,0.15)"],["DRAWS",draws,T_GOLD,"rgba(217,119,6,0.15)"],["LOSSES",losses,T_RED,"rgba(232,0,45,0.15)"],["PLAYED",played.length,T.text,T.subtleBg]].map(([l,v,c,bg]) => (
                       <div key={l} style={{ display:"flex", alignItems:"center", gap:8, background:bg, border:`1px solid ${c}30`, borderRadius:10, padding: isMobile?"6px 12px":"9px 20px" }}>
-                        <div className="bebas" style={{ fontSize: isMobile?22:28, color:c, lineHeight:1 }}>{v}</div>
-                        <div style={{ fontSize:9, letterSpacing:3, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif" }}>{l}</div>
+                        <div className="bebas" style={{ fontSize: isMobile?24:30, color:c, lineHeight:1 }}>{v}</div>
+                        <div style={{ fontSize:11, letterSpacing:2, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif" }}>{l}</div>
                       </div>
                     ))}
                   </div>
@@ -926,36 +926,36 @@ function AppShell() {
                             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, flexWrap:"wrap", gap:6 }}>
                               {/* ── Result + competition + FMT BADGE ── */}
                               <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
-                                <div style={{ display:"flex", alignItems:"center", gap:5, background:`${ac}12`, border:`1px solid ${ac}30`, borderRadius:20, padding:"3px 12px" }}>
+                                <div style={{ display:"flex", alignItems:"center", gap:5, background:`${ac}12`, border:`1px solid ${ac}30`, borderRadius:20, padding:"4px 12px" }}>
                                   <div style={{ width:5, height:5, borderRadius:"50%", background:ac, flexShrink:0 }} />
-                                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", color:ac, fontSize:10, letterSpacing:3 }}>{rl}</span>
+                                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", color:ac, fontSize:11, letterSpacing:2 }}>{rl}</span>
                                 </div>
                                 {m.competition && (
-                                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:9, color:T.textDim, letterSpacing:2, background:T.subtleBg, padding:"3px 10px", borderRadius:20 }}>{m.competition.toUpperCase()}</span>
+                                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, color:T.textDim, letterSpacing:1.5, background:T.subtleBg, padding:"4px 12px", borderRadius:20 }}>{m.competition.toUpperCase()}</span>
                                 )}
                                 {m.fmt && (
-                                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:9, color:"white", letterSpacing:2, background:"#0033a0", padding:"3px 10px", borderRadius:20 }}>{m.fmt}</span>
+                                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, color:"white", letterSpacing:1.5, background:"#0033a0", padding:"4px 12px", borderRadius:20 }}>{m.fmt}</span>
                                 )}
                               </div>
-                              <span style={{ fontSize:10, color:T.textDim, fontWeight:500 }}>{m.date}{m.venue ? ` · ${m.venue}` : ""}</span>
+                              <span style={{ fontSize:12, color:T.textDim, fontWeight:500 }}>{m.date}{m.venue ? ` · ${m.venue}` : ""}</span>
                             </div>
                             <div style={{ display:"flex", alignItems:"center", gap: isMobile?8:14 }}>
                               {/* NAFC */}
                               <div style={{ display:"flex", alignItems:"center", gap: isMobile?6:10, flex:1 }}>
-                                <div style={{ width: isMobile?36:44, height: isMobile?36:44, borderRadius:10, background:T.subtleBg, border:`1px solid ${T.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                                  <img src={LOGO} alt="NAFC" style={{ width: isMobile?22:28 }} />
+                                <div style={{ width: isMobile?38:46, height: isMobile?38:46, borderRadius:10, background:T.subtleBg, border:`1px solid ${T.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                                  <img src={LOGO} alt="NAFC" style={{ width: isMobile?24:30 }} />
                                 </div>
                                 <div>
-                                  <div className="bebas" style={{ fontSize: isMobile?16:20, color:T.text, letterSpacing:1, lineHeight:1 }}>NAFC</div>
-                                  <div style={{ fontSize:8, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>HOME</div>
+                                  <div className="bebas" style={{ fontSize: isMobile?18:22, color:T.text, letterSpacing:1, lineHeight:1 }}>NAFC</div>
+                                  <div style={{ fontSize:10, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>HOME</div>
                                 </div>
                               </div>
                               {/* Score */}
                               <div style={{ textAlign:"center", flexShrink:0 }}>
                                 {isUpc ? (
                                   <div style={{ background:"rgba(37,99,235,0.07)", border:"1px solid rgba(37,99,235,0.18)", borderRadius:10, padding: isMobile?"6px 12px":"8px 20px" }}>
-                                    <div className="bebas" style={{ fontSize: isMobile?14:18, color:"#2563eb", letterSpacing:4, lineHeight:1 }}>VS</div>
-                                    <div style={{ fontSize:8, color:T.textDim, letterSpacing:2, marginTop:2 }}>TBD</div>
+                                    <div className="bebas" style={{ fontSize: isMobile?15:19, color:"#2563eb", letterSpacing:3, lineHeight:1 }}>VS</div>
+                                    <div style={{ fontSize:10, color:T.textDim, letterSpacing:2, marginTop:2, fontFamily:"'Bebas Neue',sans-serif" }}>TBD</div>
                                   </div>
                                 ) : (
                                   <div style={{ display:"flex", alignItems:"center", gap: isMobile?4:8, background:`${ac}08`, border:`1px solid ${ac}18`, borderRadius:12, padding: isMobile?"5px 10px":"7px 16px" }}>
@@ -968,19 +968,19 @@ function AppShell() {
                               {/* Opponent */}
                               <div style={{ display:"flex", alignItems:"center", gap: isMobile?6:10, flex:1, justifyContent:"flex-end" }}>
                                 <div style={{ textAlign:"right" }}>
-                                  <div className="bebas" style={{ fontSize: isMobile?14:18, color:T.textMuted, letterSpacing:1, lineHeight:1 }}>{m.opponent}</div>
-                                  <div style={{ fontSize:8, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>AWAY</div>
+                                  <div className="bebas" style={{ fontSize: isMobile?16:20, color:T.textMuted, letterSpacing:1, lineHeight:1 }}>{m.opponent}</div>
+                                  <div style={{ fontSize:10, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>AWAY</div>
                                 </div>
-                                <div style={{ width: isMobile?36:44, height: isMobile?36:44, borderRadius:10, background:T.subtleBg, border:`1px solid ${T.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize: isMobile?18:22 }}>🛡️</div>
+                                <div style={{ width: isMobile?38:46, height: isMobile?38:46, borderRadius:10, background:T.subtleBg, border:`1px solid ${T.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize: isMobile?20:24 }}>🛡️</div>
                               </div>
                             </div>
                             {/* Scorers */}
                             {!isUpc && m.scorers && m.scorers.length > 0 && (
                               <div style={{ marginTop:12, paddingTop:10, borderTop:`1px solid ${T.borderLight}`, display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
-                                <span style={{ fontSize:11 }}>⚽</span>
-                                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:8, color:T.textDim, letterSpacing:2 }}>SCORERS</span>
+                                <span style={{ fontSize:12 }}>⚽</span>
+                                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, color:T.textDim, letterSpacing:2 }}>SCORERS</span>
                                 {m.scorers.map((s,si) => (
-                                  <span key={si} style={{ fontSize:11, color:T.text, fontWeight:600, background:T.subtleBg, padding:"3px 10px", borderRadius:16, border:`1px solid ${T.borderLight}` }}>
+                                  <span key={si} style={{ fontSize:12, color:T.text, fontWeight:600, background:T.subtleBg, padding:"4px 12px", borderRadius:16, border:`1px solid ${T.borderLight}` }}>
                                     {typeof s==="string"?s:s.name}{typeof s==="object"&&s.goals>1?` ×${s.goals}`:""}
                                   </span>
                                 ))}
@@ -1006,14 +1006,14 @@ function AppShell() {
                   <div>
                     <div className="section-label" style={{ marginBottom:8, fontSize:12 }}>{statTab==="season" ? "SEASON 2026" : getMonthLabel(activeMonth)}</div>
                     <div className="bebas" style={{ fontSize: isMobile?42:isTablet?54:62, color:T.text, lineHeight:0.88 }}>PLAYER <span style={{ color:T_RED }}>STATISTICS</span></div>
-                    <div style={{ fontSize:11, color:T.textDim, marginTop:10, letterSpacing:1 }}>↓ Click any player to view their full profile</div>
+                    <div style={{ fontSize:12, color:T.textDim, marginTop:10, letterSpacing:1 }}>↓ Click any player to view their full profile</div>
                   </div>
                   {/* Tab switcher */}
                   <div style={{ display:"flex", gap:4, background:T.subtleBg, border:`1px solid ${T.border}`, padding:4, borderRadius:10 }}>
-                    <button onClick={() => setStatTab("season")} className="bebas" style={{ background:statTab==="season"?T_RED:"transparent", color:statTab==="season"?"#fff":T.textMuted, border:"none", padding:isMobile?"8px 14px":"10px 22px", fontSize:isMobile?12:14, cursor:"pointer", letterSpacing:2, borderRadius:7, transition:"all 0.2s" }}>
+                    <button onClick={() => setStatTab("season")} className="bebas" style={{ background:statTab==="season"?T_RED:"transparent", color:statTab==="season"?"#fff":T.textMuted, border:"none", padding:isMobile?"8px 14px":"10px 22px", fontSize:isMobile?13:15, cursor:"pointer", letterSpacing:2, borderRadius:7, transition:"all 0.2s" }}>
                       🏆 ALL-TIME SEASON
                     </button>
-                    <button onClick={() => setStatTab("month")} className="bebas" style={{ background:statTab==="month"?T_RED:"transparent", color:statTab==="month"?"#fff":T.textMuted, border:"none", padding:isMobile?"8px 14px":"10px 22px", fontSize:isMobile?12:14, cursor:"pointer", letterSpacing:2, borderRadius:7, transition:"all 0.2s" }}>
+                    <button onClick={() => setStatTab("month")} className="bebas" style={{ background:statTab==="month"?T_RED:"transparent", color:statTab==="month"?"#fff":T.textMuted, border:"none", padding:isMobile?"8px 14px":"10px 22px", fontSize:isMobile?13:15, cursor:"pointer", letterSpacing:2, borderRadius:7, transition:"all 0.2s" }}>
                       📅 MONTHLY LEADERS
                     </button>
                   </div>
@@ -1029,7 +1029,7 @@ function AppShell() {
                     <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:22, flexWrap:"wrap" }}>
                       <span className="section-label" style={{ marginRight:4, fontSize:12 }}>SELECT MONTH:</span>
                       {availableMonths.map(ym => (
-                        <button key={ym} onClick={() => setSelMonth(ym)} className="bebas" style={{ background:activeMonth===ym?T_RED:T.subtleBg, color:activeMonth===ym?"#fff":T.textMuted, border:`1px solid ${activeMonth===ym?T_RED:T.border}`, padding:"8px 18px", fontSize:isMobile?12:13, letterSpacing:2, borderRadius:8, cursor:"pointer", transition:"all 0.2s" }}>
+                        <button key={ym} onClick={() => setSelMonth(ym)} className="bebas" style={{ background:activeMonth===ym?T_RED:T.subtleBg, color:activeMonth===ym?"#fff":T.textMuted, border:`1px solid ${activeMonth===ym?T_RED:T.border}`, padding:"8px 18px", fontSize:isMobile?13:14, letterSpacing:2, borderRadius:8, cursor:"pointer", transition:"all 0.2s" }}>
                           {getMonthLabel(ym)}
                         </button>
                       ))}
@@ -1046,18 +1046,18 @@ function AppShell() {
                         </div>
                         <div>
                           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4, flexWrap:"wrap" }}>
-                            <span style={{ background:"#d97706", color:"white", fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:2, padding:"3px 10px", borderRadius:4 }}>⭐ PLAYER OF THE MONTH</span>
-                            <span style={{ color:"rgba(255,255,255,0.6)", fontSize:11, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif" }}>{getMonthLabel(activeMonth)}</span>
+                            <span style={{ background:"#d97706", color:"white", fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, padding:"4px 12px", borderRadius:4 }}>⭐ PLAYER OF THE MONTH</span>
+                            <span style={{ color:"rgba(255,255,255,0.6)", fontSize:12, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif" }}>{getMonthLabel(activeMonth)}</span>
                           </div>
                           <div className="bebas" style={{ fontSize:isMobile?28:38, color:"#fff", letterSpacing:1, lineHeight:1 }}>{topPerformerMonth.name}</div>
-                          <div style={{ fontSize:12, color:POS_COLOR[topPerformerMonth.pos]||T_RED, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:4 }}>{topPerformerMonth.pos.toUpperCase()} · #{topPerformerMonth.jersey}</div>
+                          <div style={{ fontSize:13, color:POS_COLOR[topPerformerMonth.pos]||T_RED, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:4 }}>{topPerformerMonth.pos.toUpperCase()} · #{topPerformerMonth.jersey}</div>
                         </div>
                       </div>
                       <div style={{ display:"flex", gap:14, zIndex:1, flexWrap:"wrap" }}>
                         {[["GOALS",topPerformerMonth.monthGoals,T_RED],["ASSISTS",topPerformerMonth.monthAssists,T_GOLD],["MATCHES",topPerformerMonth.monthAppearances,"#3b82f6"]].map(([l,v,c]) => (
                           <div key={l} style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"12px 18px", textAlign:"center", minWidth:76 }}>
                             <div className="bebas" style={{ fontSize:isMobile?26:34, color:c, lineHeight:1 }}>{v}</div>
-                            <div style={{ fontSize:10, letterSpacing:2, color:"rgba(255,255,255,0.6)", fontFamily:"'Bebas Neue',sans-serif", marginTop:3 }}>{l}</div>
+                            <div style={{ fontSize:11, letterSpacing:2, color:"rgba(255,255,255,0.6)", fontFamily:"'Bebas Neue',sans-serif", marginTop:3 }}>{l}</div>
                           </div>
                         ))}
                       </div>
@@ -1071,7 +1071,7 @@ function AppShell() {
                         <div className="bebas" style={{ fontSize: typeof v==="number"?(isMobile?36:48):(isMobile?22:28), color:c, lineHeight:1.1 }}>
                           {typeof v==="number" ? <StatNum value={v} /> : v}
                         </div>
-                        <div style={{ fontSize:11, letterSpacing:2, color:T.textMuted, marginTop:6, fontFamily:"'Bebas Neue',sans-serif" }}>{l}</div>
+                        <div style={{ fontSize:12, letterSpacing:2, color:T.textMuted, marginTop:6, fontFamily:"'Bebas Neue',sans-serif" }}>{l}</div>
                       </div>
                     ))}
                   </div>
@@ -1084,8 +1084,8 @@ function AppShell() {
                         <div key={board.title} className="stat-card">
                           <div style={{ padding:"16px 18px 14px", borderBottom:`1px solid ${T.borderLight}`, background:T.bg2, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                             <div>
-                              <div className="bebas" style={{ fontSize:15, color:T.text, letterSpacing:2 }}>{board.title}</div>
-                              <div style={{ fontSize:10, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{sorted.length} ACTIVE PLAYERS</div>
+                              <div className="bebas" style={{ fontSize:16, color:T.text, letterSpacing:2 }}>{board.title}</div>
+                              <div style={{ fontSize:11, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{sorted.length} ACTIVE PLAYERS</div>
                             </div>
                             <div style={{ fontSize:18 }}>{board.icon}</div>
                           </div>
@@ -1097,18 +1097,18 @@ function AppShell() {
                             ) : sorted.map((p,i) => (
                               <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)}>
                                 <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                                  <div style={{ width:22, textAlign:"center" }}>
-                                    <div className="bebas" style={{ fontSize:i===0?17:14, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
+                                  <div style={{ width:24, textAlign:"center" }}>
+                                    <div className="bebas" style={{ fontSize:i===0?18:15, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
                                   </div>
-                                  <div style={{ width:34, height:34, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
-                                    {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }} />:<span className="bebas" style={{ fontSize:10, color:T.textDim }}>#{p.jersey}</span>}
+                                  <div style={{ width:36, height:36, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
+                                    {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }} />:<span className="bebas" style={{ fontSize:11, color:T.textDim }}>#{p.jersey}</span>}
                                   </div>
                                   <div>
-                                    <div style={{ fontWeight:600, fontSize:14, color:T.text, lineHeight:1.2 }}>{p.name}</div>
-                                    <div style={{ fontSize:10, letterSpacing:2, color:`${POS_COLOR[p.pos]||T_RED}`, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{p.pos.slice(0,3).toUpperCase()}</div>
+                                    <div style={{ fontWeight:600, fontSize:15, color:T.text, lineHeight:1.2 }}>{p.name}</div>
+                                    <div style={{ fontSize:11, letterSpacing:2, color:`${POS_COLOR[p.pos]||T_RED}`, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{p.pos.slice(0,3).toUpperCase()}</div>
                                   </div>
                                 </div>
-                                <div className="bebas" style={{ fontSize:24, color:i===0?board.color:T.textMuted, lineHeight:1 }}>{p[board.key]||0}</div>
+                                <div className="bebas" style={{ fontSize:26, color:i===0?board.color:T.textMuted, lineHeight:1 }}>{p[board.key]||0}</div>
                               </div>
                             ))}
                           </div>
@@ -1124,7 +1124,7 @@ function AppShell() {
                     {[["TOTAL GOALS",plrs.reduce((a,p)=>a+(p.goals||0),0),T_RED],["TOTAL ASSISTS",plrs.reduce((a,p)=>a+(p.assists||0),0),T_GOLD],["SQUAD SIZE",plrs.length,"#2563eb"],["MATCHES PLAYED",played.length,"#16a34a"]].map(([l,v,c]) => (
                       <div key={l} style={{ background:T.cardBg, border:`1px solid ${T.border}`, padding: isMobile?"16px 14px":"22px 20px", borderTop:`3px solid ${c}`, borderRadius:12 }}>
                         <div className="bebas" style={{ fontSize: isMobile?36:48, color:c, lineHeight:1 }}><StatNum value={v} /></div>
-                        <div style={{ fontSize:11, letterSpacing:2, color:T.textMuted, marginTop:6, fontFamily:"'Bebas Neue',sans-serif" }}>{l}</div>
+                        <div style={{ fontSize:12, letterSpacing:2, color:T.textMuted, marginTop:6, fontFamily:"'Bebas Neue',sans-serif" }}>{l}</div>
                       </div>
                     ))}
                   </div>
@@ -1137,8 +1137,8 @@ function AppShell() {
                         <div key={board.title} className="stat-card">
                           <div style={{ padding:"16px 18px 14px", borderBottom:`1px solid ${T.borderLight}`, background:T.bg2, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                             <div>
-                              <div className="bebas" style={{ fontSize:15, color:T.text, letterSpacing:2 }}>{board.title}</div>
-                              <div style={{ fontSize:10, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{sorted.length} PLAYERS</div>
+                              <div className="bebas" style={{ fontSize:16, color:T.text, letterSpacing:2 }}>{board.title}</div>
+                              <div style={{ fontSize:11, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{sorted.length} PLAYERS</div>
                             </div>
                             <div style={{ fontSize:18 }}>{board.icon}</div>
                           </div>
@@ -1146,18 +1146,18 @@ function AppShell() {
                             {sorted.map((p,i) => (
                               <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)}>
                                 <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                                  <div style={{ width:22, textAlign:"center" }}>
-                                    <div className="bebas" style={{ fontSize:i===0?17:14, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
+                                  <div style={{ width:24, textAlign:"center" }}>
+                                    <div className="bebas" style={{ fontSize:i===0?18:15, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
                                   </div>
-                                  <div style={{ width:34, height:34, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
-                                    {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }} />:<span className="bebas" style={{ fontSize:10, color:T.textDim }}>#{p.jersey}</span>}
+                                  <div style={{ width:36, height:36, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
+                                    {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }} />:<span className="bebas" style={{ fontSize:11, color:T.textDim }}>#{p.jersey}</span>}
                                   </div>
                                   <div>
-                                    <div style={{ fontWeight:600, fontSize:14, color:T.text, lineHeight:1.2 }}>{p.name}</div>
-                                    <div style={{ fontSize:10, letterSpacing:2, color:`${POS_COLOR[p.pos]||T_RED}`, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{p.pos.slice(0,3).toUpperCase()}</div>
+                                    <div style={{ fontWeight:600, fontSize:15, color:T.text, lineHeight:1.2 }}>{p.name}</div>
+                                    <div style={{ fontSize:11, letterSpacing:2, color:`${POS_COLOR[p.pos]||T_RED}`, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{p.pos.slice(0,3).toUpperCase()}</div>
                                   </div>
                                 </div>
-                                <div className="bebas" style={{ fontSize:24, color:i===0?board.color:T.textMuted, lineHeight:1 }}>{p[board.key]||0}</div>
+                                <div className="bebas" style={{ fontSize:26, color:i===0?board.color:T.textMuted, lineHeight:1 }}>{p[board.key]||0}</div>
                               </div>
                             ))}
                           </div>
@@ -1180,14 +1180,14 @@ function AppShell() {
                 <img src={gal[lightbox].url} alt="" onClick={e=>e.stopPropagation()} style={{ maxWidth:"86vw", maxHeight:"86vh", objectFit:"contain", borderRadius:6 }} />
                 <button onClick={e=>{e.stopPropagation();setLightbox(ii=>(ii+1)%gal.length);}} style={{ position:"absolute", right: isMobile?8:20, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.15)", color:"#fff", fontSize:24, width:44, height:44, borderRadius:"50%", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
                 <button onClick={() => setLightbox(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.15)", color:"#fff", fontSize:16, width:40, height:40, borderRadius:"50%", cursor:"pointer" }}>✕</button>
-                <div className="bebas" style={{ position:"absolute", bottom:18, left:"50%", transform:"translateX(-50%)", color:"rgba(255,255,255,0.4)", fontSize:12, letterSpacing:4 }}>{lightbox+1} / {gal.length}</div>
+                <div className="bebas" style={{ position:"absolute", bottom:18, left:"50%", transform:"translateX(-50%)", color:"rgba(255,255,255,0.4)", fontSize:13, letterSpacing:4 }}>{lightbox+1} / {gal.length}</div>
               </div>
             )}
             <div style={{ background:T.headerGrad, borderBottom:`1px solid ${T.border}`, padding:`${isMobile?"28px":"46px"} ${px} ${isMobile?"20px":"32px"}` }}>
               <div style={{ maxWidth:1200, margin:"0 auto" }}>
                 <div className="section-label" style={{ marginBottom:8 }}>PHOTOS</div>
                 <div className="bebas" style={{ fontSize: isMobile?38:isTablet?50:58, color:T.text, lineHeight:0.88 }}>MATCH <span style={{ color:T_RED }}>GALLERY</span></div>
-                {gal.length>0&&<div style={{ fontSize:9, letterSpacing:4, color:T.textDim, marginTop:8 }}>{gal.length} PHOTOS</div>}
+                {gal.length>0&&<div style={{ fontSize:11, letterSpacing:2, color:T.textDim, marginTop:8, fontFamily:"'Bebas Neue',sans-serif" }}>{gal.length} PHOTOS</div>}
               </div>
             </div>
             <div style={{ padding:`16px ${isMobile?"8px":"12px"} 50px` }}>
@@ -1197,7 +1197,7 @@ function AppShell() {
                     {gal.map((g,i) => (
                       <div key={g.id} className="gal-item" onClick={() => setLightbox(i)} style={{ animation:`fadeUp 0.4s ${(i%6)*0.05}s ease both` }}>
                         <img src={g.url} alt="" />
-                        <div className="ov"><div className="bebas" style={{ color:"white", fontSize:10, letterSpacing:3 }}>VIEW</div></div>
+                        <div className="ov"><div className="bebas" style={{ color:"white", fontSize:12, letterSpacing:3 }}>VIEW</div></div>
                       </div>
                     ))}
                   </div>
@@ -1213,18 +1213,18 @@ function AppShell() {
           <div className="footer-grid" style={{ display:"grid", gap: isMobile?24:40, paddingBottom:18, borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
             <div>
               <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
-                <img src={LOGO} alt="NAFC" style={{ width:34 }} />
+                <img src={LOGO} alt="NAFC" style={{ width:36 }} />
                 <div>
-                  <div className="bebas" style={{ fontSize:17, color:"#fff" }}>NAFC</div>
-                  <div style={{ fontSize:7, letterSpacing:4, color:"rgba(255,255,255,0.4)" }}>FOOTBALL CLUB</div>
+                  <div className="bebas" style={{ fontSize:18, color:"#fff" }}>NAFC</div>
+                  <div style={{ fontSize:9, letterSpacing:3, color:"rgba(255,255,255,0.5)", fontWeight:600 }}>FOOTBALL CLUB</div>
                 </div>
               </div>
-              <p style={{ fontSize:12, color:"rgba(255,255,255,0.45)", lineHeight:1.8, maxWidth:220 }}>A passion-driven football club based in Bengaluru.</p>
+              <p style={{ fontSize:13, color:"rgba(255,255,255,0.5)", lineHeight:1.8, maxWidth:220 }}>A passion-driven football club based in Bengaluru.</p>
               <div style={{ display:"flex", gap:6, marginTop:12 }}>
                 {[["W",wins,"#16a34a"],["D",draws,T_GOLD],["L",losses,T_RED]].map(([l,v,c]) => (
-                  <div key={l} style={{ background:`${c}14`, border:`1px solid ${c}28`, borderRadius:6, padding:"3px 10px", textAlign:"center" }}>
-                    <div className="bebas" style={{ fontSize:14, color:c }}>{v}</div>
-                    <div style={{ fontSize:7, letterSpacing:2, color:"rgba(255,255,255,0.4)", fontFamily:"'Bebas Neue',sans-serif" }}>{l}</div>
+                  <div key={l} style={{ background:`${c}14`, border:`1px solid ${c}28`, borderRadius:6, padding:"4px 12px", textAlign:"center" }}>
+                    <div className="bebas" style={{ fontSize:15, color:c }}>{v}</div>
+                    <div style={{ fontSize:10, letterSpacing:2, color:"rgba(255,255,255,0.5)", fontFamily:"'Bebas Neue',sans-serif" }}>{l}</div>
                   </div>
                 ))}
               </div>
@@ -1233,7 +1233,7 @@ function AppShell() {
               <div className="section-label" style={{ marginBottom:12 }}>NAVIGATE</div>
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 {PGS.map(p => (
-                  <span key={p} onClick={() => go(p)} className="bebas" style={{ color:"rgba(255,255,255,0.4)", cursor:"pointer", fontSize:13, letterSpacing:3, transition:"color 0.2s" }} onMouseEnter={e=>e.currentTarget.style.color="#fff"} onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,0.4)"}>{p}</span>
+                  <span key={p} onClick={() => go(p)} className="bebas" style={{ color:"rgba(255,255,255,0.5)", cursor:"pointer", fontSize:14, letterSpacing:3, transition:"color 0.2s" }} onMouseEnter={e=>e.currentTarget.style.color="#fff"} onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,0.5)"}>{p}</span>
                 ))}
               </div>
             </div>
@@ -1241,16 +1241,16 @@ function AppShell() {
               <div className="section-label" style={{ marginBottom:12 }}>FOLLOW US</div>
               <a href="https://www.instagram.com/nafc.blr?igsh=MTJvNzV1cXFyNzRxMA==" target="_blank" rel="noreferrer" style={{ display:"inline-flex", alignItems:"center", gap:10, color:"#fff", textDecoration:"none", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", padding:"10px 16px", borderRadius:8 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-                <span className="bebas" style={{ fontSize:12, letterSpacing:3 }}>@NAFC.BLR</span>
+                <span className="bebas" style={{ fontSize:13, letterSpacing:3 }}>@NAFC.BLR</span>
               </a>
             </div>
           </div>
           <div style={{ paddingTop:12, display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8 }}>
-            <div style={{ fontSize:9, color:"rgba(255,255,255,0.22)", letterSpacing:2 }}>© 2026 NAFC · BENGALURU</div>
+            <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", letterSpacing:2 }}>© 2026 NAFC · BENGALURU</div>
             <div style={{ display:"flex", gap:5, alignItems:"center" }}>
               {[T_RED,"white","#1e40af"].map((c,i) => <div key={i} style={{ width:5, height:5, borderRadius:"50%", background:c }} />)}
             </div>
-            <div style={{ fontSize:9, color:"rgba(255,255,255,0.16)", letterSpacing:1 }}>ALL RIGHTS RESERVED</div>
+            <div style={{ fontSize:11, color:"rgba(255,255,255,0.3)", letterSpacing:1 }}>ALL RIGHTS RESERVED</div>
           </div>
         </div>
       </div>
