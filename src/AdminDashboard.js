@@ -42,6 +42,7 @@ export default function AdminDashboard({ onBack }) {
   const [gal, setGal] = useState([]);
   const [ld, setLd] = useState(false);
   const [edP, setEdP] = useState(null);
+  const [edM, setEdM] = useState(null);
   const [toast, setToast] = useState(null);
   const [uploadProgress, setUploadProgress] = useState({});
   const [currentHeroURL, setCurrentHeroURL] = useState(null);
@@ -53,7 +54,7 @@ export default function AdminDashboard({ onBack }) {
 
   const [mF, setMF] = useState({
     op:"", dt:"", vn:"", cp:"Friendly", rs:"W",
-    nS:0, oS:0, ap:[], sc:[], sI:"", sG:1, fmt:"7s"
+    nS:0, oS:0, ap:[], sc:[], as:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, fmt:"7s"
   });
 
   useEffect(() => {
@@ -159,13 +160,32 @@ export default function AdminDashboard({ onBack }) {
       await addDoc(collection(db,"matches"), {
         opponent:mF.op, date:mF.dt, venue:mF.vn, competition:mF.cp,
         result:mF.rs, nafcScore:mF.nS, opponentScore:mF.oS,
-        scorers:mF.sc, fmt:mF.fmt
+        scorers:mF.sc, assisters:mF.as, fmt:mF.fmt
       });
       if (mF.rs !== "upcoming") {
-        for (let id of mF.ap) { const r=doc(db,"players",id); const s=await getDoc(r); if (s.exists()) await updateDoc(r,{ appearances:(s.data().appearances||0)+1 }); }
-        for (let s of mF.sc) { const r=doc(db,"players",s.id); const p=await getDoc(r); if (p.exists()) await updateDoc(r,{ goals:(p.data().goals||0)+s.goals }); }
+        for (let id of mF.ap) {
+          if (!String(id).startsWith("guest_")) {
+            const r=doc(db,"players",id);
+            const s=await getDoc(r);
+            if (s.exists()) await updateDoc(r,{ appearances:(s.data().appearances||0)+1 });
+          }
+        }
+        for (let s of mF.sc) {
+          if (!s.isGuest && !String(s.id).startsWith("guest_")) {
+            const r=doc(db,"players",s.id);
+            const p=await getDoc(r);
+            if (p.exists()) await updateDoc(r,{ goals:(p.data().goals||0)+s.goals });
+          }
+        }
+        for (let a of mF.as) {
+          if (!a.isGuest && !String(a.id).startsWith("guest_")) {
+            const r=doc(db,"players",a.id);
+            const p=await getDoc(r);
+            if (p.exists()) await updateDoc(r,{ assists:(p.data().assists||0)+a.assists });
+          }
+        }
       }
-      setMF({ op:"", dt:"", vn:"", cp:"Friendly", rs:"W", nS:0, oS:0, ap:[], sc:[], sI:"", sG:1, fmt:"7s" });
+      setMF({ op:"", dt:"", vn:"", cp:"Friendly", rs:"W", nS:0, oS:0, ap:[], sc:[], as:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, fmt:"7s" });
       showToast("✅ Match logged and stats updated!");
     } catch (err) { showToast(`❌ Error: ${err.message}`, "error"); }
     setLd(false);
@@ -173,11 +193,105 @@ export default function AdminDashboard({ onBack }) {
 
   const tggA = (id) => setMF(p=>({ ...p, ap:p.ap.includes(id)?p.ap.filter(x=>x!==id):[...p.ap,id] }));
   const addS = () => {
+    if (mF.sGuest && mF.sGuest.trim() && mF.sG >= 1) {
+      const name = mF.sGuest.trim();
+      setMF(v=>({ ...v, sc:[...v.sc, { id:`guest_${Date.now()}`, name:name, isGuest:true, goals:parseInt(v.sG) }], sI:"", sGuest:"", sG:1 }));
+      return;
+    }
     if (!mF.sI || mF.sG < 1) return;
     const p = plrs.find(x=>x.id===mF.sI);
-    setMF(v=>({ ...v, sc:[...v.sc,{ id:p.id, name:p.name, goals:parseInt(v.sG) }], sI:"", sG:1 }));
+    if (!p) return;
+    setMF(v=>({ ...v, sc:[...v.sc,{ id:p.id, name:p.name, isGuest:false, goals:parseInt(v.sG) }], sI:"", sGuest:"", sG:1 }));
   };
   const remS = (i) => setMF(v=>({ ...v, sc:v.sc.filter((_,idx)=>idx!==i) }));
+
+  const addA = () => {
+    if (mF.aGuest && mF.aGuest.trim() && mF.aG >= 1) {
+      const name = mF.aGuest.trim();
+      setMF(v=>({ ...v, as:[...v.as, { id:`guest_${Date.now()}`, name:name, isGuest:true, assists:parseInt(v.aG) }], aI:"", aGuest:"", aG:1 }));
+      return;
+    }
+    if (!mF.aI || mF.aG < 1) return;
+    const p = plrs.find(x=>x.id===mF.aI);
+    if (!p) return;
+    setMF(v=>({ ...v, as:[...v.as,{ id:p.id, name:p.name, isGuest:false, assists:parseInt(v.aG) }], aI:"", aGuest:"", aG:1 }));
+  };
+  const remA = (i) => setMF(v=>({ ...v, as:v.as.filter((_,idx)=>idx!==i) }));
+
+  // ── Match Edit Handlers ──
+  const oEM = (m) => {
+    setEdM({
+      id: m.id,
+      opponent: m.opponent || "",
+      date: m.date || "",
+      venue: m.venue || "",
+      competition: m.competition || "Friendly",
+      result: m.result || "W",
+      nafcScore: m.nafcScore ?? 0,
+      opponentScore: m.opponentScore ?? 0,
+      scorers: m.scorers || [],
+      assisters: m.assisters || [],
+      ap: m.ap || m.appearances || [],
+      fmt: m.fmt || "7s",
+      sI: "",
+      sGuest: "",
+      sG: 1,
+      aI: "",
+      aGuest: "",
+      aG: 1
+    });
+  };
+
+  const updM = async (e) => {
+    e.preventDefault();
+    setLd(true);
+    try {
+      await updateDoc(doc(db, "matches", edM.id), {
+        opponent: edM.opponent,
+        date: edM.date,
+        venue: edM.venue,
+        competition: edM.competition,
+        result: edM.result,
+        nafcScore: Number(edM.nafcScore),
+        opponentScore: Number(edM.opponentScore),
+        scorers: edM.scorers,
+        assisters: edM.assisters,
+        ap: edM.ap,
+        fmt: edM.fmt
+      });
+      setEdM(null);
+      showToast("✅ Match updated successfully!");
+    } catch (err) {
+      showToast(`❌ Error: ${err.message}`, "error");
+    }
+    setLd(false);
+  };
+
+  const tggEdA = (id) => setEdM(p => ({ ...p, ap: p.ap.includes(id) ? p.ap.filter(x => x !== id) : [...p.ap, id] }));
+  const addEdS = () => {
+    if (edM.sGuest && edM.sGuest.trim() && edM.sG >= 1) {
+      const name = edM.sGuest.trim();
+      setEdM(v => ({ ...v, scorers: [...v.scorers, { id: `guest_${Date.now()}`, name: name, isGuest: true, goals: parseInt(v.sG) }], sI: "", sGuest: "", sG: 1 }));
+      return;
+    }
+    if (!edM.sI || edM.sG < 1) return;
+    const p = plrs.find(x => x.id === edM.sI);
+    if (!p) return;
+    setEdM(v => ({ ...v, scorers: [...v.scorers, { id: p.id, name: p.name, isGuest: false, goals: parseInt(v.sG) }], sI: "", sGuest: "", sG: 1 }));
+  };
+  const remEdS = (i) => setEdM(v => ({ ...v, scorers: v.scorers.filter((_, idx) => idx !== i) }));
+  const addEdA = () => {
+    if (edM.aGuest && edM.aGuest.trim() && edM.aG >= 1) {
+      const name = edM.aGuest.trim();
+      setEdM(v => ({ ...v, assisters: [...v.assisters, { id: `guest_${Date.now()}`, name: name, isGuest: true, assists: parseInt(v.aG) }], aI: "", aGuest: "", aG: 1 }));
+      return;
+    }
+    if (!edM.aI || edM.aG < 1) return;
+    const p = plrs.find(x => x.id === edM.aI);
+    if (!p) return;
+    setEdM(v => ({ ...v, assisters: [...v.assisters, { id: p.id, name: p.name, isGuest: false, assists: parseInt(v.aG) }], aI: "", aGuest: "", aG: 1 }));
+  };
+  const remEdA = (i) => setEdM(v => ({ ...v, assisters: v.assisters.filter((_, idx) => idx !== i) }));
 
   const TC = {
     success:{ bg:"#dcfce7", border:"#166534", text:"#166534" },
@@ -382,17 +496,46 @@ export default function AdminDashboard({ onBack }) {
                     <div style={{ background:"#f8fafc", padding:14, borderRadius:8, border:"1px solid #e2e8f0" }}>
                       <div style={{ fontSize:14, fontWeight:700, color:"#0f172a", marginBottom:10 }}>GOAL SCORERS</div>
                       <div style={{ display:"flex", gap:8, marginBottom:10, flexWrap:isMobile?"wrap":"nowrap" }}>
-                        <select value={mF.sI} onChange={e=>setMF({...mF,sI:e.target.value})} style={{ ...selectStyle, flex:2, minWidth:0 }}>
-                          <option value="">Select Player...</option>
+                        <select value={mF.sI} onChange={e=>setMF({...mF,sI:e.target.value, sGuest:""})} style={{ ...selectStyle, flex:2, minWidth:0 }}>
+                          <option value="">Select Team Player...</option>
                           {plrs.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
-                        <input type="number" min="1" value={mF.sG} onChange={e=>setMF({...mF,sG:e.target.value})} style={{ ...inp, flex:"0 0 70px", width:70 }} placeholder="Gls"/>
+                        <input type="text" placeholder="Or Guest Name" value={mF.sGuest} onChange={e=>setMF({...mF, sGuest:e.target.value, sI:""})} style={{ ...inp, flex:1.5, minWidth:110 }}/>
+                        <input type="number" min="1" value={mF.sG} onChange={e=>setMF({...mF,sG:e.target.value})} style={{ ...inp, flex:"0 0 65px", width:65 }} placeholder="Gls"/>
                         <button type="button" onClick={addS} style={{ background:"#CC0000", color:"#fff", border:"none", padding:"0 16px", fontSize:13, fontWeight:700, borderRadius:6, cursor:"pointer", whiteSpace:"nowrap", height:42 }}>ADD</button>
                       </div>
                       {mF.sc.map((s,i) => (
                         <div key={i} style={{ background:"#fff", padding:"8px 12px", border:"1px solid #e2e8f0", borderLeft:"3px solid #CC0000", display:"flex", justifyContent:"space-between", alignItems:"center", borderRadius:5, fontSize:13, fontWeight:600, marginBottom:5 }}>
-                          <div>{s.name} <span style={{ color:"#CC0000", marginLeft:8 }}>{s.goals} GOALS</span></div>
+                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                            <span>{s.name}</span>
+                            {s.isGuest && <span style={{ background:"#f1f5f9", color:"#64748b", border:"1px solid #cbd5e1", fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4 }}>GUEST</span>}
+                            <span style={{ color:"#CC0000", marginLeft:4 }}>{s.goals} GOALS</span>
+                          </div>
                           <button type="button" onClick={()=>remS(i)} style={{ background:"#fee2e2", color:"#ef4444", border:"none", padding:"3px 8px", borderRadius:3, cursor:"pointer", fontWeight:700, fontSize:12 }}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Assists */}
+                    <div style={{ background:"#f8fafc", padding:14, borderRadius:8, border:"1px solid #e2e8f0" }}>
+                      <div style={{ fontSize:14, fontWeight:700, color:"#0f172a", marginBottom:10 }}>ASSIST PROVIDERS</div>
+                      <div style={{ display:"flex", gap:8, marginBottom:10, flexWrap:isMobile?"wrap":"nowrap" }}>
+                        <select value={mF.aI} onChange={e=>setMF({...mF,aI:e.target.value, aGuest:""})} style={{ ...selectStyle, flex:2, minWidth:0 }}>
+                          <option value="">Select Team Player...</option>
+                          {plrs.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                        <input type="text" placeholder="Or Guest Name" value={mF.aGuest} onChange={e=>setMF({...mF, aGuest:e.target.value, aI:""})} style={{ ...inp, flex:1.5, minWidth:110 }}/>
+                        <input type="number" min="1" value={mF.aG} onChange={e=>setMF({...mF,aG:e.target.value})} style={{ ...inp, flex:"0 0 65px", width:65 }} placeholder="Ast"/>
+                        <button type="button" onClick={addA} style={{ background:"#d97706", color:"#fff", border:"none", padding:"0 16px", fontSize:13, fontWeight:700, borderRadius:6, cursor:"pointer", whiteSpace:"nowrap", height:42 }}>ADD</button>
+                      </div>
+                      {mF.as.map((a,i) => (
+                        <div key={i} style={{ background:"#fff", padding:"8px 12px", border:"1px solid #e2e8f0", borderLeft:"3px solid #d97706", display:"flex", justifyContent:"space-between", alignItems:"center", borderRadius:5, fontSize:13, fontWeight:600, marginBottom:5 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                            <span>{a.name}</span>
+                            {a.isGuest && <span style={{ background:"#f1f5f9", color:"#64748b", border:"1px solid #cbd5e1", fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4 }}>GUEST</span>}
+                            <span style={{ color:"#d97706", marginLeft:4 }}>{a.assists} ASSISTS</span>
+                          </div>
+                          <button type="button" onClick={()=>remA(i)} style={{ background:"#fee2e2", color:"#ef4444", border:"none", padding:"3px 8px", borderRadius:3, cursor:"pointer", fontWeight:700, fontSize:12 }}>✕</button>
                         </div>
                       ))}
                     </div>
@@ -423,7 +566,10 @@ export default function AdminDashboard({ onBack }) {
                         </div>
                         <div style={{ fontSize:11, color:"#64748b", fontWeight:600, marginTop:2 }}>{m.date} · {m.competition} · {m.result !== "upcoming" ? `${m.nafcScore}–${m.opponentScore} (${m.result})` : "Upcoming"}</div>
                       </div>
-                      <button onClick={()=>del("matches",m.id)} style={{ background:"#fee2e2", color:"#ef4444", border:"1px solid #fca5a5", padding:"5px 10px", borderRadius:5, fontWeight:700, fontSize:11, cursor:"pointer", flexShrink:0 }}>DELETE</button>
+                      <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                        <button onClick={()=>oEM(m)} style={{ background:"#e0e7ff", color:"#3730a3", border:"1px solid #c7d2fe", padding:"5px 12px", borderRadius:5, fontWeight:700, fontSize:11, cursor:"pointer" }}>✏️ EDIT</button>
+                        <button onClick={()=>del("matches",m.id)} style={{ background:"#fee2e2", color:"#ef4444", border:"1px solid #fca5a5", padding:"5px 10px", borderRadius:5, fontWeight:700, fontSize:11, cursor:"pointer" }}>DELETE</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -541,6 +687,124 @@ export default function AdminDashboard({ onBack }) {
             <div style={{ display:"flex", gap:10, marginTop:20 }}>
               <button type="submit" disabled={ld} style={{ background:ld?"#94a3b8":"#0033a0", color:"#fff", flex:2, padding:12, border:"none", fontSize:14, fontWeight:700, cursor:ld?"wait":"pointer", borderRadius:6 }}>{ld?"SAVING...":"SAVE CHANGES"}</button>
               <button type="button" onClick={()=>setEdP(null)} style={{ background:"#f1f5f9", color:"#475569", border:"1px solid #cbd5e1", flex:1, padding:12, fontSize:14, fontWeight:700, cursor:"pointer", borderRadius:6 }}>CANCEL</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* EDIT MATCH MODAL */}
+      {edM && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.75)", backdropFilter:"blur(3px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, padding:16 }}>
+          <form onSubmit={updM} style={{ background:"#fff", padding:isMobile?"20px":"28px", width:"100%", maxWidth:560, borderRadius:10, boxShadow:"0 10px 40px rgba(0,0,0,0.2)", maxHeight:"90vh", overflowY:"auto" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:"2px solid #0033a0", paddingBottom:10, marginBottom:18 }}>
+              <div style={{ fontSize:isMobile?16:20, fontWeight:800, color:"#0033a0" }}>EDIT MATCH</div>
+              <button type="button" onClick={()=>setEdM(null)} style={{ background:"#f1f5f9", color:"#64748b", border:"1px solid #cbd5e1", padding:"4px 10px", borderRadius:4, fontSize:11, fontWeight:700, cursor:"pointer" }}>✕</button>
+            </div>
+
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:10 }}>
+                <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Opponent
+                  <input value={edM.opponent} onChange={e=>setEdM({...edM,opponent:e.target.value})} placeholder="Opponent" required style={{ ...inp, marginTop:4 }}/>
+                </label>
+                <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Date
+                  <input type="date" value={edM.date} onChange={e=>setEdM({...edM,date:e.target.value})} required style={{ ...inp, marginTop:4 }}/>
+                </label>
+              </div>
+
+              <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:10 }}>
+                <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Competition
+                  <input value={edM.competition} onChange={e=>setEdM({...edM,competition:e.target.value})} placeholder="e.g. Bangalore Cup" style={{ ...inp, marginTop:4 }}/>
+                </label>
+                <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Venue
+                  <input value={edM.venue} onChange={e=>setEdM({...edM,venue:e.target.value})} placeholder="e.g. Dribble Arena" style={{ ...inp, marginTop:4 }}/>
+                </label>
+              </div>
+
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10 }}>
+                <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Result
+                  <select value={edM.result} onChange={e=>setEdM({...edM,result:e.target.value})} style={{ ...selectStyle, marginTop:4 }}>
+                    <option value="W">Win (W)</option>
+                    <option value="L">Loss (L)</option>
+                    <option value="D">Draw (D)</option>
+                    <option value="upcoming">Upcoming</option>
+                  </select>
+                </label>
+                <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>NAFC Score
+                  <input type="number" min="0" value={edM.nafcScore} onChange={e=>setEdM({...edM,nafcScore:e.target.value})} style={{ ...inp, marginTop:4 }}/>
+                </label>
+                <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Opponent Score
+                  <input type="number" min="0" value={edM.opponentScore} onChange={e=>setEdM({...edM,opponentScore:e.target.value})} style={{ ...inp, marginTop:4 }}/>
+                </label>
+              </div>
+
+              {/* Goal Scorers */}
+              <div style={{ background:"#f8fafc", padding:12, borderRadius:8, border:"1px solid #e2e8f0" }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#0f172a", marginBottom:8 }}>⚽ GOAL SCORERS</div>
+                <div style={{ display:"flex", gap:8, marginBottom:8, flexWrap:isMobile?"wrap":"nowrap" }}>
+                  <select value={edM.sI} onChange={e=>setEdM({...edM,sI:e.target.value, sGuest:""})} style={{ ...selectStyle, flex:2, minWidth:0 }}>
+                    <option value="">Select Team Player...</option>
+                    {plrs.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                  <input type="text" placeholder="Or Guest Name" value={edM.sGuest} onChange={e=>setEdM({...edM, sGuest:e.target.value, sI:""})} style={{ ...inp, flex:1.5, minWidth:110 }}/>
+                  <input type="number" min="1" value={edM.sG} onChange={e=>setEdM({...edM,sG:e.target.value})} style={{ ...inp, flex:"0 0 60px", width:60 }} placeholder="Gls"/>
+                  <button type="button" onClick={addEdS} style={{ background:"#CC0000", color:"#fff", border:"none", padding:"0 14px", fontSize:12, fontWeight:700, borderRadius:6, cursor:"pointer" }}>ADD</button>
+                </div>
+                {edM.scorers.map((s,i) => (
+                  <div key={i} style={{ background:"#fff", padding:"6px 10px", border:"1px solid #e2e8f0", borderLeft:"3px solid #CC0000", display:"flex", justifyContent:"space-between", alignItems:"center", borderRadius:5, fontSize:12, fontWeight:600, marginBottom:4 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <span>{s.name}</span>
+                      {s.isGuest && <span style={{ background:"#f1f5f9", color:"#64748b", border:"1px solid #cbd5e1", fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4 }}>GUEST</span>}
+                      <span style={{ color:"#CC0000", marginLeft:4 }}>{s.goals} GOALS</span>
+                    </div>
+                    <button type="button" onClick={()=>remEdS(i)} style={{ background:"#fee2e2", color:"#ef4444", border:"none", padding:"2px 6px", borderRadius:3, cursor:"pointer", fontWeight:700, fontSize:11 }}>✕</button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Assist Providers */}
+              <div style={{ background:"#f8fafc", padding:12, borderRadius:8, border:"1px solid #e2e8f0" }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#0f172a", marginBottom:8 }}>🅰️ ASSIST PROVIDERS</div>
+                <div style={{ display:"flex", gap:8, marginBottom:8, flexWrap:isMobile?"wrap":"nowrap" }}>
+                  <select value={edM.aI} onChange={e=>setEdM({...edM,aI:e.target.value, aGuest:""})} style={{ ...selectStyle, flex:2, minWidth:0 }}>
+                    <option value="">Select Team Player...</option>
+                    {plrs.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                  <input type="text" placeholder="Or Guest Name" value={edM.aGuest} onChange={e=>setEdM({...edM, aGuest:e.target.value, aI:""})} style={{ ...inp, flex:1.5, minWidth:110 }}/>
+                  <input type="number" min="1" value={edM.aG} onChange={e=>setEdM({...edM,aG:e.target.value})} style={{ ...inp, flex:"0 0 60px", width:60 }} placeholder="Ast"/>
+                  <button type="button" onClick={addEdA} style={{ background:"#d97706", color:"#fff", border:"none", padding:"0 14px", fontSize:12, fontWeight:700, borderRadius:6, cursor:"pointer" }}>ADD</button>
+                </div>
+                {edM.assisters.map((a,i) => (
+                  <div key={i} style={{ background:"#fff", padding:"6px 10px", border:"1px solid #e2e8f0", borderLeft:"3px solid #d97706", display:"flex", justifyContent:"space-between", alignItems:"center", borderRadius:5, fontSize:12, fontWeight:600, marginBottom:4 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <span>{a.name}</span>
+                      {a.isGuest && <span style={{ background:"#f1f5f9", color:"#64748b", border:"1px solid #cbd5e1", fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4 }}>GUEST</span>}
+                      <span style={{ color:"#d97706", marginLeft:4 }}>{a.assists} ASSISTS</span>
+                    </div>
+                    <button type="button" onClick={()=>remEdA(i)} style={{ background:"#fee2e2", color:"#ef4444", border:"none", padding:"2px 6px", borderRadius:3, cursor:"pointer", fontWeight:700, fontSize:11 }}>✕</button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Lineup / Appearances */}
+              <div style={{ background:"#f8fafc", padding:12, borderRadius:8, border:"1px solid #e2e8f0" }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#0f172a", marginBottom:8 }}>SQUAD LINEUP ({edM.ap.length} PLAYERS)</div>
+                <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr 1fr":"1fr 1fr 1fr", gap:6, maxHeight:140, overflowY:"auto" }}>
+                  {plrs.map(p => {
+                    const sel = edM.ap.includes(p.id);
+                    return (
+                      <div key={p.id} onClick={()=>tggEdA(p.id)} style={{ background:sel?"#0033a0":"#fff", color:sel?"#fff":"#475569", border:`1px solid ${sel?"#0033a0":"#cbd5e1"}`, padding:"6px 8px", borderRadius:5, cursor:"pointer", display:"flex", justifyContent:"space-between", fontSize:11, fontWeight:600 }}>
+                        <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</span>
+                        <span style={{ opacity:sel?1:0.4, marginLeft:4 }}>#{p.jersey}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display:"flex", gap:10, marginTop:18 }}>
+              <button type="submit" disabled={ld} style={{ background:ld?"#94a3b8":"#0033a0", color:"#fff", flex:2, padding:12, border:"none", fontSize:14, fontWeight:700, cursor:ld?"wait":"pointer", borderRadius:6 }}>{ld?"SAVING...":"SAVE CHANGES"}</button>
+              <button type="button" onClick={()=>setEdM(null)} style={{ background:"#f1f5f9", color:"#475569", border:"1px solid #cbd5e1", flex:1, padding:12, fontSize:14, fontWeight:700, cursor:"pointer", borderRadius:6 }}>CANCEL</button>
             </div>
           </form>
         </div>

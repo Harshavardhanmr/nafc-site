@@ -11,7 +11,6 @@ const HUDDLE_DEFAULT = "/huddle.jpg";
 const T_RED    = "#E8002D";
 const T_BG     = "#f0eeec";
 const T_BG2    = "#e8e6e3";
-const T_BG3    = "#dddad6";
 const T_GOLD   = "#d97706";
 const T_BORDER = "rgba(0,0,0,0.10)";
 const T_LIGHT  = "#111111";
@@ -63,6 +62,8 @@ function MatchModal({ match, onClose }) {
   const scorers = match.scorers || [];
   const assists = match.assisters || [];
   const summary = match.summary || "";
+  const totalGoals = scorers.reduce((sum, s) => sum + (typeof s === "object" && s.goals ? Number(s.goals) : 1), 0);
+  const totalAssists = assists.reduce((sum, a) => sum + (typeof a === "object" && a.assists ? Number(a.assists) : 1), 0);
   return (
     <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:16, backdropFilter:"blur(16px)" }}>
       <div onClick={e=>e.stopPropagation()} style={{ background:"#ffffff", border:`1px solid ${T_BORDER}`, borderTop:`4px solid ${ac}`, borderRadius:20, width:"100%", maxWidth:560, maxHeight:"90vh", overflowY:"auto", animation:"fadeUp 0.25s ease", boxShadow:"0 32px 80px rgba(0,0,0,0.35)" }}>
@@ -101,27 +102,53 @@ function MatchModal({ match, onClose }) {
         <div style={{ padding:"20px" }}>
           {scorers.length > 0 && (
             <div style={{ marginBottom:16 }}>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, letterSpacing:4, color:T_RED, marginBottom:10 }}>⚽ GOAL SCORERS ({scorers.length})</div>
-              {scorers.map((s,i) => (
-                <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 12px", background:"rgba(0,0,0,0.03)", borderRadius:8, border:`1px solid ${T_BORDER}`, marginBottom:5 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                    <div style={{ width:26, height:26, borderRadius:"50%", background:"rgba(232,0,45,0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12 }}>⚽</div>
-                    <span style={{ fontWeight:600, color:"#111", fontSize:13 }}>{typeof s==="string"?s:s.name}</span>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, letterSpacing:4, color:T_RED, marginBottom:10 }}>⚽ GOALS ({totalGoals})</div>
+              {scorers.map((s,i) => {
+                const sName = typeof s==="string"?s:s.name;
+                const sGoals = typeof s==="object"&&s.goals?s.goals:1;
+                const isGuest = typeof s==="object"?(s.isGuest||(s.id&&String(s.id).startsWith("guest_"))||sName.toLowerCase().includes("guest")):sName.toLowerCase().includes("guest");
+                return (
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 12px", background:"rgba(0,0,0,0.03)", borderRadius:8, border:`1px solid ${T_BORDER}`, marginBottom:5 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <div style={{ width:26, height:26, borderRadius:"50%", background:"rgba(232,0,45,0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12 }}>⚽</div>
+                      <span style={{ fontWeight:600, color:"#111", fontSize:13 }}>{sName}</span>
+                      {isGuest && <span style={{ background:"rgba(0,0,0,0.05)", color:"#64748b", border:"1px solid rgba(0,0,0,0.1)", fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4 }}>GUEST</span>}
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      {sGoals > 1 && (
+                        <span style={{ fontFamily:"'Bebas Neue',sans-serif", color:T_RED, background:"rgba(232,0,45,0.1)", border:"1px solid rgba(232,0,45,0.2)", padding:"2px 8px", borderRadius:6, fontSize:11, letterSpacing:1 }}>
+                          {sGoals} GOALS
+                        </span>
+                      )}
+                      {typeof s==="object"&&s.minute&&<span style={{ fontFamily:"'Bebas Neue',sans-serif", color:"rgba(0,0,0,0.4)", fontSize:12 }}>{s.minute}'</span>}
+                    </div>
                   </div>
-                  {typeof s==="object"&&s.minute&&<span style={{ fontFamily:"'Bebas Neue',sans-serif", color:"rgba(0,0,0,0.4)", fontSize:12 }}>{s.minute}'</span>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
           {assists.length > 0 && (
             <div style={{ marginBottom:16 }}>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, letterSpacing:4, color:T_GOLD, marginBottom:10 }}>🅰️ ASSISTS ({assists.length})</div>
-              {assists.map((a,i) => (
-                <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", background:"rgba(0,0,0,0.03)", borderRadius:8, border:`1px solid ${T_BORDER}`, marginBottom:5 }}>
-                  <div style={{ width:26, height:26, borderRadius:"50%", background:"rgba(217,119,6,0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12 }}>🅰️</div>
-                  <span style={{ fontWeight:600, color:"#111", fontSize:13 }}>{typeof a==="string"?a:a.name}</span>
-                </div>
-              ))}
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, letterSpacing:4, color:T_GOLD, marginBottom:10 }}>🅰️ ASSISTS ({totalAssists})</div>
+              {assists.map((a,i) => {
+                const aName = typeof a==="string"?a:a.name;
+                const aCount = typeof a==="object"&&a.assists?a.assists:1;
+                const isGuest = typeof a==="object"?(a.isGuest||(a.id&&String(a.id).startsWith("guest_"))||aName.toLowerCase().includes("guest")):aName.toLowerCase().includes("guest");
+                return (
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 12px", background:"rgba(0,0,0,0.03)", borderRadius:8, border:`1px solid ${T_BORDER}`, marginBottom:5 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <div style={{ width:26, height:26, borderRadius:"50%", background:"rgba(217,119,6,0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12 }}>🅰️</div>
+                      <span style={{ fontWeight:600, color:"#111", fontSize:13 }}>{aName}</span>
+                      {isGuest && <span style={{ background:"rgba(0,0,0,0.05)", color:"#64748b", border:"1px solid rgba(0,0,0,0.1)", fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4 }}>GUEST</span>}
+                    </div>
+                    {aCount > 1 && (
+                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", color:T_GOLD, background:"rgba(217,119,6,0.1)", border:"1px solid rgba(217,119,6,0.2)", padding:"2px 8px", borderRadius:6, fontSize:11, letterSpacing:1 }}>
+                        {aCount} ASSISTS
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
           {summary
@@ -199,6 +226,8 @@ function AppShell() {
   const [selMatch, setSelMatch] = useState(null);
   const [selStatPlayer, setSelStatPlayer] = useState(null);
   const [pFltr, setPFltr] = useState("All");
+  const [statTab, setStatTab] = useState("season");
+  const [selMonth, setSelMonth] = useState("");
   const [srch, setSrch] = useState("");
   const [lightbox, setLightbox] = useState(null);
   const [plrs, setPlrs] = useState([]);
@@ -210,7 +239,6 @@ function AppShell() {
   const w = useWindowWidth();
   const isMobile = w < 768;
   const isTablet = w >= 768 && w < 1024;
-  const isDesktop = w >= 1024;
 
   useEffect(() => {
     const uP = onSnapshot(collection(db,"players"), s => setPlrs(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.jersey-b.jersey)));
@@ -249,6 +277,88 @@ function AppShell() {
   const losses = played.filter(m=>m.result==="L").length;
   const draws  = played.filter(m=>m.result==="D").length;
   const fPlrs  = plrs.filter(p=>(pFltr==="All"||p.pos===pFltr)&&p.name.toLowerCase().includes(srch.toLowerCase()));
+
+  // ── Monthly Stats Aggregation ──
+  const availableMonths = Array.from(
+    new Set(
+      played
+        .map(m => (m.date ? String(m.date).slice(0, 7) : null))
+        .filter(Boolean)
+    )
+  ).sort((a, b) => b.localeCompare(a));
+
+  const activeMonth = selMonth || (availableMonths[0] || new Date().toISOString().slice(0, 7));
+
+  const getMonthLabel = (ym) => {
+    if (!ym) return "";
+    const parts = ym.split("-");
+    if (parts.length < 2) return ym;
+    const year = Number(parts[0]);
+    const month = Number(parts[1]) - 1;
+    const d = new Date(year, month, 1);
+    return isNaN(d.getTime()) ? ym : d.toLocaleString("en-US", { month: "long", year: "numeric" }).toUpperCase();
+  };
+
+  const monthMatches = played.filter(m => m.date && String(m.date).startsWith(activeMonth));
+  const monthWins = monthMatches.filter(m => m.result === "W").length;
+  const monthLosses = monthMatches.filter(m => m.result === "L").length;
+  const monthDraws = monthMatches.filter(m => m.result === "D").length;
+  const monthGoalsCount = monthMatches.reduce((a, m) => a + (Number(m.nafcScore) || 0), 0);
+
+  const playerMonthlyStats = plrs.map(p => {
+    let goals = 0;
+    let assists = 0;
+    let appearances = 0;
+
+    monthMatches.forEach(m => {
+      if ((m.ap && m.ap.includes(p.id)) || (m.appearances && m.appearances.includes(p.id))) {
+        appearances += 1;
+      } else if (
+        (m.scorers && m.scorers.some(s => (typeof s === "object" ? s.id === p.id || s.name === p.name : s === p.name))) ||
+        (m.assisters && m.assisters.some(a => (typeof a === "object" ? a.id === p.id || a.name === p.name : a === p.name)))
+      ) {
+        appearances += 1;
+      }
+
+      if (m.scorers) {
+        m.scorers.forEach(s => {
+          if (typeof s === "object") {
+            if (s.id === p.id || s.name === p.name) {
+              goals += Number(s.goals) || 1;
+            }
+          } else if (s === p.name) {
+            goals += 1;
+          }
+        });
+      }
+
+      if (m.assisters) {
+        m.assisters.forEach(a => {
+          if (typeof a === "object") {
+            if (a.id === p.id || a.name === p.name) {
+              assists += Number(a.assists) || 1;
+            }
+          } else if (a === p.name) {
+            assists += 1;
+          }
+        });
+      }
+    });
+
+    return {
+      ...p,
+      monthGoals: goals,
+      monthAssists: assists,
+      monthAppearances: appearances,
+      monthContributions: goals + assists,
+    };
+  });
+
+  const topScorerMonth = [...playerMonthlyStats].sort((a,b) => b.monthGoals - a.monthGoals)[0];
+  const topAssistMonth = [...playerMonthlyStats].sort((a,b) => b.monthAssists - a.monthAssists)[0];
+  const topPerformerMonth = [...playerMonthlyStats]
+    .filter(p => p.monthContributions > 0 || p.monthAppearances > 0)
+    .sort((a, b) => b.monthContributions - a.monthContributions || b.monthGoals - a.monthGoals || b.monthAppearances - a.monthAppearances)[0];
 
   const go = p => { setPg(p); setSel(null); setSrch(""); setMobileNav(false); window.scrollTo(0,0); };
 
@@ -816,58 +926,171 @@ function AppShell() {
             <div style={{ background:`linear-gradient(135deg,${T_BG} 0%,${T_BG2} 100%)`, borderBottom:"1px solid rgba(0,0,0,0.08)", padding:`${isMobile?"28px":"46px"} ${px} ${isMobile?"20px":"32px"}`, position:"relative", overflow:"hidden" }}>
               <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 59px,rgba(0,0,0,0.02) 59px,rgba(0,0,0,0.02) 60px),repeating-linear-gradient(90deg,transparent,transparent 59px,rgba(0,0,0,0.02) 59px,rgba(0,0,0,0.02) 60px)" }} />
               <div style={{ maxWidth:1100, margin:"0 auto", position:"relative", zIndex:1 }}>
-                <div className="section-label" style={{ marginBottom:8 }}>SEASON 2026</div>
-                <div className="bebas" style={{ fontSize: isMobile?38:isTablet?50:58, color:"#111", lineHeight:0.88 }}>PLAYER <span style={{ color:T_RED }}>STATISTICS</span></div>
-                <div style={{ fontSize:10, color:"rgba(0,0,0,0.32)", marginTop:10, letterSpacing:1 }}>↓ Click any player to view their full profile</div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems: isMobile?"flex-start":"flex-end", flexWrap:"wrap", gap:14 }}>
+                  <div>
+                    <div className="section-label" style={{ marginBottom:8, fontSize:12 }}>{statTab==="season" ? "SEASON 2026" : getMonthLabel(activeMonth)}</div>
+                    <div className="bebas" style={{ fontSize: isMobile?42:isTablet?54:62, color:"#111", lineHeight:0.88 }}>PLAYER <span style={{ color:T_RED }}>STATISTICS</span></div>
+                    <div style={{ fontSize:11, color:"rgba(0,0,0,0.4)", marginTop:10, letterSpacing:1 }}>↓ Click any player to view their full profile</div>
+                  </div>
+                  {/* Tab switcher */}
+                  <div style={{ display:"flex", gap:4, background:"rgba(0,0,0,0.05)", border:"1px solid rgba(0,0,0,0.08)", padding:4, borderRadius:10 }}>
+                    <button onClick={() => setStatTab("season")} className="bebas" style={{ background:statTab==="season"?T_RED:"transparent", color:statTab==="season"?"#fff":"rgba(0,0,0,0.5)", border:"none", padding:isMobile?"8px 14px":"10px 22px", fontSize:isMobile?12:14, cursor:"pointer", letterSpacing:2, borderRadius:7, transition:"all 0.2s" }}>
+                      🏆 ALL-TIME SEASON
+                    </button>
+                    <button onClick={() => setStatTab("month")} className="bebas" style={{ background:statTab==="month"?T_RED:"transparent", color:statTab==="month"?"#fff":"rgba(0,0,0,0.5)", border:"none", padding:isMobile?"8px 14px":"10px 22px", fontSize:isMobile?12:14, cursor:"pointer", letterSpacing:2, borderRadius:7, transition:"all 0.2s" }}>
+                      📅 MONTHLY LEADERS
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-            <div style={{ maxWidth:1100, margin:"0 auto", padding:`24px ${px} 0` }}>
-              {/* Summary cards */}
-              <div className="stat-grid-4" style={{ display:"grid", gap:isMobile?8:12, marginBottom:24 }}>
-                {[["TOTAL GOALS",plrs.reduce((a,p)=>a+(p.goals||0),0),T_RED],["TOTAL ASSISTS",plrs.reduce((a,p)=>a+(p.assists||0),0),T_GOLD],["SQUAD SIZE",plrs.length,"#2563eb"],["MATCHES PLAYED",played.length,"#16a34a"]].map(([l,v,c]) => (
-                  <div key={l} style={{ background:"#f7f5f2", border:"1px solid rgba(0,0,0,0.08)", padding: isMobile?"14px 12px":"20px 18px", borderTop:`3px solid ${c}`, borderRadius:12 }}>
-                    <div className="bebas" style={{ fontSize: isMobile?32:42, color:c, lineHeight:1 }}><StatNum value={v} /></div>
-                    <div style={{ fontSize:8, letterSpacing:3, color:"rgba(0,0,0,0.4)", marginTop:5, fontFamily:"'Bebas Neue',sans-serif" }}>{l}</div>
-                  </div>
-                ))}
-              </div>
 
-              {/* Leaderboards — always 3 cols on tablet+, single col on mobile */}
-              <div className="stat-grid-3" style={{ display:"grid", gap:isMobile?12:14 }}>
-                {[{title:"TOP SCORERS",key:"goals",color:T_RED,icon:"⚽"},{title:"TOP ASSISTS",key:"assists",color:T_GOLD,icon:"🅰️"},{title:"APPEARANCES",key:"appearances",color:"#16a34a",icon:"🎽"}].map(board => {
-                  const sorted = [...plrs].sort((a,b)=>(b[board.key]||0)-(a[board.key]||0));
-                  return (
-                    <div key={board.title} className="stat-card">
-                      <div style={{ padding:"14px 16px 12px", borderBottom:"1px solid rgba(0,0,0,0.06)", background:"linear-gradient(135deg,#fafafa,#f5f3f0)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                        <div>
-                          <div className="bebas" style={{ fontSize:13, color:"#111", letterSpacing:2 }}>{board.title}</div>
-                          <div style={{ fontSize:8, color:"rgba(0,0,0,0.3)", letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:1 }}>{sorted.length} PLAYERS</div>
+            <div style={{ maxWidth:1100, margin:"0 auto", padding:`24px ${px} 0` }}>
+              {statTab === "month" ? (
+                <>
+                  {/* Month Pills Selector */}
+                  {availableMonths.length > 0 && (
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:22, flexWrap:"wrap" }}>
+                      <span className="section-label" style={{ marginRight:4, fontSize:12 }}>SELECT MONTH:</span>
+                      {availableMonths.map(ym => (
+                        <button key={ym} onClick={() => setSelMonth(ym)} className="bebas" style={{ background:activeMonth===ym?T_RED:"rgba(0,0,0,0.04)", color:activeMonth===ym?"#fff":"rgba(0,0,0,0.65)", border:`1px solid ${activeMonth===ym?T_RED:"rgba(0,0,0,0.08)"}`, padding:"8px 18px", fontSize:isMobile?12:13, letterSpacing:2, borderRadius:8, cursor:"pointer", transition:"all 0.2s" }}>
+                          {getMonthLabel(ym)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Player of the Month Spotlight Banner */}
+                  {topPerformerMonth && (topPerformerMonth.monthContributions > 0 || topPerformerMonth.monthAppearances > 0) && (
+                    <div style={{ background:"linear-gradient(135deg, #18181b 0%, #27272a 100%)", borderRadius:16, border:"1px solid rgba(255,255,255,0.1)", padding: isMobile?"20px 18px":"24px 32px", marginBottom:24, display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:16, boxShadow:"0 12px 32px rgba(0,0,0,0.15)", position:"relative", overflow:"hidden" }}>
+                      <div style={{ position:"absolute", right:-10, bottom:-20, fontSize:130, fontFamily:"'Bebas Neue',sans-serif", opacity:0.04, color:"#fff", pointerEvents:"none" }}>#{topPerformerMonth.jersey}</div>
+                      <div style={{ display:"flex", alignItems:"center", gap:18, zIndex:1 }}>
+                        <div style={{ width:isMobile?64:78, height:isMobile?64:78, borderRadius:"50%", background:`${POS_COLOR[topPerformerMonth.pos]||T_RED}20`, border:`2.5px solid ${POS_COLOR[topPerformerMonth.pos]||T_RED}`, overflow:"hidden", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                          {topPerformerMonth.photoURL ? <img src={topPerformerMonth.photoURL} alt={topPerformerMonth.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }} /> : <span className="bebas" style={{ fontSize:22, color:"#fff" }}>#{topPerformerMonth.jersey}</span>}
                         </div>
-                        <div style={{ fontSize:16 }}>{board.icon}</div>
+                        <div>
+                          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4, flexWrap:"wrap" }}>
+                            <span style={{ background:"#d97706", color:"white", fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:2, padding:"3px 10px", borderRadius:4 }}>⭐ PLAYER OF THE MONTH</span>
+                            <span style={{ color:"rgba(255,255,255,0.5)", fontSize:11, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif" }}>{getMonthLabel(activeMonth)}</span>
+                          </div>
+                          <div className="bebas" style={{ fontSize:isMobile?28:38, color:"#fff", letterSpacing:1, lineHeight:1 }}>{topPerformerMonth.name}</div>
+                          <div style={{ fontSize:12, color:POS_COLOR[topPerformerMonth.pos]||T_RED, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:4 }}>{topPerformerMonth.pos.toUpperCase()} · #{topPerformerMonth.jersey}</div>
+                        </div>
                       </div>
-                      <div style={{ padding:"4px 10px 8px", maxHeight:380, overflowY:"auto" }}>
-                        {sorted.map((p,i) => (
-                          <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)}>
-                            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                              <div style={{ width:20, textAlign:"center" }}>
-                                <div className="bebas" style={{ fontSize:i===0?15:12, color:i===0?board.color:i<3?"rgba(0,0,0,0.35)":"rgba(0,0,0,0.2)", lineHeight:1 }}>{i+1}</div>
-                              </div>
-                              <div style={{ width:30, height:30, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
-                                {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top" }} />:<span className="bebas" style={{ fontSize:9, color:"rgba(0,0,0,0.3)" }}>#{p.jersey}</span>}
-                              </div>
-                              <div>
-                                <div style={{ fontWeight:600, fontSize:12, color:"#111", lineHeight:1.2 }}>{p.name}</div>
-                                <div style={{ fontSize:8, letterSpacing:2, color:`${POS_COLOR[p.pos]||T_RED}`, fontFamily:"'Bebas Neue',sans-serif", marginTop:1 }}>{p.pos.slice(0,3).toUpperCase()}</div>
-                              </div>
-                            </div>
-                            <div className="bebas" style={{ fontSize:20, color:i===0?board.color:"rgba(0,0,0,0.4)", lineHeight:1 }}>{p[board.key]||0}</div>
+                      <div style={{ display:"flex", gap:14, zIndex:1, flexWrap:"wrap" }}>
+                        {[["GOALS",topPerformerMonth.monthGoals,T_RED],["ASSISTS",topPerformerMonth.monthAssists,T_GOLD],["MATCHES",topPerformerMonth.monthAppearances,"#3b82f6"]].map(([l,v,c]) => (
+                          <div key={l} style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"12px 18px", textAlign:"center", minWidth:76 }}>
+                            <div className="bebas" style={{ fontSize:isMobile?26:34, color:c, lineHeight:1 }}>{v}</div>
+                            <div style={{ fontSize:10, letterSpacing:2, color:"rgba(255,255,255,0.55)", fontFamily:"'Bebas Neue',sans-serif", marginTop:3 }}>{l}</div>
                           </div>
                         ))}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  )}
+
+                  {/* Monthly Summary cards */}
+                  <div className="stat-grid-4" style={{ display:"grid", gap:isMobile?10:14, marginBottom:24 }}>
+                    {[["MONTHLY RECORD",`${monthWins}W - ${monthDraws}D - ${monthLosses}L`,"#2563eb"],["GOALS SCORED",monthGoalsCount,T_RED],["TOP SCORER",topScorerMonth&&topScorerMonth.monthGoals>0?`${topScorerMonth.name} (${topScorerMonth.monthGoals})`:"—",T_GOLD],["TOP PLAYMAKER",topAssistMonth&&topAssistMonth.monthAssists>0?`${topAssistMonth.name} (${topAssistMonth.monthAssists})`:"—","#16a34a"]].map(([l,v,c]) => (
+                      <div key={l} style={{ background:"#f7f5f2", border:"1px solid rgba(0,0,0,0.08)", padding: isMobile?"16px 14px":"22px 20px", borderTop:`3px solid ${c}`, borderRadius:12 }}>
+                        <div className="bebas" style={{ fontSize: typeof v==="number"?(isMobile?36:48):(isMobile?22:28), color:c, lineHeight:1.1 }}>
+                          {typeof v==="number" ? <StatNum value={v} /> : v}
+                        </div>
+                        <div style={{ fontSize:11, letterSpacing:2, color:"rgba(0,0,0,0.5)", marginTop:6, fontFamily:"'Bebas Neue',sans-serif" }}>{l}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Monthly Leaderboards — 3 cols */}
+                  <div className="stat-grid-3" style={{ display:"grid", gap:isMobile?12:14 }}>
+                    {[{title:`TOP SCORERS (${getMonthLabel(activeMonth)})`,key:"monthGoals",color:T_RED,icon:"⚽"},{title:`TOP ASSISTS (${getMonthLabel(activeMonth)})`,key:"monthAssists",color:T_GOLD,icon:"🅰️"},{title:`APPEARANCES (${getMonthLabel(activeMonth)})`,key:"monthAppearances",color:"#16a34a",icon:"🎽"}].map(board => {
+                      const sorted = [...playerMonthlyStats].filter(p => (p[board.key]||0) > 0).sort((a,b)=>(b[board.key]||0)-(a[board.key]||0));
+                      return (
+                        <div key={board.title} className="stat-card">
+                          <div style={{ padding:"16px 18px 14px", borderBottom:"1px solid rgba(0,0,0,0.06)", background:"linear-gradient(135deg,#fafafa,#f5f3f0)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                            <div>
+                              <div className="bebas" style={{ fontSize:15, color:"#111", letterSpacing:2 }}>{board.title}</div>
+                              <div style={{ fontSize:10, color:"rgba(0,0,0,0.4)", letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{sorted.length} ACTIVE PLAYERS</div>
+                            </div>
+                            <div style={{ fontSize:18 }}>{board.icon}</div>
+                          </div>
+                          <div style={{ padding:"6px 12px 10px", maxHeight:400, overflowY:"auto" }}>
+                            {sorted.length === 0 ? (
+                              <div style={{ textAlign:"center", padding:"34px 10px", color:"rgba(0,0,0,0.4)", fontSize:13 }}>
+                                {board.key === "monthAssists" ? "No assists recorded for this month." : board.key === "monthGoals" ? "No goals recorded for this month." : "No appearances recorded for this month."}
+                              </div>
+                            ) : sorted.map((p,i) => (
+                              <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)}>
+                                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                                  <div style={{ width:22, textAlign:"center" }}>
+                                    <div className="bebas" style={{ fontSize:i===0?17:14, color:i===0?board.color:i<3?"rgba(0,0,0,0.4)":"rgba(0,0,0,0.25)", lineHeight:1 }}>{i+1}</div>
+                                  </div>
+                                  <div style={{ width:34, height:34, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
+                                    {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }} />:<span className="bebas" style={{ fontSize:10, color:"rgba(0,0,0,0.3)" }}>#{p.jersey}</span>}
+                                  </div>
+                                  <div>
+                                    <div style={{ fontWeight:600, fontSize:14, color:"#111", lineHeight:1.2 }}>{p.name}</div>
+                                    <div style={{ fontSize:10, letterSpacing:2, color:`${POS_COLOR[p.pos]||T_RED}`, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{p.pos.slice(0,3).toUpperCase()}</div>
+                                  </div>
+                                </div>
+                                <div className="bebas" style={{ fontSize:24, color:i===0?board.color:"rgba(0,0,0,0.5)", lineHeight:1 }}>{p[board.key]||0}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Season All-Time Summary cards */}
+                  <div className="stat-grid-4" style={{ display:"grid", gap:isMobile?10:14, marginBottom:24 }}>
+                    {[["TOTAL GOALS",plrs.reduce((a,p)=>a+(p.goals||0),0),T_RED],["TOTAL ASSISTS",plrs.reduce((a,p)=>a+(p.assists||0),0),T_GOLD],["SQUAD SIZE",plrs.length,"#2563eb"],["MATCHES PLAYED",played.length,"#16a34a"]].map(([l,v,c]) => (
+                      <div key={l} style={{ background:"#f7f5f2", border:"1px solid rgba(0,0,0,0.08)", padding: isMobile?"16px 14px":"22px 20px", borderTop:`3px solid ${c}`, borderRadius:12 }}>
+                        <div className="bebas" style={{ fontSize: isMobile?36:48, color:c, lineHeight:1 }}><StatNum value={v} /></div>
+                        <div style={{ fontSize:11, letterSpacing:2, color:"rgba(0,0,0,0.5)", marginTop:6, fontFamily:"'Bebas Neue',sans-serif" }}>{l}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Season All-Time Leaderboards */}
+                  <div className="stat-grid-3" style={{ display:"grid", gap:isMobile?12:14 }}>
+                    {[{title:"TOP SCORERS",key:"goals",color:T_RED,icon:"⚽"},{title:"TOP ASSISTS",key:"assists",color:T_GOLD,icon:"🅰️"},{title:"APPEARANCES",key:"appearances",color:"#16a34a",icon:"🎽"}].map(board => {
+                      const sorted = [...plrs].sort((a,b)=>(b[board.key]||0)-(a[board.key]||0));
+                      return (
+                        <div key={board.title} className="stat-card">
+                          <div style={{ padding:"16px 18px 14px", borderBottom:"1px solid rgba(0,0,0,0.06)", background:"linear-gradient(135deg,#fafafa,#f5f3f0)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                            <div>
+                              <div className="bebas" style={{ fontSize:15, color:"#111", letterSpacing:2 }}>{board.title}</div>
+                              <div style={{ fontSize:10, color:"rgba(0,0,0,0.4)", letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{sorted.length} PLAYERS</div>
+                            </div>
+                            <div style={{ fontSize:18 }}>{board.icon}</div>
+                          </div>
+                          <div style={{ padding:"6px 12px 10px", maxHeight:400, overflowY:"auto" }}>
+                            {sorted.map((p,i) => (
+                              <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)}>
+                                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                                  <div style={{ width:22, textAlign:"center" }}>
+                                    <div className="bebas" style={{ fontSize:i===0?17:14, color:i===0?board.color:i<3?"rgba(0,0,0,0.4)":"rgba(0,0,0,0.25)", lineHeight:1 }}>{i+1}</div>
+                                  </div>
+                                  <div style={{ width:34, height:34, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
+                                    {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }} />:<span className="bebas" style={{ fontSize:10, color:"rgba(0,0,0,0.3)" }}>#{p.jersey}</span>}
+                                  </div>
+                                  <div>
+                                    <div style={{ fontWeight:600, fontSize:14, color:"#111", lineHeight:1.2 }}>{p.name}</div>
+                                    <div style={{ fontSize:10, letterSpacing:2, color:`${POS_COLOR[p.pos]||T_RED}`, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{p.pos.slice(0,3).toUpperCase()}</div>
+                                  </div>
+                                </div>
+                                <div className="bebas" style={{ fontSize:24, color:i===0?board.color:"rgba(0,0,0,0.5)", lineHeight:1 }}>{p[board.key]||0}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
