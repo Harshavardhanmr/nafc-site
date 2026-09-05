@@ -54,7 +54,7 @@ export default function AdminDashboard({ onBack }) {
 
   const [mF, setMF] = useState({
     op:"", dt:"", vn:"", cp:"Friendly", rs:"W",
-    nS:0, oS:0, ap:[], sc:[], as:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, fmt:"7s"
+    nS:0, oS:0, ap:[], sc:[], as:[], df:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, dI:"", dGuest:"", dB:0, dInt:0, dC:0, fmt:"7s"
   });
 
   useEffect(() => {
@@ -152,7 +152,7 @@ export default function AdminDashboard({ onBack }) {
     setLd(false);
   };
 
-  const oNP = () => setEdP({ name:"", pos:"Midfielder", jersey:0, goals:0, assists:0, appearances:0, cleanSheets:0, saves:0 });
+  const oNP = () => setEdP({ name:"", pos:"Midfielder", jersey:0, goals:0, assists:0, appearances:0, cleanSheets:0, saves:0, blocks:0, interceptions:0, clearances:0 });
 
   const addM = async (e) => {
     e.preventDefault(); setLd(true);
@@ -160,7 +160,7 @@ export default function AdminDashboard({ onBack }) {
       await addDoc(collection(db,"matches"), {
         opponent:mF.op, date:mF.dt, venue:mF.vn, competition:mF.cp,
         result:mF.rs, nafcScore:mF.nS, opponentScore:mF.oS,
-        scorers:mF.sc, assisters:mF.as, fmt:mF.fmt
+        scorers:mF.sc, assisters:mF.as, defensiveActions:mF.df, fmt:mF.fmt
       });
       if (mF.rs !== "upcoming") {
         for (let id of mF.ap) {
@@ -184,8 +184,22 @@ export default function AdminDashboard({ onBack }) {
             if (p.exists()) await updateDoc(r,{ assists:(p.data().assists||0)+a.assists });
           }
         }
+        for (let d of mF.df) {
+          if (!d.isGuest && !String(d.id).startsWith("guest_")) {
+            const r=doc(db,"players",d.id);
+            const p=await getDoc(r);
+            if (p.exists()) {
+              const data = p.data();
+              await updateDoc(r, {
+                blocks: (data.blocks||0) + (d.blocks||0),
+                interceptions: (data.interceptions||0) + (d.interceptions||0),
+                clearances: (data.clearances||0) + (d.clearances||0)
+              });
+            }
+          }
+        }
       }
-      setMF({ op:"", dt:"", vn:"", cp:"Friendly", rs:"W", nS:0, oS:0, ap:[], sc:[], as:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, fmt:"7s" });
+      setMF({ op:"", dt:"", vn:"", cp:"Friendly", rs:"W", nS:0, oS:0, ap:[], sc:[], as:[], df:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, dI:"", dGuest:"", dB:0, dInt:0, dC:0, fmt:"7s" });
       showToast("✅ Match logged and stats updated!");
     } catch (err) { showToast(`❌ Error: ${err.message}`, "error"); }
     setLd(false);
@@ -218,6 +232,24 @@ export default function AdminDashboard({ onBack }) {
   };
   const remA = (i) => setMF(v=>({ ...v, as:v.as.filter((_,idx)=>idx!==i) }));
 
+  const addD = () => {
+    const blocks = parseInt(mF.dB) || 0;
+    const interceptions = parseInt(mF.dInt) || 0;
+    const clearances = parseInt(mF.dC) || 0;
+    if (blocks === 0 && interceptions === 0 && clearances === 0) return;
+
+    if (mF.dGuest && mF.dGuest.trim()) {
+      const name = mF.dGuest.trim();
+      setMF(v=>({ ...v, df:[...v.df, { id:`guest_${Date.now()}`, name:name, isGuest:true, blocks, interceptions, clearances }], dI:"", dGuest:"", dB:0, dInt:0, dC:0 }));
+      return;
+    }
+    if (!mF.dI) return;
+    const p = plrs.find(x=>x.id===mF.dI);
+    if (!p) return;
+    setMF(v=>({ ...v, df:[...v.df, { id:p.id, name:p.name, isGuest:false, blocks, interceptions, clearances }], dI:"", dGuest:"", dB:0, dInt:0, dC:0 }));
+  };
+  const remD = (i) => setMF(v=>({ ...v, df:v.df.filter((_,idx)=>idx!==i) }));
+
   // ── Match Edit Handlers ──
   const oEM = (m) => {
     setEdM({
@@ -231,6 +263,7 @@ export default function AdminDashboard({ onBack }) {
       opponentScore: m.opponentScore ?? 0,
       scorers: m.scorers || [],
       assisters: m.assisters || [],
+      defensiveActions: m.defensiveActions || [],
       ap: m.ap || m.appearances || [],
       fmt: m.fmt || "7s",
       sI: "",
@@ -238,7 +271,12 @@ export default function AdminDashboard({ onBack }) {
       sG: 1,
       aI: "",
       aGuest: "",
-      aG: 1
+      aG: 1,
+      dI: "",
+      dGuest: "",
+      dB: 0,
+      dInt: 0,
+      dC: 0
     });
   };
 
@@ -256,6 +294,7 @@ export default function AdminDashboard({ onBack }) {
         opponentScore: Number(edM.opponentScore),
         scorers: edM.scorers,
         assisters: edM.assisters,
+        defensiveActions: edM.defensiveActions,
         ap: edM.ap,
         fmt: edM.fmt
       });
@@ -292,6 +331,24 @@ export default function AdminDashboard({ onBack }) {
     setEdM(v => ({ ...v, assisters: [...v.assisters, { id: p.id, name: p.name, isGuest: false, assists: parseInt(v.aG) }], aI: "", aGuest: "", aG: 1 }));
   };
   const remEdA = (i) => setEdM(v => ({ ...v, assisters: v.assisters.filter((_, idx) => idx !== i) }));
+
+  const addEdD = () => {
+    const blocks = parseInt(edM.dB) || 0;
+    const interceptions = parseInt(edM.dInt) || 0;
+    const clearances = parseInt(edM.dC) || 0;
+    if (blocks === 0 && interceptions === 0 && clearances === 0) return;
+
+    if (edM.dGuest && edM.dGuest.trim()) {
+      const name = edM.dGuest.trim();
+      setEdM(v => ({ ...v, defensiveActions: [...(v.defensiveActions || []), { id: `guest_${Date.now()}`, name: name, isGuest: true, blocks, interceptions, clearances }], dI: "", dGuest: "", dB: 0, dInt: 0, dC: 0 }));
+      return;
+    }
+    if (!edM.dI) return;
+    const p = plrs.find(x => x.id === edM.dI);
+    if (!p) return;
+    setEdM(v => ({ ...v, defensiveActions: [...(v.defensiveActions || []), { id: p.id, name: p.name, isGuest: false, blocks, interceptions, clearances }], dI: "", dGuest: "", dB: 0, dInt: 0, dC: 0 }));
+  };
+  const remEdD = (i) => setEdM(v => ({ ...v, defensiveActions: (v.defensiveActions || []).filter((_, idx) => idx !== i) }));
 
   const TC = {
     success:{ bg:"#dcfce7", border:"#166534", text:"#166534" },
@@ -539,6 +596,36 @@ export default function AdminDashboard({ onBack }) {
                         </div>
                       ))}
                     </div>
+
+                    {/* Defensive Actions */}
+                    <div style={{ background:"#f8fafc", padding:14, borderRadius:8, border:"1px solid #e2e8f0" }}>
+                      <div style={{ fontSize:14, fontWeight:700, color:"#0f172a", marginBottom:10 }}>🛡️ DEFENSIVE ACTIONS (BLOCKS / INTERCEPTIONS / CLEARANCES)</div>
+                      <div style={{ display:"flex", gap:8, marginBottom:10, flexWrap:isMobile?"wrap":"nowrap" }}>
+                        <select value={mF.dI} onChange={e=>setMF({...mF,dI:e.target.value, dGuest:""})} style={{ ...selectStyle, flex:2, minWidth:0 }}>
+                          <option value="">Select Team Player...</option>
+                          {plrs.map(p=><option key={p.id} value={p.id}>{p.name} ({p.pos.slice(0,3)})</option>)}
+                        </select>
+                        <input type="text" placeholder="Or Guest Name" value={mF.dGuest} onChange={e=>setMF({...mF, dGuest:e.target.value, dI:""})} style={{ ...inp, flex:1.5, minWidth:110 }}/>
+                        <div style={{ display:"flex", gap:4, flexShrink:0 }}>
+                          <input type="number" min="0" value={mF.dB} onChange={e=>setMF({...mF,dB:e.target.value})} style={{ ...inp, width:55 }} placeholder="Blk" title="Blocks"/>
+                          <input type="number" min="0" value={mF.dInt} onChange={e=>setMF({...mF,dInt:e.target.value})} style={{ ...inp, width:55 }} placeholder="Int" title="Interceptions"/>
+                          <input type="number" min="0" value={mF.dC} onChange={e=>setMF({...mF,dC:e.target.value})} style={{ ...inp, width:55 }} placeholder="Clr" title="Clearances"/>
+                        </div>
+                        <button type="button" onClick={addD} style={{ background:"#2563eb", color:"#fff", border:"none", padding:"0 16px", fontSize:13, fontWeight:700, borderRadius:6, cursor:"pointer", whiteSpace:"nowrap", height:42 }}>ADD</button>
+                      </div>
+                      {mF.df.map((d,i) => (
+                        <div key={i} style={{ background:"#fff", padding:"8px 12px", border:"1px solid #e2e8f0", borderLeft:"3px solid #2563eb", display:"flex", justifyContent:"space-between", alignItems:"center", borderRadius:5, fontSize:13, fontWeight:600, marginBottom:5 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                            <span>{d.name}</span>
+                            {d.isGuest && <span style={{ background:"#f1f5f9", color:"#64748b", border:"1px solid #cbd5e1", fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4 }}>GUEST</span>}
+                            <span style={{ color:"#2563eb", marginLeft:4 }}>
+                              {[d.blocks>0&&`${d.blocks} BLK`, d.interceptions>0&&`${d.interceptions} INT`, d.clearances>0&&`${d.clearances} CLR`].filter(Boolean).join(" · ") || "0 DEF"}
+                            </span>
+                          </div>
+                          <button type="button" onClick={()=>remD(i)} style={{ background:"#fee2e2", color:"#ef4444", border:"none", padding:"3px 8px", borderRadius:3, cursor:"pointer", fontWeight:700, fontSize:12 }}>✕</button>
+                        </div>
+                      ))}
+                    </div>
                   </>
                 )}
 
@@ -676,7 +763,7 @@ export default function AdminDashboard({ onBack }) {
               <div style={{ borderTop:"1px solid #e2e8f0", paddingTop:14 }}>
                 <div style={{ fontWeight:700, fontSize:11, color:"#0033a0", marginBottom:10, letterSpacing:1 }}>STAT OVERRIDE</div>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-                  {[["GOALS","goals"],["ASSISTS","assists"],["APPEARANCES","appearances"],["CLEAN SHEETS","cleanSheets"],["SAVES","saves"]].map(([l,k]) => (
+                  {[["GOALS","goals"],["ASSISTS","assists"],["APPEARANCES","appearances"],["CLEAN SHEETS","cleanSheets"],["SAVES","saves"],["BLOCKS","blocks"],["INTERCEPTIONS","interceptions"],["CLEARANCES","clearances"]].map(([l,k]) => (
                     <label key={k} style={{ color:"#64748b", fontSize:11, fontWeight:700 }}>{l}
                       <input type="number" min="0" value={edP[k]||0} onChange={e=>setEdP({...edP,[k]:parseInt(e.target.value)})} style={{ ...inp, marginTop:4 }}/>
                     </label>
@@ -781,6 +868,36 @@ export default function AdminDashboard({ onBack }) {
                       <span style={{ color:"#d97706", marginLeft:4 }}>{a.assists} ASSISTS</span>
                     </div>
                     <button type="button" onClick={()=>remEdA(i)} style={{ background:"#fee2e2", color:"#ef4444", border:"none", padding:"2px 6px", borderRadius:3, cursor:"pointer", fontWeight:700, fontSize:11 }}>✕</button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Defensive Actions */}
+              <div style={{ background:"#f8fafc", padding:12, borderRadius:8, border:"1px solid #e2e8f0" }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#0f172a", marginBottom:8 }}>🛡️ DEFENSIVE ACTIONS (BLOCKS / INT / CLEARANCES)</div>
+                <div style={{ display:"flex", gap:8, marginBottom:8, flexWrap:isMobile?"wrap":"nowrap" }}>
+                  <select value={edM.dI} onChange={e=>setEdM({...edM,dI:e.target.value, dGuest:""})} style={{ ...selectStyle, flex:2, minWidth:0 }}>
+                    <option value="">Select Team Player...</option>
+                    {plrs.map(p=><option key={p.id} value={p.id}>{p.name} ({p.pos.slice(0,3)})</option>)}
+                  </select>
+                  <input type="text" placeholder="Or Guest Name" value={edM.dGuest} onChange={e=>setEdM({...edM, dGuest:e.target.value, dI:""})} style={{ ...inp, flex:1.5, minWidth:110 }}/>
+                  <div style={{ display:"flex", gap:4, flexShrink:0 }}>
+                    <input type="number" min="0" value={edM.dB} onChange={e=>setEdM({...edM,dB:e.target.value})} style={{ ...inp, width:50 }} placeholder="Blk" title="Blocks"/>
+                    <input type="number" min="0" value={edM.dInt} onChange={e=>setEdM({...edM,dInt:e.target.value})} style={{ ...inp, width:50 }} placeholder="Int" title="Interceptions"/>
+                    <input type="number" min="0" value={edM.dC} onChange={e=>setEdM({...edM,dC:e.target.value})} style={{ ...inp, width:50 }} placeholder="Clr" title="Clearances"/>
+                  </div>
+                  <button type="button" onClick={addEdD} style={{ background:"#2563eb", color:"#fff", border:"none", padding:"0 14px", fontSize:12, fontWeight:700, borderRadius:6, cursor:"pointer" }}>ADD</button>
+                </div>
+                {(edM.defensiveActions || []).map((d,i) => (
+                  <div key={i} style={{ background:"#fff", padding:"6px 10px", border:"1px solid #e2e8f0", borderLeft:"3px solid #2563eb", display:"flex", justifyContent:"space-between", alignItems:"center", borderRadius:5, fontSize:12, fontWeight:600, marginBottom:4 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <span>{d.name}</span>
+                      {d.isGuest && <span style={{ background:"#f1f5f9", color:"#64748b", border:"1px solid #cbd5e1", fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4 }}>GUEST</span>}
+                      <span style={{ color:"#2563eb", marginLeft:4 }}>
+                        {[d.blocks>0&&`${d.blocks} BLK`, d.interceptions>0&&`${d.interceptions} INT`, d.clearances>0&&`${d.clearances} CLR`].filter(Boolean).join(" · ") || "0 DEF"}
+                      </span>
+                    </div>
+                    <button type="button" onClick={()=>remEdD(i)} style={{ background:"#fee2e2", color:"#ef4444", border:"none", padding:"2px 6px", borderRadius:3, cursor:"pointer", fontWeight:700, fontSize:11 }}>✕</button>
                   </div>
                 ))}
               </div>

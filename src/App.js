@@ -102,6 +102,7 @@ function MatchModal({ match, onClose, T = THEMES.dark }) {
   const label = isUpc ? "UPCOMING" : isW ? "WIN" : isD ? "DRAW" : "LOSS";
   const scorers = match.scorers || [];
   const assists = match.assisters || [];
+  const defActions = match.defensiveActions || [];
   const summary = match.summary || "";
   const totalGoals = scorers.reduce((sum, s) => sum + (typeof s === "object" && s.goals ? Number(s.goals) : 1), 0);
   const totalAssists = assists.reduce((sum, a) => sum + (typeof a === "object" && a.assists ? Number(a.assists) : 1), 0);
@@ -193,12 +194,38 @@ function MatchModal({ match, onClose, T = THEMES.dark }) {
               })}
             </div>
           )}
+          {defActions.length > 0 && (
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:3, color:"#2563eb", marginBottom:10 }}>🛡️ DEFENSIVE ACTIONS ({defActions.length})</div>
+              {defActions.map((d,i) => {
+                const dName = typeof d==="string"?d:d.name;
+                const isGuest = typeof d==="object"?(d.isGuest||(d.id&&String(d.id).startsWith("guest_"))||dName.toLowerCase().includes("guest")):dName.toLowerCase().includes("guest");
+                const statsArr = [];
+                if (d.blocks > 0) statsArr.push(`${d.blocks} BLK`);
+                if (d.interceptions > 0) statsArr.push(`${d.interceptions} INT`);
+                if (d.clearances > 0) statsArr.push(`${d.clearances} CLR`);
+                const statStr = statsArr.join(" · ") || "Defensive Contributor";
+                return (
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", background:T.bg2, borderRadius:8, border:`1px solid ${T.borderLight}`, marginBottom:6 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <div style={{ width:28, height:28, borderRadius:"50%", background:"rgba(37,99,235,0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13 }}>🛡️</div>
+                      <span style={{ fontWeight:600, color:T.text, fontSize:14 }}>{dName}</span>
+                      {isGuest && <span style={{ background:T.hoverBg, color:T.textMuted, border:`1px solid ${T.border}`, fontSize:10, fontWeight:700, padding:"2px 7px", borderRadius:4, letterSpacing:1 }}>GUEST</span>}
+                    </div>
+                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", color:"#2563eb", background:"rgba(37,99,235,0.1)", border:"1px solid rgba(37,99,235,0.2)", padding:"3px 10px", borderRadius:6, fontSize:12, letterSpacing:1 }}>
+                      {statStr}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {summary
             ? <div>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:3, color:T.textDim, marginBottom:8 }}>MATCH SUMMARY</div>
                 <p style={{ fontSize:14, color:T.textMuted, lineHeight:1.8, background:T.bg2, borderRadius:8, padding:"14px 16px", border:`1px solid ${T.borderLight}` }}>{summary}</p>
               </div>
-            : (!isUpc && scorers.length===0 && assists.length===0 &&
+            : (!isUpc && scorers.length===0 && assists.length===0 && defActions.length===0 &&
                 <div style={{ textAlign:"center", padding:"16px 0", color:T.textDim, fontSize:14 }}>No match details yet.</div>)
           }
           {isUpc && <div style={{ textAlign:"center", padding:"14px 0", color:T.textMuted, fontSize:14 }}>This match hasn't been played yet!</div>}
@@ -212,6 +239,9 @@ function PlayerModal({ player, onClose, T = THEMES.dark }) {
   const p = player;
   const pc = POS_COLOR[p.pos] || T_RED;
   const isGK = p.pos === "Goalkeeper";
+  const isDef = p.pos === "Defender";
+  const hasDefStats = isDef && ((p.blocks || 0) + (p.interceptions || 0) + (p.clearances || 0) > 0);
+
   return (
     <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.80)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:16, backdropFilter:"blur(12px)" }}>
       <div onClick={e=>e.stopPropagation()} style={{ background:T.cardBg, borderRadius:20, width:"100%", maxWidth:420, overflow:"hidden", animation:"fadeUp 0.25s ease", boxShadow:"0 30px 80px rgba(0,0,0,0.5)", border:`1px solid ${T.border}` }}>
@@ -237,6 +267,8 @@ function PlayerModal({ player, onClose, T = THEMES.dark }) {
           <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:12 }}>
             {(isGK
               ? [["SAVES",p.saves,"#60a5fa"],["CLEAN SHT",p.cleanSheets,"#4ade80"],["APPS",p.appearances,T.textMuted]]
+              : hasDefStats
+              ? [["BLOCKS",p.blocks||0,"#60a5fa"],["INTERCEPT",p.interceptions||0,"#38bdf8"],["CLEARANCES",p.clearances||0,"#4ade80"]]
               : [["GOALS",p.goals,T_RED],["ASSISTS",p.assists,"#fbbf24"],["APPS",p.appearances,T.textMuted]]
             ).map(([l,v,c]) => (
               <div key={l} style={{ background:T.bg2, border:`1px solid ${T.borderLight}`, borderRadius:10, padding:"12px 8px", textAlign:"center", borderTop:`2px solid ${c}` }}>
@@ -245,8 +277,15 @@ function PlayerModal({ player, onClose, T = THEMES.dark }) {
               </div>
             ))}
           </div>
+          {hasDefStats && ((p.goals||0) > 0 || (p.assists||0) > 0) && (
+            <div style={{ background:T.bg2, border:`1px solid ${T.borderLight}`, borderRadius:8, padding:"8px 12px", marginBottom:12, display:"flex", justifyContent:"space-around", alignItems:"center", fontSize:12, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5 }}>
+              <span style={{ color:T_RED }}>⚽ {p.goals||0} GOALS</span>
+              <span style={{ color:T.borderLight }}>|</span>
+              <span style={{ color:T_GOLD }}>🅰️ {p.assists||0} ASSISTS</span>
+            </div>
+          )}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-            {[["POSITION",p.pos],["JERSEY",`#${p.jersey}`],["CLUB","NAFC"],["SEASON","2026"]].map(([l,v]) => (
+            {[["POSITION",p.pos],["JERSEY",`#${p.jersey}`],["CLUB","NAFC"],["APPEARANCES",`${p.appearances||0} APPS`]].map(([l,v]) => (
               <div key={l} style={{ background:T.bg2, borderRadius:8, padding:"10px 14px", border:`1px solid ${T.borderLight}` }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, letterSpacing:2.5, color:T.textDim, marginBottom:3 }}>{l}</div>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:T.textMuted, letterSpacing:1 }}>{v}</div>
@@ -372,13 +411,17 @@ function AppShell() {
     let goals = 0;
     let assists = 0;
     let appearances = 0;
+    let blocks = 0;
+    let interceptions = 0;
+    let clearances = 0;
 
     monthMatches.forEach(m => {
       if ((m.ap && m.ap.includes(p.id)) || (m.appearances && m.appearances.includes(p.id))) {
         appearances += 1;
       } else if (
         (m.scorers && m.scorers.some(s => (typeof s === "object" ? s.id === p.id || s.name === p.name : s === p.name))) ||
-        (m.assisters && m.assisters.some(a => (typeof a === "object" ? a.id === p.id || a.name === p.name : a === p.name)))
+        (m.assisters && m.assisters.some(a => (typeof a === "object" ? a.id === p.id || a.name === p.name : a === p.name))) ||
+        (m.defensiveActions && m.defensiveActions.some(d => (typeof d === "object" ? d.id === p.id || d.name === p.name : d === p.name)))
       ) {
         appearances += 1;
       }
@@ -406,22 +449,40 @@ function AppShell() {
           }
         });
       }
+
+      if (m.defensiveActions) {
+        m.defensiveActions.forEach(d => {
+          if (typeof d === "object") {
+            if (d.id === p.id || d.name === p.name) {
+              blocks += Number(d.blocks) || 0;
+              interceptions += Number(d.interceptions) || 0;
+              clearances += Number(d.clearances) || 0;
+            }
+          }
+        });
+      }
     });
+
+    const monthDefActions = blocks + interceptions + clearances;
 
     return {
       ...p,
       monthGoals: goals,
       monthAssists: assists,
+      monthBlocks: blocks,
+      monthInterceptions: interceptions,
+      monthClearances: clearances,
+      monthDefActions: monthDefActions,
       monthAppearances: appearances,
       monthContributions: goals + assists,
     };
   });
 
-  const topScorerMonth = [...playerMonthlyStats].sort((a,b) => b.monthGoals - a.monthGoals)[0];
-  const topAssistMonth = [...playerMonthlyStats].sort((a,b) => b.monthAssists - a.monthAssists)[0];
+  const topScorerMonth = [...playerMonthlyStats].sort((a,b) => (b.monthGoals||0) - (a.monthGoals||0))[0];
+  const topAssistMonth = [...playerMonthlyStats].sort((a,b) => (b.monthAssists||0) - (a.monthAssists||0))[0];
   const topPerformerMonth = [...playerMonthlyStats]
-    .filter(p => p.monthContributions > 0 || p.monthAppearances > 0)
-    .sort((a, b) => b.monthContributions - a.monthContributions || b.monthGoals - a.monthGoals || b.monthAppearances - a.monthAppearances)[0];
+    .filter(p => (p.monthContributions || 0) > 0 || (p.monthAppearances || 0) > 0)
+    .sort((a, b) => (b.monthContributions || 0) - (a.monthContributions || 0) || (b.monthGoals || 0) - (a.monthGoals || 0) || (b.monthAppearances || 0) - (a.monthAppearances || 0))[0];
 
   const go = p => { setPg(p); setSel(null); setSrch(""); setMobileNav(false); window.scrollTo(0,0); };
 
@@ -480,6 +541,7 @@ function AppShell() {
           .hide-mobile{display:none!important;}
           .stat-grid-4{grid-template-columns:repeat(2,1fr)!important;}
           .stat-grid-3{grid-template-columns:1fr!important;}
+          .leaderboard-grid-4{display:grid;grid-template-columns:1fr!important;gap:12px;}
           .squad-grid{grid-template-columns:repeat(2,1fr)!important;}
           .home-stats-bar{grid-template-columns:1fr!important;}
           .footer-grid{grid-template-columns:1fr!important;}
@@ -491,6 +553,7 @@ function AppShell() {
         @media(min-width:768px) and (max-width:1023px){
           .stat-grid-4{grid-template-columns:repeat(2,1fr)!important;}
           .stat-grid-3{grid-template-columns:repeat(3,1fr)!important;}
+          .leaderboard-grid-4{display:grid;grid-template-columns:repeat(2,1fr)!important;gap:14px;}
           .squad-grid{grid-template-columns:repeat(3,1fr)!important;}
           .home-stats-bar{grid-template-columns:1fr 1fr 1fr!important;}
           .footer-grid{grid-template-columns:1fr 1fr!important;}
@@ -501,6 +564,7 @@ function AppShell() {
         @media(min-width:1024px){
           .stat-grid-4{grid-template-columns:repeat(4,1fr)!important;}
           .stat-grid-3{grid-template-columns:repeat(3,1fr)!important;}
+          .leaderboard-grid-4{display:grid;grid-template-columns:repeat(4,1fr)!important;gap:14px;}
           .squad-grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))!important;}
           .home-stats-bar{grid-template-columns:1fr 1fr 1fr!important;}
           .footer-grid{grid-template-columns:1fr 1fr 1fr!important;}
@@ -736,7 +800,12 @@ function AppShell() {
                             <div className="bebas" style={{ fontSize:22, color:T.textDim }}>#{p.jersey}</div>
                           </div>
                           <div style={{ display:"flex", gap:0, borderTop:`1px solid ${T.borderLight}`, paddingTop:10 }}>
-                            {(p.pos==="Goalkeeper"?[["SVS",p.saves,"#2563eb"],["CS",p.cleanSheets,"#16a34a"]]:[ ["G",p.goals,T_RED],["A",p.assists,T_GOLD]]).concat([["APP",p.appearances,T.textMuted]]).map(([l,v,c],idx,arr) => (
+                            {(p.pos==="Goalkeeper"
+                              ? [["SVS",p.saves||0,"#2563eb"],["CS",p.cleanSheets||0,"#16a34a"],["APP",p.appearances||0,T.textMuted]]
+                              : (p.pos==="Defender" && ((p.blocks||0)+(p.interceptions||0)+(p.clearances||0) > 0))
+                              ? [["DEF",(p.blocks||0)+(p.interceptions||0)+(p.clearances||0),"#2563eb"],["G/A",(p.goals||0)+(p.assists||0),T_RED],["APP",p.appearances||0,T.textMuted]]
+                              : [["G",p.goals||0,T_RED],["A",p.assists||0,T_GOLD],["APP",p.appearances||0,T.textMuted]]
+                            ).map(([l,v,c],idx,arr) => (
                               <div key={l} style={{ flex:1, textAlign:"center", borderRight:idx<arr.length-1?`1px solid ${T.borderLight}`:"none" }}>
                                 <div className="bebas" style={{ fontSize:18, color:c||T.text }}>{v||0}</div>
                                 <div style={{ fontSize:10, letterSpacing:2, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{l}</div>
@@ -757,6 +826,8 @@ function AppShell() {
         {pg === "Players" && sel && (() => {
           const pc  = POS_COLOR[sel.pos] || T_RED;
           const isGK= sel.pos === "Goalkeeper";
+          const isDef = sel.pos === "Defender";
+          const hasDefStats = isDef && ((sel.blocks||0)+(sel.interceptions||0)+(sel.clearances||0) > 0);
           return (
             <div style={{ background:T.bg, minHeight:"100vh" }}>
               <div className="player-profile-grid" style={{ position:"relative", overflow: isMobile?"visible":"hidden" }}>
@@ -791,9 +862,11 @@ function AppShell() {
                     )}
                     <div style={{ display:"flex", gap:0, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, overflow:"hidden" }}>
                       {(isGK
-                        ?[["SAVES",sel.saves,"#60a5fa"],["CLEAN SHT",sel.cleanSheets,"#4ade80"]]
-                        :[["GOALS",sel.goals,T_RED],["ASSISTS",sel.assists,"#fbbf24"]]
-                      ).concat([["APPS",sel.appearances,"rgba(255,255,255,0.7)"]]).map(([l,v,c],idx,arr) => (
+                        ?[["SAVES",sel.saves,"#60a5fa"],["CLEAN SHT",sel.cleanSheets,"#4ade80"],["APPS",sel.appearances,"rgba(255,255,255,0.7)"]]
+                        :hasDefStats
+                        ?[["BLOCKS",sel.blocks||0,"#60a5fa"],["INTERCEPT",sel.interceptions||0,"#38bdf8"],["CLEARANCES",sel.clearances||0,"#4ade80"],["APPS",sel.appearances,"rgba(255,255,255,0.7)"]]
+                        :[["GOALS",sel.goals,T_RED],["ASSISTS",sel.assists,"#fbbf24"],["APPS",sel.appearances,"rgba(255,255,255,0.7)"]]
+                      ).map(([l,v,c],idx,arr) => (
                         <div key={l} style={{ flex:1, padding: isMobile?"12px 6px":"16px 10px", textAlign:"center", borderRight:idx<arr.length-1?"1px solid rgba(255,255,255,0.07)":"none", borderTop:`2px solid ${c}` }}>
                           <div className="bebas" style={{ fontSize: isMobile?30:36, color:c, lineHeight:1 }}>{v||0}</div>
                           <div style={{ fontSize:10, letterSpacing:2, color:"rgba(255,255,255,0.6)", fontFamily:"'Bebas Neue',sans-serif", marginTop:4 }}>{l}</div>
@@ -856,9 +929,18 @@ function AppShell() {
                 <div style={{ maxWidth:900, margin:"0 auto" }}>
                   <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr 1fr":"repeat(3,1fr)", gap:isMobile?10:14, marginBottom:32 }}>
                     {(isGK
-                      ?[["SAVES",sel.saves,"#2563eb","Saves this season"],["CLEAN SHEETS",sel.cleanSheets,"#16a34a","Games without conceding"]]
-                      :[["GOALS",sel.goals,T_RED,"Goals this season"],["ASSISTS",sel.assists,T_GOLD,"Assists provided"]]
-                    ).concat([["APPEARANCES",sel.appearances,T.text,"Games played"]]).map(([l,v,c,desc]) => (
+                      ? [["SAVES",sel.saves,"#2563eb","Saves this season"],["CLEAN SHEETS",sel.cleanSheets,"#16a34a","Games without conceding"],["APPEARANCES",sel.appearances,T.text,"Games played"]]
+                      : hasDefStats
+                      ? [
+                          ["BLOCKS",sel.blocks||0,"#2563eb","Crucial shots & passes blocked"],
+                          ["INTERCEPTIONS",sel.interceptions||0,"#0ea5e9","Opponent attacks intercepted"],
+                          ["CLEARANCES",sel.clearances||0,"#10b981","Dangerous balls cleared"],
+                          ["GOALS",sel.goals||0,T_RED,"Goals scored"],
+                          ["ASSISTS",sel.assists||0,T_GOLD,"Assists provided"],
+                          ["APPEARANCES",sel.appearances||0,T.text,"Matches played"]
+                        ]
+                      : [["GOALS",sel.goals,T_RED,"Goals this season"],["ASSISTS",sel.assists,T_GOLD,"Assists provided"],["APPEARANCES",sel.appearances,T.text,"Games played"]]
+                    ).map(([l,v,c,desc]) => (
                       <div key={l} className="profile-stat-box" style={{ borderTop:`3px solid ${c}` }}>
                         <div className="bebas" style={{ fontSize: isMobile?44:54, color:c, lineHeight:1, marginBottom:4 }}><StatNum value={v||0} /></div>
                         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:isMobile?12:14, color:T.text, letterSpacing:2, marginBottom:4 }}>{l}</div>
@@ -1076,45 +1158,84 @@ function AppShell() {
                     ))}
                   </div>
 
-                  {/* Monthly Leaderboards — 3 cols */}
-                  <div className="stat-grid-3" style={{ display:"grid", gap:isMobile?12:14 }}>
-                    {[{title:`TOP SCORERS (${getMonthLabel(activeMonth)})`,key:"monthGoals",color:T_RED,icon:"⚽"},{title:`TOP ASSISTS (${getMonthLabel(activeMonth)})`,key:"monthAssists",color:T_GOLD,icon:"🅰️"},{title:`APPEARANCES (${getMonthLabel(activeMonth)})`,key:"monthAppearances",color:"#16a34a",icon:"🎽"}].map(board => {
-                      const sorted = [...playerMonthlyStats].filter(p => (p[board.key]||0) > 0).sort((a,b)=>(b[board.key]||0)-(a[board.key]||0));
-                      return (
-                        <div key={board.title} className="stat-card">
-                          <div style={{ padding:"16px 18px 14px", borderBottom:`1px solid ${T.borderLight}`, background:T.bg2, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                            <div>
-                              <div className="bebas" style={{ fontSize:16, color:T.text, letterSpacing:2 }}>{board.title}</div>
-                              <div style={{ fontSize:11, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{sorted.length} ACTIVE PLAYERS</div>
-                            </div>
-                            <div style={{ fontSize:18 }}>{board.icon}</div>
+                  {/* Monthly Leaderboards — 4 cols */}
+                  <div className="leaderboard-grid-4">
+                    {[
+                      {
+                        title: `TOP SCORERS (${getMonthLabel(activeMonth)})`,
+                        color: T_RED,
+                        icon: "⚽",
+                        emptyMsg: "No goals recorded for this month.",
+                        sorted: [...playerMonthlyStats].filter(p => (p.monthGoals || 0) > 0).sort((a,b) => (b.monthGoals||0) - (a.monthGoals||0) || (b.monthAssists||0) - (a.monthAssists||0)),
+                        renderValue: p => p.monthGoals || 0,
+                        subValue: null
+                      },
+                      {
+                        title: `TOP ASSISTS (${getMonthLabel(activeMonth)})`,
+                        color: T_GOLD,
+                        icon: "🅰️",
+                        emptyMsg: "No assists recorded for this month.",
+                        sorted: [...playerMonthlyStats].filter(p => (p.monthAssists || 0) > 0).sort((a,b) => (b.monthAssists||0) - (a.monthAssists||0) || (b.monthGoals||0) - (a.monthGoals||0)),
+                        renderValue: p => p.monthAssists || 0,
+                        subValue: null
+                      },
+                      {
+                        title: `DEFENSIVE LEADERS (${getMonthLabel(activeMonth)})`,
+                        color: "#2563eb",
+                        icon: "🛡️",
+                        emptyMsg: "No defensive actions recorded for this month.",
+                        sorted: [...playerMonthlyStats].filter(p => (p.monthDefActions || 0) > 0).sort((a,b) => (b.monthDefActions||0) - (a.monthDefActions||0) || (b.monthAppearances||0) - (a.monthAppearances||0)),
+                        renderValue: p => p.monthDefActions || 0,
+                        subValue: p => [p.monthBlocks>0&&`${p.monthBlocks} Blk`, p.monthInterceptions>0&&`${p.monthInterceptions} Int`, p.monthClearances>0&&`${p.monthClearances} Clr`].filter(Boolean).join(" · ") || null
+                      },
+                      {
+                        title: `APPEARANCES (${getMonthLabel(activeMonth)})`,
+                        color: "#16a34a",
+                        icon: "🎽",
+                        emptyMsg: "No appearances recorded for this month.",
+                        sorted: [...playerMonthlyStats].filter(p => (p.monthAppearances || 0) > 0).sort((a,b) => (b.monthAppearances||0) - (a.monthAppearances||0) || (b.monthGoals||0) - (a.monthGoals||0)),
+                        renderValue: p => p.monthAppearances || 0,
+                        subValue: null
+                      }
+                    ].map(board => (
+                      <div key={board.title} className="stat-card">
+                        <div style={{ padding:"16px 18px 14px", borderBottom:`1px solid ${T.borderLight}`, background:T.bg2, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                          <div>
+                            <div className="bebas" style={{ fontSize:15, color:T.text, letterSpacing:1.5 }}>{board.title}</div>
+                            <div style={{ fontSize:11, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{board.sorted.length} ACTIVE PLAYERS</div>
                           </div>
-                          <div style={{ padding:"6px 12px 10px", maxHeight:400, overflowY:"auto" }}>
-                            {sorted.length === 0 ? (
-                              <div style={{ textAlign:"center", padding:"34px 10px", color:T.textDim, fontSize:13 }}>
-                                {board.key === "monthAssists" ? "No assists recorded for this month." : board.key === "monthGoals" ? "No goals recorded for this month." : "No appearances recorded for this month."}
-                              </div>
-                            ) : sorted.map((p,i) => (
-                              <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)}>
-                                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                                  <div style={{ width:24, textAlign:"center" }}>
-                                    <div className="bebas" style={{ fontSize:i===0?18:15, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
-                                  </div>
-                                  <div style={{ width:36, height:36, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
-                                    {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }} />:<span className="bebas" style={{ fontSize:11, color:T.textDim }}>#{p.jersey}</span>}
-                                  </div>
-                                  <div>
-                                    <div style={{ fontWeight:600, fontSize:15, color:T.text, lineHeight:1.2 }}>{p.name}</div>
-                                    <div style={{ fontSize:11, letterSpacing:2, color:`${POS_COLOR[p.pos]||T_RED}`, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{p.pos.slice(0,3).toUpperCase()}</div>
-                                  </div>
-                                </div>
-                                <div className="bebas" style={{ fontSize:26, color:i===0?board.color:T.textMuted, lineHeight:1 }}>{p[board.key]||0}</div>
-                              </div>
-                            ))}
-                          </div>
+                          <div style={{ fontSize:18 }}>{board.icon}</div>
                         </div>
-                      );
-                    })}
+                        <div style={{ padding:"6px 12px 10px", maxHeight:400, overflowY:"auto" }}>
+                          {board.sorted.length === 0 ? (
+                            <div style={{ textAlign:"center", padding:"34px 10px", color:T.textDim, fontSize:13 }}>
+                              {board.emptyMsg}
+                            </div>
+                          ) : board.sorted.map((p,i) => (
+                            <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)}>
+                              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                                <div style={{ width:24, textAlign:"center" }}>
+                                  <div className="bebas" style={{ fontSize:i===0?18:15, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
+                                </div>
+                                <div style={{ width:36, height:36, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
+                                  {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }} />:<span className="bebas" style={{ fontSize:11, color:T.textDim }}>#{p.jersey}</span>}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight:600, fontSize:15, color:T.text, lineHeight:1.2 }}>{p.name}</div>
+                                  <div style={{ fontSize:11, letterSpacing:2, color:`${POS_COLOR[p.pos]||T_RED}`, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{p.pos.slice(0,3).toUpperCase()}</div>
+                                </div>
+                              </div>
+                              <div style={{ textAlign:"right" }}>
+                                <div className="bebas" style={{ fontSize:26, color:i===0?board.color:T.textMuted, lineHeight:1 }}>{board.renderValue(p)}</div>
+                                {board.subValue && board.subValue(p) && (
+                                  <div style={{ fontSize:10, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:2 }}>{board.subValue(p)}</div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </>
               ) : (
@@ -1129,41 +1250,84 @@ function AppShell() {
                     ))}
                   </div>
 
-                  {/* Season All-Time Leaderboards */}
-                  <div className="stat-grid-3" style={{ display:"grid", gap:isMobile?12:14 }}>
-                    {[{title:"TOP SCORERS",key:"goals",color:T_RED,icon:"⚽"},{title:"TOP ASSISTS",key:"assists",color:T_GOLD,icon:"🅰️"},{title:"APPEARANCES",key:"appearances",color:"#16a34a",icon:"🎽"}].map(board => {
-                      const sorted = [...plrs].sort((a,b)=>(b[board.key]||0)-(a[board.key]||0));
-                      return (
-                        <div key={board.title} className="stat-card">
-                          <div style={{ padding:"16px 18px 14px", borderBottom:`1px solid ${T.borderLight}`, background:T.bg2, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                            <div>
-                              <div className="bebas" style={{ fontSize:16, color:T.text, letterSpacing:2 }}>{board.title}</div>
-                              <div style={{ fontSize:11, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{sorted.length} PLAYERS</div>
-                            </div>
-                            <div style={{ fontSize:18 }}>{board.icon}</div>
+                  {/* Season All-Time Leaderboards — 4 cols */}
+                  <div className="leaderboard-grid-4">
+                    {[
+                      {
+                        title: "TOP SCORERS",
+                        color: T_RED,
+                        icon: "⚽",
+                        emptyMsg: "No goals recorded yet.",
+                        sorted: [...plrs].filter(p => (p.goals || 0) > 0).sort((a,b) => (b.goals||0) - (a.goals||0) || (b.assists||0) - (a.assists||0)),
+                        renderValue: p => p.goals || 0,
+                        subValue: null
+                      },
+                      {
+                        title: "TOP ASSISTS",
+                        color: T_GOLD,
+                        icon: "🅰️",
+                        emptyMsg: "No assists recorded yet.",
+                        sorted: [...plrs].filter(p => (p.assists || 0) > 0).sort((a,b) => (b.assists||0) - (a.assists||0) || (b.goals||0) - (a.goals||0)),
+                        renderValue: p => p.assists || 0,
+                        subValue: null
+                      },
+                      {
+                        title: "DEFENSIVE LEADERS",
+                        color: "#2563eb",
+                        icon: "🛡️",
+                        emptyMsg: "No defensive actions recorded yet.",
+                        sorted: [...plrs].filter(p => ((p.blocks||0) + (p.interceptions||0) + (p.clearances||0)) > 0).sort((a,b) => ((b.blocks||0)+(b.interceptions||0)+(b.clearances||0)) - ((a.blocks||0)+(a.interceptions||0)+(a.clearances||0)) || (b.appearances||0) - (a.appearances||0)),
+                        renderValue: p => (p.blocks||0) + (p.interceptions||0) + (p.clearances||0),
+                        subValue: p => [p.blocks>0&&`${p.blocks} Blk`, p.interceptions>0&&`${p.interceptions} Int`, p.clearances>0&&`${p.clearances} Clr`].filter(Boolean).join(" · ") || null
+                      },
+                      {
+                        title: "APPEARANCES",
+                        color: "#16a34a",
+                        icon: "🎽",
+                        emptyMsg: "No appearances recorded yet.",
+                        sorted: [...plrs].filter(p => (p.appearances || 0) > 0).sort((a,b) => (b.appearances||0) - (a.appearances||0) || (b.goals||0) - (a.goals||0)),
+                        renderValue: p => p.appearances || 0,
+                        subValue: null
+                      }
+                    ].map(board => (
+                      <div key={board.title} className="stat-card">
+                        <div style={{ padding:"16px 18px 14px", borderBottom:`1px solid ${T.borderLight}`, background:T.bg2, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                          <div>
+                            <div className="bebas" style={{ fontSize:15, color:T.text, letterSpacing:1.5 }}>{board.title}</div>
+                            <div style={{ fontSize:11, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{board.sorted.length} PLAYERS</div>
                           </div>
-                          <div style={{ padding:"6px 12px 10px", maxHeight:400, overflowY:"auto" }}>
-                            {sorted.map((p,i) => (
-                              <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)}>
-                                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                                  <div style={{ width:24, textAlign:"center" }}>
-                                    <div className="bebas" style={{ fontSize:i===0?18:15, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
-                                  </div>
-                                  <div style={{ width:36, height:36, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
-                                    {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }} />:<span className="bebas" style={{ fontSize:11, color:T.textDim }}>#{p.jersey}</span>}
-                                  </div>
-                                  <div>
-                                    <div style={{ fontWeight:600, fontSize:15, color:T.text, lineHeight:1.2 }}>{p.name}</div>
-                                    <div style={{ fontSize:11, letterSpacing:2, color:`${POS_COLOR[p.pos]||T_RED}`, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{p.pos.slice(0,3).toUpperCase()}</div>
-                                  </div>
-                                </div>
-                                <div className="bebas" style={{ fontSize:26, color:i===0?board.color:T.textMuted, lineHeight:1 }}>{p[board.key]||0}</div>
-                              </div>
-                            ))}
-                          </div>
+                          <div style={{ fontSize:18 }}>{board.icon}</div>
                         </div>
-                      );
-                    })}
+                        <div style={{ padding:"6px 12px 10px", maxHeight:400, overflowY:"auto" }}>
+                          {board.sorted.length === 0 ? (
+                            <div style={{ textAlign:"center", padding:"34px 10px", color:T.textDim, fontSize:13 }}>
+                              {board.emptyMsg}
+                            </div>
+                          ) : board.sorted.map((p,i) => (
+                            <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)}>
+                              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                                <div style={{ width:24, textAlign:"center" }}>
+                                  <div className="bebas" style={{ fontSize:i===0?18:15, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
+                                </div>
+                                <div style={{ width:36, height:36, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
+                                  {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }} />:<span className="bebas" style={{ fontSize:11, color:T.textDim }}>#{p.jersey}</span>}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight:600, fontSize:15, color:T.text, lineHeight:1.2 }}>{p.name}</div>
+                                  <div style={{ fontSize:11, letterSpacing:2, color:`${POS_COLOR[p.pos]||T_RED}`, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{p.pos.slice(0,3).toUpperCase()}</div>
+                                </div>
+                              </div>
+                              <div style={{ textAlign:"right" }}>
+                                <div className="bebas" style={{ fontSize:26, color:i===0?board.color:T.textMuted, lineHeight:1 }}>{board.renderValue(p)}</div>
+                                {board.subValue && board.subValue(p) && (
+                                  <div style={{ fontSize:10, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:2 }}>{board.subValue(p)}</div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </>
               )}
