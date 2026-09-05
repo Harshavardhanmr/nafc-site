@@ -77,7 +77,7 @@ const DEFAULT_ANNOUNCEMENTS = [
         players: [
           { name: "Hafeez", role: "Striker", jersey: 9 },
           { name: "Hruthik", role: "Midfielder", jersey: 10 },
-          { name: "Ruddy", role: "Midfielder", jersey: 8 },
+          { name: "Ruddy (C)", role: "Midfielder", jersey: 8, isCaptain: true },
           { name: "Dheemanth", role: "Defender", jersey: 30 },
           { name: "Akarsh", role: "Goalkeeper", jersey: 1 },
           { name: "Harsha", role: "Defender", jersey: 6 },
@@ -89,7 +89,7 @@ const DEFAULT_ANNOUNCEMENTS = [
         color: "#2563eb",
         players: [
           { name: "Vignesh", role: "Defender", jersey: 4 },
-          { name: "Gopal", role: "Defender", jersey: 3 },
+          { name: "Gopal (C)", role: "Defender", jersey: 3, isCaptain: true },
           { name: "Shetty", role: "Midfielder", jersey: 11 },
           { name: "Nithin", role: "Winger", jersey: 14 },
           { name: "Naga", role: "Guest Player", isGuest: true },
@@ -1570,21 +1570,27 @@ function AppShell() {
                                       </span>
                                     </div>
                                     <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                                      {tm.players && tm.players.map((plyr, pIdx) => (
-                                        <div key={plyr.name || pIdx} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 10px", background:T.bg, borderRadius:6, border:`1px solid ${T.borderLight}` }}>
-                                          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                                            <span className="bebas" style={{ fontSize:13, color:T.textDim, width:18, textAlign:"center" }}>{pIdx + 1}.</span>
-                                            <span style={{ fontWeight:600, fontSize:14, color:T.text }}>{plyr.name}</span>
-                                            {plyr.isGuest && (
-                                              <span style={{ background:"rgba(217,119,6,0.15)", color:T_GOLD, border:"1px solid rgba(217,119,6,0.3)", borderRadius:4, padding:"1px 6px", fontSize:9, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>GUEST ⭐</span>
-                                            )}
+                                      {tm.players && tm.players.map((plyr, pIdx) => {
+                                        const isCap = plyr.isCaptain || (plyr.name && plyr.name.includes('(C)'));
+                                        return (
+                                          <div key={plyr.name || pIdx} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 10px", background:T.bg, borderRadius:6, border: isCap ? `1px solid ${T_GOLD}40` : `1px solid ${T.borderLight}` }}>
+                                            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                              <span className="bebas" style={{ fontSize:13, color:T.textDim, width:18, textAlign:"center" }}>{pIdx + 1}.</span>
+                                              <span style={{ fontWeight:600, fontSize:14, color:T.text }}>{plyr.name}</span>
+                                              {isCap && (
+                                                <span style={{ background:"rgba(217,119,6,0.18)", color:T_GOLD, border:"1px solid rgba(217,119,6,0.4)", borderRadius:4, padding:"1px 6px", fontSize:9, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>CAPTAIN 🎽</span>
+                                              )}
+                                              {plyr.isGuest && (
+                                                <span style={{ background:"rgba(37,99,235,0.15)", color:"#2563eb", border:"1px solid rgba(37,99,235,0.3)", borderRadius:4, padding:"1px 6px", fontSize:9, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>GUEST ⭐</span>
+                                              )}
+                                            </div>
+                                            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                                              {plyr.role && <span style={{ fontSize:11, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>{plyr.role.toUpperCase()}</span>}
+                                              {plyr.jersey && <span className="bebas" style={{ fontSize:13, color:squadAccent }}>#{plyr.jersey}</span>}
+                                            </div>
                                           </div>
-                                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                                            {plyr.role && <span style={{ fontSize:11, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>{plyr.role.toUpperCase()}</span>}
-                                            {plyr.jersey && <span className="bebas" style={{ fontSize:13, color:squadAccent }}>#{plyr.jersey}</span>}
-                                          </div>
-                                        </div>
-                                      ))}
+                                        );
+                                      })}
                                     </div>
                                   </div>
                                 );
