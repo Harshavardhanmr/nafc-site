@@ -68,7 +68,7 @@ const DEFAULT_ANNOUNCEMENTS = [
     date: "2026-09-06",
     badge: "UPCOMING",
     format: "5-a-Side",
-    venue: "BFS Bengaluru",
+    venue: "Ballpark Central, Kothanur",
     summary: "NAFC is fielding two competitive squads for the Bangalore 5-a-side championship: Team 1 (NAFC) and Team 2 (ENNE FC / EFC).",
     teams: [
       {
@@ -93,7 +93,7 @@ const DEFAULT_ANNOUNCEMENTS = [
           { name: "Shetty", role: "Midfielder", jersey: 11 },
           { name: "Nithin", role: "Winger", jersey: 14 },
           { name: "Naga", role: "Guest Player", isGuest: true },
-          { name: "Danish", role: "Forward" }
+          { name: "Danish", role: "Midfielder", jersey: 21 }
         ]
       }
     ],

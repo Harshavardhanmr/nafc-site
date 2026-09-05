@@ -361,7 +361,7 @@ export default function AdminDashboard({ onBack }) {
     date: new Date().toISOString().slice(0, 10),
     badge: "UPCOMING",
     format: "5-a-Side",
-    venue: "BFS Bengaluru",
+    venue: "Ballpark Central, Kothanur",
     summary: "",
     content: "",
     teams: [
