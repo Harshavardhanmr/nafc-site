@@ -58,7 +58,81 @@ export const THEMES = {
   }
 };
 
-const PGS = ["Home", "Players", "Fixtures", "Stats", "Gallery"];
+const PGS = ["Home", "Players", "Fixtures", "Stats", "Gallery", "News"];
+
+const DEFAULT_ANNOUNCEMENTS = [
+  {
+    id: "tournament-sept-6-2026",
+    title: "Sept 6 5-a-Side Tournament — Dual Squad Announcement",
+    category: "Tournament",
+    date: "2026-09-06",
+    badge: "UPCOMING",
+    format: "5-a-Side",
+    venue: "BFS Bengaluru",
+    summary: "NAFC is fielding two competitive squads for the Bangalore 5-a-side championship: Team 1 (NAFC) and Team 2 (ENNE FC / EFC).",
+    teams: [
+      {
+        name: "TEAM 1 — NAFC",
+        color: "#E8002D",
+        players: [
+          { name: "Hafeez", role: "Striker", jersey: 9 },
+          { name: "Hruthik", role: "Midfielder", jersey: 10 },
+          { name: "Ruddy", role: "Midfielder", jersey: 8 },
+          { name: "Dheemanth", role: "Defender", jersey: 30 },
+          { name: "Akarsh", role: "Goalkeeper", jersey: 1 },
+          { name: "Harsha", role: "Defender", jersey: 6 },
+          { name: "Megur", role: "Forward", jersey: 17 }
+        ]
+      },
+      {
+        name: "TEAM 2 — ENNE FC (EFC)",
+        color: "#2563eb",
+        players: [
+          { name: "Vignesh", role: "Defender", jersey: 4 },
+          { name: "Gopal", role: "Defender", jersey: 3 },
+          { name: "Shetty", role: "Midfielder", jersey: 11 },
+          { name: "Nithin", role: "Winger", jersey: 14 },
+          { name: "Naga", role: "Guest Player", isGuest: true },
+          { name: "Danish", role: "Forward" }
+        ]
+      }
+    ],
+    content: "NAFC kicks off the September tournament season with two squads in action. Both teams will compete across the group stages and knockouts representing NAFC tactical depth and pace. Stay tuned for live match updates and scorelines throughout the day!",
+    createdAt: "2026-09-06T00:00:00.000Z"
+  },
+  {
+    id: "tournament-christ-aug-2026",
+    title: "Christ Tournament 9v9 — NAFC Campaign & Squad Roster",
+    category: "Tournament",
+    date: "2026-08-01",
+    badge: "COMPLETED",
+    format: "9v9",
+    venue: "Christ Academy Bengaluru",
+    summary: "NAFC's first official tournament campaign at the Christ 9v9 Tournament featuring 12 squad members across 2 matches.",
+    teams: [
+      {
+        name: "NAFC TOURNAMENT SQUAD (9v9)",
+        color: "#E8002D",
+        players: [
+          { name: "Nithin", role: "Striker", jersey: 14 },
+          { name: "Gopal (C)", role: "Defender", jersey: 3 },
+          { name: "Harsha Vardhan", role: "Defender", jersey: 6 },
+          { name: "Ruddy", role: "Midfielder", jersey: 8 },
+          { name: "Hruthik", role: "Midfielder", jersey: 10 },
+          { name: "Akarsh", role: "Goalkeeper", jersey: 1 },
+          { name: "Danish", role: "Midfielder", jersey: 21 },
+          { name: "Dheemanth", role: "Defender", jersey: 30 },
+          { name: "Megur", role: "Forward", jersey: 17 },
+          { name: "Vignesh", role: "Defender", jersey: 4 },
+          { name: "Shetty", role: "Forward", jersey: 11 },
+          { name: "Hafeez", role: "Winger", jersey: 9 }
+        ]
+      }
+    ],
+    content: "NAFC participated in the prestigious Christ 9v9 Tournament on August 1st and 2nd. Match 1 saw a hard-fought 1–0 victory over BMSC with Hruthik scoring the winning goal, followed by a tough knockout encounter against TFC. A foundational tournament for the squad!",
+    createdAt: "2026-08-02T20:00:00.000Z"
+  }
+];
 
 const POS_COLOR = {
   Goalkeeper: "#2563eb",
@@ -314,6 +388,8 @@ function AppShell() {
   const [plrs, setPlrs] = useState([]);
   const [mtchs, setMtchs] = useState([]);
   const [gal, setGal] = useState([]);
+  const [newsList, setNewsList] = useState(DEFAULT_ANNOUNCEMENTS);
+  const [newsFltr, setNewsFltr] = useState("All");
   const [heroURL, setHeroURL] = useState(HUDDLE_DEFAULT);
   const [mobileNav, setMobileNav] = useState(false);
   
@@ -350,7 +426,14 @@ function AppShell() {
       if (snap.exists() && snap.data().url) setHeroURL(snap.data().url);
       else setHeroURL(HUDDLE_DEFAULT);
     });
-    return () => { uP(); uM(); uG(); uS(); };
+    const uA = onSnapshot(query(collection(db,"announcements"),orderBy("date","desc")), s => {
+      if (!s.empty) {
+        setNewsList(s.docs.map(d=>({id:d.id,...d.data()})));
+      } else {
+        setNewsList(DEFAULT_ANNOUNCEMENTS);
+      }
+    });
+    return () => { uP(); uM(); uG(); uS(); uA(); };
   }, []);
 
   useEffect(() => {
@@ -746,6 +829,41 @@ function AppShell() {
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* ── Breaking / Tournament Alert Banner ── */}
+            <div style={{ maxWidth:1200, margin:"24px auto 0", padding:`0 ${px}` }}>
+              <div onClick={() => go("News")} style={{ background: themeMode==="dark"?"linear-gradient(135deg, rgba(232,0,45,0.16) 0%, rgba(37,99,235,0.16) 100%)":"linear-gradient(135deg, rgba(232,0,45,0.08) 0%, rgba(37,99,235,0.08) 100%)", border:`1px solid ${themeMode==="dark"?"rgba(232,0,45,0.4)":"rgba(232,0,45,0.25)"}`, borderRadius:14, padding: isMobile?"14px 16px":"16px 22px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer", flexWrap:"wrap", gap:12, transition:"all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.borderColor=T_RED;}} onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.borderColor=themeMode==="dark"?"rgba(232,0,45,0.4)":"rgba(232,0,45,0.25)";}}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+                  <span style={{ background:T_RED, color:"#fff", fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, padding:"3px 10px", borderRadius:5 }}>🏆 TOURNAMENT DAY · SEPT 6</span>
+                  <span style={{ color:T.text, fontWeight:600, fontSize:isMobile?13:15 }}>5-a-Side Squads Announced: <strong>NAFC</strong> & <strong>ENNE FC (EFC)</strong></span>
+                </div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", color:T_RED, fontSize:13, letterSpacing:2, display:"flex", alignItems:"center", gap:4 }}>
+                  VIEW SQUADS & LIVE UPDATES →
+                </div>
+              </div>
+            </div>
+
+            {/* ── Challenge NAFC / Contact Us Banner ── */}
+            <div style={{ maxWidth:1200, margin:"0 auto", padding:`32px ${px} 48px` }}>
+              <div style={{ background:T.cardBg, border:`1px solid ${T.border}`, borderTop:`4px solid ${T_RED}`, borderRadius:16, padding: isMobile?"24px 18px":"32px 36px", display:"flex", flexDirection: isMobile?"column":"row", alignItems: isMobile?"flex-start":"center", justifyContent:"space-between", gap:20, boxShadow:"0 8px 30px rgba(0,0,0,0.08)" }}>
+                <div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+                    <span style={{ background:"rgba(22,163,74,0.12)", color:"#16a34a", border:"1px solid rgba(22,163,74,0.25)", borderRadius:4, padding:"2px 8px", fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:2 }}>OPEN FOR FIXTURES & TRIALS</span>
+                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, color:T.textDim, letterSpacing:2 }}>BENGALURU</span>
+                  </div>
+                  <div className="bebas" style={{ fontSize: isMobile?28:36, color:T.text, lineHeight:1, marginBottom:8 }}>WANT TO CHALLENGE <span style={{ color:T_RED }}>NAFC?</span></div>
+                  <p style={{ color:T.textMuted, fontSize:14, margin:0, maxWidth:580, lineHeight:1.7 }}>
+                    Looking to book a 5v5, 7v7, or 11v11 friendly match against NAFC in Bengaluru? Or interested in joining the squad for upcoming trials? Drop us a text on our official Instagram page.
+                  </p>
+                </div>
+                <a href="https://www.instagram.com/nafc.blr?igsh=MTJvNzV1cXFyNzRxMA==" target="_blank" rel="noreferrer" style={{ textDecoration:"none", flexShrink:0, width: isMobile?"100%":"auto" }}>
+                  <button className="bebas btn-red" style={{ padding: isMobile?"12px 20px":"14px 28px", fontSize:14, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", gap:8, cursor:"pointer", width: isMobile?"100%":"auto" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                    <span>DROP US A DM (@NAFC.BLR)</span>
+                  </button>
+                </a>
               </div>
             </div>
           </div>
@@ -1369,6 +1487,126 @@ function AppShell() {
             </div>
           </div>
         )}
+
+        {/* ══════════════ NEWS & TOURNAMENT HUB ══════════════ */}
+        {pg === "News" && (
+          <div style={{ background:T.bg, minHeight:"100vh", paddingBottom:70 }}>
+            <div style={{ background:T.headerGrad, borderBottom:`1px solid ${T.border}`, padding:`${isMobile?"28px":isTablet?"36px":"50px"} ${px} ${isMobile?"20px":"32px"}`, position:"relative", overflow:"hidden" }}>
+              <div style={{ position:"absolute", inset:0, backgroundImage:`repeating-linear-gradient(0deg,transparent,transparent 59px,${T.borderLight} 59px,${T.borderLight} 60px),repeating-linear-gradient(90deg,transparent,transparent 59px,${T.borderLight} 59px,${T.borderLight} 60px)` }} />
+              <div style={{ maxWidth:1100, margin:"0 auto", position:"relative", zIndex:1 }}>
+                <div className="section-label" style={{ marginBottom:8 }}>CLUB BULLETIN · 2026</div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems: isMobile?"flex-start":"flex-end", flexWrap:"wrap", gap:12 }}>
+                  <div className="bebas" style={{ fontSize: isMobile?40:isTablet?52:64, color:T.text, lineHeight:0.88 }}>NEWS & <span style={{ color:T_RED }}>TOURNAMENTS</span></div>
+                  {/* Category Filter */}
+                  <div style={{ display:"flex", gap:4, background:T.subtleBg, border:`1px solid ${T.border}`, padding:4, borderRadius:8, flexWrap:"wrap" }}>
+                    {["All","Tournament","Club News","Match Report"].map(cat => (
+                      <button key={cat} onClick={() => setNewsFltr(cat)} className="bebas" style={{ background:newsFltr===cat?T_RED:"transparent", color:newsFltr===cat?"#fff":T.textMuted, border:"none", padding: isMobile?"6px 10px":isTablet?"7px 14px":"8px 18px", fontSize:isMobile?11:12, cursor:"pointer", letterSpacing:2, borderRadius:5, transition:"all 0.2s" }}>
+                        {cat.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ maxWidth:1100, margin:"0 auto", padding:`28px ${px} 0` }}>
+              {newsList.filter(n => newsFltr === "All" || n.category === newsFltr).length === 0 ? (
+                <div style={{ textAlign:"center", padding:60, color:T.textDim }}>No announcements in this category yet.</div>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
+                  {newsList.filter(n => newsFltr === "All" || n.category === newsFltr).map((item, idx) => {
+                    const isTournament = item.category === "Tournament" || (item.teams && item.teams.length > 0);
+                    const isLive = item.badge === "LIVE";
+                    const isUpc = item.badge === "UPCOMING" || !item.badge;
+                    const badgeColor = isLive ? "#16a34a" : isUpc ? "#2563eb" : "#7c3aed";
+                    return (
+                      <div key={item.id || idx} style={{ background:T.cardBg, border:`1px solid ${T.border}`, borderRadius:16, overflow:"hidden", boxShadow:"0 6px 24px rgba(0,0,0,0.06)", animation:`fadeUp 0.35s ${idx*0.08}s ease both` }}>
+                        <div style={{ height:4, background: isTournament ? "linear-gradient(90deg, #E8002D 0%, #2563eb 100%)" : `linear-gradient(90deg, ${T_RED}, transparent)` }} />
+                        <div style={{ padding: isMobile?"18px 16px":"28px 32px" }}>
+                          {/* Card header */}
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10, marginBottom:14 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                              <span style={{ background:`${badgeColor}18`, border:`1px solid ${badgeColor}40`, color:badgeColor, padding:"3px 10px", borderRadius:6, fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2 }}>
+                                {item.badge || "UPCOMING"}
+                              </span>
+                              {item.category && (
+                                <span style={{ background:T.subtleBg, color:T.textDim, padding:"3px 10px", borderRadius:6, fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:2 }}>
+                                  {item.category.toUpperCase()}
+                                </span>
+                              )}
+                              {item.format && (
+                                <span style={{ background:"#0033a0", color:"#fff", padding:"3px 10px", borderRadius:6, fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:2 }}>
+                                  {item.format.toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <span style={{ fontSize:12, color:T.textDim, fontWeight:500 }}>
+                              {item.date}{item.venue ? ` · ${item.venue}` : ""}
+                            </span>
+                          </div>
+
+                          {/* Title & Summary */}
+                          <div className="bebas" style={{ fontSize: isMobile?24:isTablet?30:36, color:T.text, lineHeight:1.1, marginBottom:10 }}>
+                            {item.title}
+                          </div>
+                          {item.summary && (
+                            <p style={{ color:T.textMuted, fontSize: isMobile?13:15, lineHeight:1.7, margin:"0 0 20px" }}>
+                              {item.summary}
+                            </p>
+                          )}
+
+                          {/* Optional Tournament Squad Boards */}
+                          {item.teams && item.teams.length > 0 && (
+                            <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr":"1fr 1fr", gap:14, margin:"20px 0" }}>
+                              {item.teams.map((tm, tIdx) => {
+                                const isTeamRed = tm.color === "#E8002D" || tIdx === 0;
+                                const squadAccent = isTeamRed ? T_RED : "#2563eb";
+                                return (
+                                  <div key={tm.name || tIdx} style={{ background: themeMode==="dark" ? (isTeamRed ? "linear-gradient(145deg, rgba(232,0,45,0.08) 0%, rgba(24,24,27,0.9) 100%)" : "linear-gradient(145deg, rgba(37,99,235,0.08) 0%, rgba(24,24,27,0.9) 100%)") : (isTeamRed ? "linear-gradient(145deg, rgba(232,0,45,0.04) 0%, #ffffff 100%)" : "linear-gradient(145deg, rgba(37,99,235,0.04) 0%, #ffffff 100%)"), border:`1px solid ${squadAccent}35`, borderTop:`3px solid ${squadAccent}`, borderRadius:12, padding:"16px 18px" }}>
+                                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, borderBottom:`1px solid ${squadAccent}20`, paddingBottom:8 }}>
+                                      <div className="bebas" style={{ fontSize:18, color:squadAccent, letterSpacing:2 }}>{tm.name}</div>
+                                      <span style={{ fontSize:10, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, background:`${squadAccent}15`, color:squadAccent, padding:"2px 8px", borderRadius:4 }}>
+                                        {tm.players ? `${tm.players.length} SQUAD MEMBERS` : "ROSTER"}
+                                      </span>
+                                    </div>
+                                    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                                      {tm.players && tm.players.map((plyr, pIdx) => (
+                                        <div key={plyr.name || pIdx} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 10px", background:T.bg, borderRadius:6, border:`1px solid ${T.borderLight}` }}>
+                                          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                            <span className="bebas" style={{ fontSize:13, color:T.textDim, width:18, textAlign:"center" }}>{pIdx + 1}.</span>
+                                            <span style={{ fontWeight:600, fontSize:14, color:T.text }}>{plyr.name}</span>
+                                            {plyr.isGuest && (
+                                              <span style={{ background:"rgba(217,119,6,0.15)", color:T_GOLD, border:"1px solid rgba(217,119,6,0.3)", borderRadius:4, padding:"1px 6px", fontSize:9, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>GUEST ⭐</span>
+                                            )}
+                                          </div>
+                                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                                            {plyr.role && <span style={{ fontSize:11, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>{plyr.role.toUpperCase()}</span>}
+                                            {plyr.jersey && <span className="bebas" style={{ fontSize:13, color:squadAccent }}>#{plyr.jersey}</span>}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Content paragraph */}
+                          {item.content && (
+                            <div style={{ borderTop:`1px solid ${T.borderLight}`, paddingTop:16, marginTop:16, color:T.textMuted, fontSize:14, lineHeight:1.8 }}>
+                              {item.content}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ══════════════ FOOTER ══════════════ */}
@@ -1402,7 +1640,10 @@ function AppShell() {
               </div>
             </div>
             <div>
-              <div className="section-label" style={{ marginBottom:12 }}>FOLLOW US</div>
+              <div className="section-label" style={{ marginBottom:12 }}>CONTACT & INQUIRIES</div>
+              <p style={{ fontSize:13, color:"rgba(255,255,255,0.6)", lineHeight:1.7, margin:"0 0 12px", maxWidth:260 }}>
+                Looking to schedule a friendly (5v5/7v7/11v11) or join our upcoming trials? Drop us a text directly on Instagram:
+              </p>
               <a href="https://www.instagram.com/nafc.blr?igsh=MTJvNzV1cXFyNzRxMA==" target="_blank" rel="noreferrer" style={{ display:"inline-flex", alignItems:"center", gap:10, color:"#fff", textDecoration:"none", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", padding:"10px 16px", borderRadius:8 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
                 <span className="bebas" style={{ fontSize:13, letterSpacing:3 }}>@NAFC.BLR</span>

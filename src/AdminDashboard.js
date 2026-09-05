@@ -40,6 +40,8 @@ export default function AdminDashboard({ onBack }) {
   const [plrs, setPlrs] = useState([]);
   const [mtchs, setMtchs] = useState([]);
   const [gal, setGal] = useState([]);
+  const [anns, setAnns] = useState([]);
+  const [edAnn, setEdAnn] = useState(null);
   const [ld, setLd] = useState(false);
   const [edP, setEdP] = useState(null);
   const [edM, setEdM] = useState(null);
@@ -61,11 +63,12 @@ export default function AdminDashboard({ onBack }) {
     const uP = onSnapshot(collection(db,"players"), s => setPlrs(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.jersey-b.jersey)));
     const uM = onSnapshot(query(collection(db,"matches"),orderBy("date","desc")), s => setMtchs(s.docs.map(d=>({id:d.id,...d.data()}))));
     const uG = onSnapshot(query(collection(db,"gallery"),orderBy("createdAt","desc")), s => setGal(s.docs.map(d=>({id:d.id,...d.data()}))));
+    const uA = onSnapshot(query(collection(db,"announcements"),orderBy("date","desc")), s => setAnns(s.docs.map(d=>({id:d.id,...d.data()}))));
     const uS = onSnapshot(doc(db,"siteSettings","heroImage"), snap => {
       if (snap.exists() && snap.data().url) setCurrentHeroURL(snap.data().url);
       else setCurrentHeroURL(null);
     });
-    return () => { uP(); uM(); uG(); uS(); };
+    return () => { uP(); uM(); uG(); uA(); uS(); };
   }, []);
 
   const showToast = (msg, type="success") => {
@@ -350,6 +353,69 @@ export default function AdminDashboard({ onBack }) {
   };
   const remEdD = (i) => setEdM(v => ({ ...v, defensiveActions: (v.defensiveActions || []).filter((_, idx) => idx !== i) }));
 
+  // ── Announcement Handlers ──
+  const oNAnn = () => setEdAnn({
+    id: "",
+    title: "",
+    category: "Tournament",
+    date: new Date().toISOString().slice(0, 10),
+    badge: "UPCOMING",
+    format: "5-a-Side",
+    venue: "BFS Bengaluru",
+    summary: "",
+    content: "",
+    teams: [
+      { name: "TEAM 1 — NAFC", color: "#E8002D", players: [] },
+      { name: "TEAM 2 — ENNE FC (EFC)", color: "#2563eb", players: [] }
+    ]
+  });
+
+  const oEAnn = (a) => setEdAnn({ ...a });
+
+  const updAnn = async (e) => {
+    e.preventDefault();
+    setLd(true);
+    try {
+      const data = {
+        title: edAnn.title,
+        category: edAnn.category,
+        date: edAnn.date,
+        badge: edAnn.badge || "UPCOMING",
+        format: edAnn.format || "",
+        venue: edAnn.venue || "",
+        summary: edAnn.summary || "",
+        content: edAnn.content || "",
+        updatedAt: new Date().toISOString()
+      };
+      if (edAnn.teams && edAnn.teams.length > 0) {
+        data.teams = edAnn.teams;
+      }
+      if (edAnn.id) {
+        await updateDoc(doc(db, "announcements", edAnn.id), data);
+        showToast("✅ Announcement updated!");
+      } else {
+        data.createdAt = new Date().toISOString();
+        await addDoc(collection(db, "announcements"), data);
+        showToast("✅ Announcement published!");
+      }
+      setEdAnn(null);
+    } catch (err) {
+      showToast(`❌ Error: ${err.message}`, "error");
+    }
+    setLd(false);
+  };
+
+  const delAnn = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this announcement?")) return;
+    try {
+      await deleteDoc(doc(db, "announcements", id));
+      setEdAnn(null);
+      showToast("🗑️ Announcement deleted");
+    } catch (err) {
+      showToast(`❌ Error: ${err.message}`, "error");
+    }
+  };
+
   const TC = {
     success:{ bg:"#dcfce7", border:"#166534", text:"#166534" },
     error:  { bg:"#fee2e2", border:"#991b1b", text:"#991b1b" },
@@ -361,6 +427,7 @@ export default function AdminDashboard({ onBack }) {
     { i:"sqd",  l:"👥 Squad"    },
     { i:"addM", l:"⚔️ Log Match" },
     { i:"mtch", l:"📋 History"  },
+    { i:"news", l:"📢 News"     },
     { i:"gal",  l:"📷 Gallery"  },
     { i:"hero", l:"🏠 Hero Photo"},
   ];
@@ -664,6 +731,39 @@ export default function AdminDashboard({ onBack }) {
             </div>
           )}
 
+          {/* NEWS & ANNOUNCEMENTS */}
+          {tb === "news" && (
+            <div>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:"1px solid #e2e8f0", paddingBottom:12, marginBottom:18, gap:10, flexWrap:"wrap" }}>
+                <div style={{ fontSize:isMobile?18:22, fontWeight:800, color:"#0033a0" }}>ANNOUNCEMENTS & TOURNAMENTS</div>
+                <button onClick={oNAnn} style={{ background:"#0033a0", color:"#fff", border:"none", padding:"8px 14px", borderRadius:6, fontWeight:700, cursor:"pointer", fontSize:12, whiteSpace:"nowrap" }}>+ POST ANNOUNCEMENT</button>
+              </div>
+              {anns.length === 0 ? (
+                <div style={{ textAlign:"center", padding:"40px 0", color:"#94a3b8" }}>No announcements posted yet.</div>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  {anns.map(a => (
+                    <div key={a.id} style={{ background:"#f8fafc", border:"1px solid #e2e8f0", borderLeft:`4px solid ${a.badge==="LIVE"?"#16a34a":a.category==="Tournament"?"#0033a0":"#d97706"}`, padding:isMobile?"12px 14px":"14px 18px", borderRadius:8, display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:isMobile?"wrap":"nowrap" }}>
+                      <div style={{ minWidth:0, flex:1 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:4 }}>
+                          <span style={{ background:"#0033a0", color:"#fff", fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4 }}>{a.badge || "UPCOMING"}</span>
+                          <span style={{ background:"#e2e8f0", color:"#475569", fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4 }}>{a.category || "General"}</span>
+                          {a.format && <span style={{ background:"#f1f5f9", color:"#334155", fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4, border:"1px solid #cbd5e1" }}>{a.format}</span>}
+                        </div>
+                        <div style={{ fontSize:15, fontWeight:700, color:"#0f172a" }}>{a.title}</div>
+                        <div style={{ fontSize:12, color:"#64748b", marginTop:2 }}>{a.date}{a.venue ? ` · ${a.venue}` : ""}</div>
+                      </div>
+                      <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                        <button onClick={()=>oEAnn(a)} style={{ background:"#e0e7ff", color:"#3730a3", border:"1px solid #c7d2fe", padding:"6px 12px", borderRadius:5, fontWeight:700, fontSize:11, cursor:"pointer" }}>✏️ EDIT</button>
+                        <button onClick={()=>delAnn(a.id)} style={{ background:"#fee2e2", color:"#ef4444", border:"1px solid #fca5a5", padding:"6px 10px", borderRadius:5, fontWeight:700, fontSize:11, cursor:"pointer" }}>DELETE</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* GALLERY */}
           {tb === "gal" && (
             <div>
@@ -922,6 +1022,69 @@ export default function AdminDashboard({ onBack }) {
             <div style={{ display:"flex", gap:10, marginTop:18 }}>
               <button type="submit" disabled={ld} style={{ background:ld?"#94a3b8":"#0033a0", color:"#fff", flex:2, padding:12, border:"none", fontSize:14, fontWeight:700, cursor:ld?"wait":"pointer", borderRadius:6 }}>{ld?"SAVING...":"SAVE CHANGES"}</button>
               <button type="button" onClick={()=>setEdM(null)} style={{ background:"#f1f5f9", color:"#475569", border:"1px solid #cbd5e1", flex:1, padding:12, fontSize:14, fontWeight:700, cursor:"pointer", borderRadius:6 }}>CANCEL</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* EDIT / ADD ANNOUNCEMENT MODAL */}
+      {edAnn && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.75)", backdropFilter:"blur(3px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, padding:16 }}>
+          <form onSubmit={updAnn} style={{ background:"#fff", padding:isMobile?"20px":"28px", width:"100%", maxWidth:560, borderRadius:10, boxShadow:"0 10px 40px rgba(0,0,0,0.2)", maxHeight:"90vh", overflowY:"auto" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:"2px solid #0033a0", paddingBottom:10, marginBottom:18 }}>
+              <div style={{ fontSize:isMobile?16:20, fontWeight:800, color:"#0033a0" }}>{edAnn.id ? "EDIT ANNOUNCEMENT" : "POST ANNOUNCEMENT"}</div>
+              <div style={{ display:"flex", gap:8 }}>
+                {edAnn.id && <button type="button" onClick={()=>delAnn(edAnn.id)} style={{ background:"#fee2e2", color:"#ef4444", border:"none", padding:"4px 10px", borderRadius:4, fontSize:11, fontWeight:700, cursor:"pointer" }}>DELETE</button>}
+                <button type="button" onClick={()=>setEdAnn(null)} style={{ background:"#f1f5f9", color:"#64748b", border:"1px solid #cbd5e1", padding:"4px 10px", borderRadius:4, fontSize:11, fontWeight:700, cursor:"pointer" }}>✕</button>
+              </div>
+            </div>
+
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Title
+                <input value={edAnn.title} onChange={e=>setEdAnn({...edAnn,title:e.target.value})} placeholder="e.g. Sept 6 5-a-Side Tournament Squad Announcement" required style={{ ...inp, marginTop:4 }}/>
+              </label>
+
+              <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:10 }}>
+                <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Category
+                  <select value={edAnn.category} onChange={e=>setEdAnn({...edAnn,category:e.target.value})} style={{ ...selectStyle, marginTop:4 }}>
+                    <option value="Tournament">🏆 Tournament</option>
+                    <option value="Club News">📢 Club News</option>
+                    <option value="Match Report">⚽ Match Report</option>
+                  </select>
+                </label>
+                <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Status Badge
+                  <select value={edAnn.badge} onChange={e=>setEdAnn({...edAnn,badge:e.target.value})} style={{ ...selectStyle, marginTop:4 }}>
+                    <option value="UPCOMING">UPCOMING</option>
+                    <option value="LIVE">LIVE 🔴</option>
+                    <option value="COMPLETED">COMPLETED</option>
+                  </select>
+                </label>
+              </div>
+
+              <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr", gap:10 }}>
+                <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Date
+                  <input type="date" value={edAnn.date} onChange={e=>setEdAnn({...edAnn,date:e.target.value})} required style={{ ...inp, marginTop:4 }}/>
+                </label>
+                <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Venue
+                  <input value={edAnn.venue} onChange={e=>setEdAnn({...edAnn,venue:e.target.value})} placeholder="e.g. BFS Bengaluru" style={{ ...inp, marginTop:4 }}/>
+                </label>
+                <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Format
+                  <input value={edAnn.format} onChange={e=>setEdAnn({...edAnn,format:e.target.value})} placeholder="e.g. 5-a-Side" style={{ ...inp, marginTop:4 }}/>
+                </label>
+              </div>
+
+              <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Short Summary
+                <textarea rows={2} value={edAnn.summary} onChange={e=>setEdAnn({...edAnn,summary:e.target.value})} placeholder="Brief highlight of the announcement..." style={{ ...inp, marginTop:4, resize:"vertical" }}/>
+              </label>
+
+              <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Full Content / Matchday Report
+                <textarea rows={4} value={edAnn.content} onChange={e=>setEdAnn({...edAnn,content:e.target.value})} placeholder="Full announcement text, updates, results, etc..." style={{ ...inp, marginTop:4, resize:"vertical" }}/>
+              </label>
+            </div>
+
+            <div style={{ display:"flex", gap:10, marginTop:18 }}>
+              <button type="submit" disabled={ld} style={{ background:ld?"#94a3b8":"#0033a0", color:"#fff", flex:2, padding:12, border:"none", fontSize:14, fontWeight:700, cursor:ld?"wait":"pointer", borderRadius:6 }}>{ld?"SAVING...":"SAVE ANNOUNCEMENT"}</button>
+              <button type="button" onClick={()=>setEdAnn(null)} style={{ background:"#f1f5f9", color:"#475569", border:"1px solid #cbd5e1", flex:1, padding:12, fontSize:14, fontWeight:700, cursor:"pointer", borderRadius:6 }}>CANCEL</button>
             </div>
           </form>
         </div>
