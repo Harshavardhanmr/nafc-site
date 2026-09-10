@@ -58,7 +58,81 @@ export const THEMES = {
   }
 };
 
-const PGS = ["Home", "Players", "Fixtures", "Stats", "Gallery"];
+const PGS = ["Home", "Players", "Fixtures", "Stats", "Gallery", "News"];
+
+const DEFAULT_ANNOUNCEMENTS = [
+  {
+    id: "tournament-sept-6-2026",
+    title: "Sept 6 5-a-Side Tournament — Dual Squad Announcement",
+    category: "Tournament",
+    date: "2026-09-06",
+    badge: "UPCOMING",
+    format: "5-a-Side",
+    venue: "Ballpark Central, Kothanur",
+    summary: "NAFC is fielding two competitive squads for the Bangalore 5-a-side championship: Team 1 (NAFC) and Team 2 (ENNE FC / EFC).",
+    teams: [
+      {
+        name: "TEAM 1 — NAFC",
+        color: "#E8002D",
+        players: [
+          { name: "Hafeez", role: "Striker", jersey: 9 },
+          { name: "Hruthik", role: "Midfielder", jersey: 10 },
+          { name: "Ruddy (C)", role: "Midfielder", jersey: 8, isCaptain: true },
+          { name: "Dheemanth", role: "Defender", jersey: 30 },
+          { name: "Akarsh", role: "Goalkeeper", jersey: 1 },
+          { name: "Harsha", role: "Defender", jersey: 6 },
+          { name: "Megur", role: "Forward", jersey: 17 }
+        ]
+      },
+      {
+        name: "TEAM 2 — ENNE FC (EFC)",
+        color: "#2563eb",
+        players: [
+          { name: "Vignesh", role: "Defender", jersey: 4 },
+          { name: "Gopal (C)", role: "Defender", jersey: 3, isCaptain: true },
+          { name: "Shetty", role: "Midfielder", jersey: 11 },
+          { name: "Nithin", role: "Winger", jersey: 14 },
+          { name: "Naga", role: "Guest Player", isGuest: true },
+          { name: "Danish", role: "Midfielder", jersey: 21 }
+        ]
+      }
+    ],
+    content: "NAFC kicks off the September tournament season with two squads in action. Both teams will compete across the group stages and knockouts representing NAFC tactical depth and pace. Stay tuned for live match updates and scorelines throughout the day!",
+    createdAt: "2026-09-06T00:00:00.000Z"
+  },
+  {
+    id: "tournament-christ-aug-2026",
+    title: "Christ Tournament 9v9 — NAFC Campaign & Squad Roster",
+    category: "Tournament",
+    date: "2026-08-01",
+    badge: "COMPLETED",
+    format: "9v9",
+    venue: "Christ Academy Bengaluru",
+    summary: "NAFC's first official tournament campaign at the Christ 9v9 Tournament featuring 12 squad members across 2 matches.",
+    teams: [
+      {
+        name: "NAFC TOURNAMENT SQUAD (9v9)",
+        color: "#E8002D",
+        players: [
+          { name: "Nithin", role: "Striker", jersey: 14 },
+          { name: "Gopal (C)", role: "Defender", jersey: 3 },
+          { name: "Harsha Vardhan", role: "Defender", jersey: 6 },
+          { name: "Ruddy", role: "Midfielder", jersey: 8 },
+          { name: "Hruthik", role: "Midfielder", jersey: 10 },
+          { name: "Akarsh", role: "Goalkeeper", jersey: 1 },
+          { name: "Danish", role: "Midfielder", jersey: 21 },
+          { name: "Dheemanth", role: "Defender", jersey: 30 },
+          { name: "Megur", role: "Forward", jersey: 17 },
+          { name: "Vignesh", role: "Defender", jersey: 4 },
+          { name: "Shetty", role: "Forward", jersey: 11 },
+          { name: "Hafeez", role: "Winger", jersey: 9 }
+        ]
+      }
+    ],
+    content: "NAFC participated in the prestigious Christ 9v9 Tournament on August 1st and 2nd. Match 1 saw a hard-fought 1–0 victory over BMSC with Hruthik scoring the winning goal, followed by a tough knockout encounter against TFC. A foundational tournament for the squad!",
+    createdAt: "2026-08-02T20:00:00.000Z"
+  }
+];
 
 const POS_COLOR = {
   Goalkeeper: "#2563eb",
@@ -102,6 +176,7 @@ function MatchModal({ match, onClose, T = THEMES.dark }) {
   const label = isUpc ? "UPCOMING" : isW ? "WIN" : isD ? "DRAW" : "LOSS";
   const scorers = match.scorers || [];
   const assists = match.assisters || [];
+  const defActions = match.defensiveActions || [];
   const summary = match.summary || "";
   const totalGoals = scorers.reduce((sum, s) => sum + (typeof s === "object" && s.goals ? Number(s.goals) : 1), 0);
   const totalAssists = assists.reduce((sum, a) => sum + (typeof a === "object" && a.assists ? Number(a.assists) : 1), 0);
@@ -193,12 +268,38 @@ function MatchModal({ match, onClose, T = THEMES.dark }) {
               })}
             </div>
           )}
+          {defActions.length > 0 && (
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:3, color:"#2563eb", marginBottom:10 }}>🛡️ DEFENSIVE ACTIONS ({defActions.length})</div>
+              {defActions.map((d,i) => {
+                const dName = typeof d==="string"?d:d.name;
+                const isGuest = typeof d==="object"?(d.isGuest||(d.id&&String(d.id).startsWith("guest_"))||dName.toLowerCase().includes("guest")):dName.toLowerCase().includes("guest");
+                const statsArr = [];
+                if (d.blocks > 0) statsArr.push(`${d.blocks} BLK`);
+                if (d.interceptions > 0) statsArr.push(`${d.interceptions} INT`);
+                if (d.clearances > 0) statsArr.push(`${d.clearances} CLR`);
+                const statStr = statsArr.join(" · ") || "Defensive Contributor";
+                return (
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", background:T.bg2, borderRadius:8, border:`1px solid ${T.borderLight}`, marginBottom:6 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <div style={{ width:28, height:28, borderRadius:"50%", background:"rgba(37,99,235,0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13 }}>🛡️</div>
+                      <span style={{ fontWeight:600, color:T.text, fontSize:14 }}>{dName}</span>
+                      {isGuest && <span style={{ background:T.hoverBg, color:T.textMuted, border:`1px solid ${T.border}`, fontSize:10, fontWeight:700, padding:"2px 7px", borderRadius:4, letterSpacing:1 }}>GUEST</span>}
+                    </div>
+                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", color:"#2563eb", background:"rgba(37,99,235,0.1)", border:"1px solid rgba(37,99,235,0.2)", padding:"3px 10px", borderRadius:6, fontSize:12, letterSpacing:1 }}>
+                      {statStr}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {summary
             ? <div>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:3, color:T.textDim, marginBottom:8 }}>MATCH SUMMARY</div>
                 <p style={{ fontSize:14, color:T.textMuted, lineHeight:1.8, background:T.bg2, borderRadius:8, padding:"14px 16px", border:`1px solid ${T.borderLight}` }}>{summary}</p>
               </div>
-            : (!isUpc && scorers.length===0 && assists.length===0 &&
+            : (!isUpc && scorers.length===0 && assists.length===0 && defActions.length===0 &&
                 <div style={{ textAlign:"center", padding:"16px 0", color:T.textDim, fontSize:14 }}>No match details yet.</div>)
           }
           {isUpc && <div style={{ textAlign:"center", padding:"14px 0", color:T.textMuted, fontSize:14 }}>This match hasn't been played yet!</div>}
@@ -212,6 +313,9 @@ function PlayerModal({ player, onClose, T = THEMES.dark }) {
   const p = player;
   const pc = POS_COLOR[p.pos] || T_RED;
   const isGK = p.pos === "Goalkeeper";
+  const isDef = p.pos === "Defender";
+  const hasDefStats = isDef && ((p.blocks || 0) + (p.interceptions || 0) + (p.clearances || 0) > 0);
+
   return (
     <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.80)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:16, backdropFilter:"blur(12px)" }}>
       <div onClick={e=>e.stopPropagation()} style={{ background:T.cardBg, borderRadius:20, width:"100%", maxWidth:420, overflow:"hidden", animation:"fadeUp 0.25s ease", boxShadow:"0 30px 80px rgba(0,0,0,0.5)", border:`1px solid ${T.border}` }}>
@@ -237,6 +341,8 @@ function PlayerModal({ player, onClose, T = THEMES.dark }) {
           <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:12 }}>
             {(isGK
               ? [["SAVES",p.saves,"#60a5fa"],["CLEAN SHT",p.cleanSheets,"#4ade80"],["APPS",p.appearances,T.textMuted]]
+              : hasDefStats
+              ? [["BLOCKS",p.blocks||0,"#60a5fa"],["INTERCEPT",p.interceptions||0,"#38bdf8"],["CLEARANCES",p.clearances||0,"#4ade80"]]
               : [["GOALS",p.goals,T_RED],["ASSISTS",p.assists,"#fbbf24"],["APPS",p.appearances,T.textMuted]]
             ).map(([l,v,c]) => (
               <div key={l} style={{ background:T.bg2, border:`1px solid ${T.borderLight}`, borderRadius:10, padding:"12px 8px", textAlign:"center", borderTop:`2px solid ${c}` }}>
@@ -245,8 +351,15 @@ function PlayerModal({ player, onClose, T = THEMES.dark }) {
               </div>
             ))}
           </div>
+          {hasDefStats && ((p.goals||0) > 0 || (p.assists||0) > 0) && (
+            <div style={{ background:T.bg2, border:`1px solid ${T.borderLight}`, borderRadius:8, padding:"8px 12px", marginBottom:12, display:"flex", justifyContent:"space-around", alignItems:"center", fontSize:12, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5 }}>
+              <span style={{ color:T_RED }}>⚽ {p.goals||0} GOALS</span>
+              <span style={{ color:T.borderLight }}>|</span>
+              <span style={{ color:T_GOLD }}>🅰️ {p.assists||0} ASSISTS</span>
+            </div>
+          )}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-            {[["POSITION",p.pos],["JERSEY",`#${p.jersey}`],["CLUB","NAFC"],["SEASON","2026"]].map(([l,v]) => (
+            {[["POSITION",p.pos],["JERSEY",`#${p.jersey}`],["CLUB","NAFC"],["APPEARANCES",`${p.appearances||0} APPS`]].map(([l,v]) => (
               <div key={l} style={{ background:T.bg2, borderRadius:8, padding:"10px 14px", border:`1px solid ${T.borderLight}` }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:10, letterSpacing:2.5, color:T.textDim, marginBottom:3 }}>{l}</div>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:T.textMuted, letterSpacing:1 }}>{v}</div>
@@ -275,6 +388,8 @@ function AppShell() {
   const [plrs, setPlrs] = useState([]);
   const [mtchs, setMtchs] = useState([]);
   const [gal, setGal] = useState([]);
+  const [newsList, setNewsList] = useState(DEFAULT_ANNOUNCEMENTS);
+  const [newsFltr, setNewsFltr] = useState("All");
   const [heroURL, setHeroURL] = useState(HUDDLE_DEFAULT);
   const [mobileNav, setMobileNav] = useState(false);
   
@@ -311,7 +426,14 @@ function AppShell() {
       if (snap.exists() && snap.data().url) setHeroURL(snap.data().url);
       else setHeroURL(HUDDLE_DEFAULT);
     });
-    return () => { uP(); uM(); uG(); uS(); };
+    const uA = onSnapshot(query(collection(db,"announcements"),orderBy("date","desc")), s => {
+      if (!s.empty) {
+        setNewsList(s.docs.map(d=>({id:d.id,...d.data()})));
+      } else {
+        setNewsList(DEFAULT_ANNOUNCEMENTS);
+      }
+    });
+    return () => { uP(); uM(); uG(); uS(); uA(); };
   }, []);
 
   useEffect(() => {
@@ -372,13 +494,17 @@ function AppShell() {
     let goals = 0;
     let assists = 0;
     let appearances = 0;
+    let blocks = 0;
+    let interceptions = 0;
+    let clearances = 0;
 
     monthMatches.forEach(m => {
       if ((m.ap && m.ap.includes(p.id)) || (m.appearances && m.appearances.includes(p.id))) {
         appearances += 1;
       } else if (
         (m.scorers && m.scorers.some(s => (typeof s === "object" ? s.id === p.id || s.name === p.name : s === p.name))) ||
-        (m.assisters && m.assisters.some(a => (typeof a === "object" ? a.id === p.id || a.name === p.name : a === p.name)))
+        (m.assisters && m.assisters.some(a => (typeof a === "object" ? a.id === p.id || a.name === p.name : a === p.name))) ||
+        (m.defensiveActions && m.defensiveActions.some(d => (typeof d === "object" ? d.id === p.id || d.name === p.name : d === p.name)))
       ) {
         appearances += 1;
       }
@@ -406,22 +532,40 @@ function AppShell() {
           }
         });
       }
+
+      if (m.defensiveActions) {
+        m.defensiveActions.forEach(d => {
+          if (typeof d === "object") {
+            if (d.id === p.id || d.name === p.name) {
+              blocks += Number(d.blocks) || 0;
+              interceptions += Number(d.interceptions) || 0;
+              clearances += Number(d.clearances) || 0;
+            }
+          }
+        });
+      }
     });
+
+    const monthDefActions = blocks + interceptions + clearances;
 
     return {
       ...p,
       monthGoals: goals,
       monthAssists: assists,
+      monthBlocks: blocks,
+      monthInterceptions: interceptions,
+      monthClearances: clearances,
+      monthDefActions: monthDefActions,
       monthAppearances: appearances,
       monthContributions: goals + assists,
     };
   });
 
-  const topScorerMonth = [...playerMonthlyStats].sort((a,b) => b.monthGoals - a.monthGoals)[0];
-  const topAssistMonth = [...playerMonthlyStats].sort((a,b) => b.monthAssists - a.monthAssists)[0];
+  const topScorerMonth = [...playerMonthlyStats].sort((a,b) => (b.monthGoals||0) - (a.monthGoals||0))[0];
+  const topAssistMonth = [...playerMonthlyStats].sort((a,b) => (b.monthAssists||0) - (a.monthAssists||0))[0];
   const topPerformerMonth = [...playerMonthlyStats]
-    .filter(p => p.monthContributions > 0 || p.monthAppearances > 0)
-    .sort((a, b) => b.monthContributions - a.monthContributions || b.monthGoals - a.monthGoals || b.monthAppearances - a.monthAppearances)[0];
+    .filter(p => (p.monthContributions || 0) > 0 || (p.monthAppearances || 0) > 0)
+    .sort((a, b) => (b.monthContributions || 0) - (a.monthContributions || 0) || (b.monthGoals || 0) - (a.monthGoals || 0) || (b.monthAppearances || 0) - (a.monthAppearances || 0))[0];
 
   const go = p => { setPg(p); setSel(null); setSrch(""); setMobileNav(false); window.scrollTo(0,0); };
 
@@ -480,6 +624,7 @@ function AppShell() {
           .hide-mobile{display:none!important;}
           .stat-grid-4{grid-template-columns:repeat(2,1fr)!important;}
           .stat-grid-3{grid-template-columns:1fr!important;}
+          .leaderboard-grid-4{display:grid;grid-template-columns:1fr!important;gap:12px;}
           .squad-grid{grid-template-columns:repeat(2,1fr)!important;}
           .home-stats-bar{grid-template-columns:1fr!important;}
           .footer-grid{grid-template-columns:1fr!important;}
@@ -491,6 +636,7 @@ function AppShell() {
         @media(min-width:768px) and (max-width:1023px){
           .stat-grid-4{grid-template-columns:repeat(2,1fr)!important;}
           .stat-grid-3{grid-template-columns:repeat(3,1fr)!important;}
+          .leaderboard-grid-4{display:grid;grid-template-columns:repeat(2,1fr)!important;gap:14px;}
           .squad-grid{grid-template-columns:repeat(3,1fr)!important;}
           .home-stats-bar{grid-template-columns:1fr 1fr 1fr!important;}
           .footer-grid{grid-template-columns:1fr 1fr!important;}
@@ -501,6 +647,7 @@ function AppShell() {
         @media(min-width:1024px){
           .stat-grid-4{grid-template-columns:repeat(4,1fr)!important;}
           .stat-grid-3{grid-template-columns:repeat(3,1fr)!important;}
+          .leaderboard-grid-4{display:grid;grid-template-columns:repeat(4,1fr)!important;gap:14px;}
           .squad-grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))!important;}
           .home-stats-bar{grid-template-columns:1fr 1fr 1fr!important;}
           .footer-grid{grid-template-columns:1fr 1fr 1fr!important;}
@@ -684,6 +831,41 @@ function AppShell() {
                 </div>
               </div>
             </div>
+
+            {/* ── Breaking / Tournament Alert Banner ── */}
+            <div style={{ maxWidth:1200, margin:"24px auto 0", padding:`0 ${px}` }}>
+              <div onClick={() => go("News")} style={{ background: themeMode==="dark"?"linear-gradient(135deg, rgba(232,0,45,0.16) 0%, rgba(37,99,235,0.16) 100%)":"linear-gradient(135deg, rgba(232,0,45,0.08) 0%, rgba(37,99,235,0.08) 100%)", border:`1px solid ${themeMode==="dark"?"rgba(232,0,45,0.4)":"rgba(232,0,45,0.25)"}`, borderRadius:14, padding: isMobile?"14px 16px":"16px 22px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer", flexWrap:"wrap", gap:12, transition:"all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.borderColor=T_RED;}} onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.borderColor=themeMode==="dark"?"rgba(232,0,45,0.4)":"rgba(232,0,45,0.25)";}}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+                  <span style={{ background:T_RED, color:"#fff", fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, padding:"3px 10px", borderRadius:5 }}>🏆 TOURNAMENT DAY · SEPT 6</span>
+                  <span style={{ color:T.text, fontWeight:600, fontSize:isMobile?13:15 }}>5-a-Side Squads Announced: <strong>NAFC</strong> & <strong>ENNE FC (EFC)</strong></span>
+                </div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", color:T_RED, fontSize:13, letterSpacing:2, display:"flex", alignItems:"center", gap:4 }}>
+                  VIEW SQUADS & LIVE UPDATES →
+                </div>
+              </div>
+            </div>
+
+            {/* ── Challenge NAFC / Contact Us Banner ── */}
+            <div style={{ maxWidth:1200, margin:"0 auto", padding:`32px ${px} 48px` }}>
+              <div style={{ background:T.cardBg, border:`1px solid ${T.border}`, borderTop:`4px solid ${T_RED}`, borderRadius:16, padding: isMobile?"24px 18px":"32px 36px", display:"flex", flexDirection: isMobile?"column":"row", alignItems: isMobile?"flex-start":"center", justifyContent:"space-between", gap:20, boxShadow:"0 8px 30px rgba(0,0,0,0.08)" }}>
+                <div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+                    <span style={{ background:"rgba(22,163,74,0.12)", color:"#16a34a", border:"1px solid rgba(22,163,74,0.25)", borderRadius:4, padding:"2px 8px", fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:2 }}>OPEN FOR FIXTURES & TRIALS</span>
+                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, color:T.textDim, letterSpacing:2 }}>BENGALURU</span>
+                  </div>
+                  <div className="bebas" style={{ fontSize: isMobile?28:36, color:T.text, lineHeight:1, marginBottom:8 }}>WANT TO CHALLENGE <span style={{ color:T_RED }}>NAFC?</span></div>
+                  <p style={{ color:T.textMuted, fontSize:14, margin:0, maxWidth:580, lineHeight:1.7 }}>
+                    Looking to book a 5v5, 7v7, or 11v11 friendly match against NAFC in Bengaluru? Or interested in joining the squad for upcoming trials? Drop us a text on our official Instagram page.
+                  </p>
+                </div>
+                <a href="https://www.instagram.com/nafc.blr?igsh=MTJvNzV1cXFyNzRxMA==" target="_blank" rel="noreferrer" style={{ textDecoration:"none", flexShrink:0, width: isMobile?"100%":"auto" }}>
+                  <button className="bebas btn-red" style={{ padding: isMobile?"12px 20px":"14px 28px", fontSize:14, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", gap:8, cursor:"pointer", width: isMobile?"100%":"auto" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                    <span>DROP US A DM (@NAFC.BLR)</span>
+                  </button>
+                </a>
+              </div>
+            </div>
           </div>
         )}
 
@@ -736,7 +918,12 @@ function AppShell() {
                             <div className="bebas" style={{ fontSize:22, color:T.textDim }}>#{p.jersey}</div>
                           </div>
                           <div style={{ display:"flex", gap:0, borderTop:`1px solid ${T.borderLight}`, paddingTop:10 }}>
-                            {(p.pos==="Goalkeeper"?[["SVS",p.saves,"#2563eb"],["CS",p.cleanSheets,"#16a34a"]]:[ ["G",p.goals,T_RED],["A",p.assists,T_GOLD]]).concat([["APP",p.appearances,T.textMuted]]).map(([l,v,c],idx,arr) => (
+                            {(p.pos==="Goalkeeper"
+                              ? [["SVS",p.saves||0,"#2563eb"],["CS",p.cleanSheets||0,"#16a34a"],["APP",p.appearances||0,T.textMuted]]
+                              : (p.pos==="Defender" && ((p.blocks||0)+(p.interceptions||0)+(p.clearances||0) > 0))
+                              ? [["DEF",(p.blocks||0)+(p.interceptions||0)+(p.clearances||0),"#2563eb"],["G/A",(p.goals||0)+(p.assists||0),T_RED],["APP",p.appearances||0,T.textMuted]]
+                              : [["G",p.goals||0,T_RED],["A",p.assists||0,T_GOLD],["APP",p.appearances||0,T.textMuted]]
+                            ).map(([l,v,c],idx,arr) => (
                               <div key={l} style={{ flex:1, textAlign:"center", borderRight:idx<arr.length-1?`1px solid ${T.borderLight}`:"none" }}>
                                 <div className="bebas" style={{ fontSize:18, color:c||T.text }}>{v||0}</div>
                                 <div style={{ fontSize:10, letterSpacing:2, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{l}</div>
@@ -757,6 +944,8 @@ function AppShell() {
         {pg === "Players" && sel && (() => {
           const pc  = POS_COLOR[sel.pos] || T_RED;
           const isGK= sel.pos === "Goalkeeper";
+          const isDef = sel.pos === "Defender";
+          const hasDefStats = isDef && ((sel.blocks||0)+(sel.interceptions||0)+(sel.clearances||0) > 0);
           return (
             <div style={{ background:T.bg, minHeight:"100vh" }}>
               <div className="player-profile-grid" style={{ position:"relative", overflow: isMobile?"visible":"hidden" }}>
@@ -791,9 +980,11 @@ function AppShell() {
                     )}
                     <div style={{ display:"flex", gap:0, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, overflow:"hidden" }}>
                       {(isGK
-                        ?[["SAVES",sel.saves,"#60a5fa"],["CLEAN SHT",sel.cleanSheets,"#4ade80"]]
-                        :[["GOALS",sel.goals,T_RED],["ASSISTS",sel.assists,"#fbbf24"]]
-                      ).concat([["APPS",sel.appearances,"rgba(255,255,255,0.7)"]]).map(([l,v,c],idx,arr) => (
+                        ?[["SAVES",sel.saves,"#60a5fa"],["CLEAN SHT",sel.cleanSheets,"#4ade80"],["APPS",sel.appearances,"rgba(255,255,255,0.7)"]]
+                        :hasDefStats
+                        ?[["BLOCKS",sel.blocks||0,"#60a5fa"],["INTERCEPT",sel.interceptions||0,"#38bdf8"],["CLEARANCES",sel.clearances||0,"#4ade80"],["APPS",sel.appearances,"rgba(255,255,255,0.7)"]]
+                        :[["GOALS",sel.goals,T_RED],["ASSISTS",sel.assists,"#fbbf24"],["APPS",sel.appearances,"rgba(255,255,255,0.7)"]]
+                      ).map(([l,v,c],idx,arr) => (
                         <div key={l} style={{ flex:1, padding: isMobile?"12px 6px":"16px 10px", textAlign:"center", borderRight:idx<arr.length-1?"1px solid rgba(255,255,255,0.07)":"none", borderTop:`2px solid ${c}` }}>
                           <div className="bebas" style={{ fontSize: isMobile?30:36, color:c, lineHeight:1 }}>{v||0}</div>
                           <div style={{ fontSize:10, letterSpacing:2, color:"rgba(255,255,255,0.6)", fontFamily:"'Bebas Neue',sans-serif", marginTop:4 }}>{l}</div>
@@ -856,9 +1047,18 @@ function AppShell() {
                 <div style={{ maxWidth:900, margin:"0 auto" }}>
                   <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr 1fr":"repeat(3,1fr)", gap:isMobile?10:14, marginBottom:32 }}>
                     {(isGK
-                      ?[["SAVES",sel.saves,"#2563eb","Saves this season"],["CLEAN SHEETS",sel.cleanSheets,"#16a34a","Games without conceding"]]
-                      :[["GOALS",sel.goals,T_RED,"Goals this season"],["ASSISTS",sel.assists,T_GOLD,"Assists provided"]]
-                    ).concat([["APPEARANCES",sel.appearances,T.text,"Games played"]]).map(([l,v,c,desc]) => (
+                      ? [["SAVES",sel.saves,"#2563eb","Saves this season"],["CLEAN SHEETS",sel.cleanSheets,"#16a34a","Games without conceding"],["APPEARANCES",sel.appearances,T.text,"Games played"]]
+                      : hasDefStats
+                      ? [
+                          ["BLOCKS",sel.blocks||0,"#2563eb","Crucial shots & passes blocked"],
+                          ["INTERCEPTIONS",sel.interceptions||0,"#0ea5e9","Opponent attacks intercepted"],
+                          ["CLEARANCES",sel.clearances||0,"#10b981","Dangerous balls cleared"],
+                          ["GOALS",sel.goals||0,T_RED,"Goals scored"],
+                          ["ASSISTS",sel.assists||0,T_GOLD,"Assists provided"],
+                          ["APPEARANCES",sel.appearances||0,T.text,"Matches played"]
+                        ]
+                      : [["GOALS",sel.goals,T_RED,"Goals this season"],["ASSISTS",sel.assists,T_GOLD,"Assists provided"],["APPEARANCES",sel.appearances,T.text,"Games played"]]
+                    ).map(([l,v,c,desc]) => (
                       <div key={l} className="profile-stat-box" style={{ borderTop:`3px solid ${c}` }}>
                         <div className="bebas" style={{ fontSize: isMobile?44:54, color:c, lineHeight:1, marginBottom:4 }}><StatNum value={v||0} /></div>
                         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:isMobile?12:14, color:T.text, letterSpacing:2, marginBottom:4 }}>{l}</div>
@@ -1076,45 +1276,84 @@ function AppShell() {
                     ))}
                   </div>
 
-                  {/* Monthly Leaderboards — 3 cols */}
-                  <div className="stat-grid-3" style={{ display:"grid", gap:isMobile?12:14 }}>
-                    {[{title:`TOP SCORERS (${getMonthLabel(activeMonth)})`,key:"monthGoals",color:T_RED,icon:"⚽"},{title:`TOP ASSISTS (${getMonthLabel(activeMonth)})`,key:"monthAssists",color:T_GOLD,icon:"🅰️"},{title:`APPEARANCES (${getMonthLabel(activeMonth)})`,key:"monthAppearances",color:"#16a34a",icon:"🎽"}].map(board => {
-                      const sorted = [...playerMonthlyStats].filter(p => (p[board.key]||0) > 0).sort((a,b)=>(b[board.key]||0)-(a[board.key]||0));
-                      return (
-                        <div key={board.title} className="stat-card">
-                          <div style={{ padding:"16px 18px 14px", borderBottom:`1px solid ${T.borderLight}`, background:T.bg2, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                            <div>
-                              <div className="bebas" style={{ fontSize:16, color:T.text, letterSpacing:2 }}>{board.title}</div>
-                              <div style={{ fontSize:11, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{sorted.length} ACTIVE PLAYERS</div>
-                            </div>
-                            <div style={{ fontSize:18 }}>{board.icon}</div>
+                  {/* Monthly Leaderboards — 4 cols */}
+                  <div className="leaderboard-grid-4">
+                    {[
+                      {
+                        title: `TOP SCORERS (${getMonthLabel(activeMonth)})`,
+                        color: T_RED,
+                        icon: "⚽",
+                        emptyMsg: "No goals recorded for this month.",
+                        sorted: [...playerMonthlyStats].filter(p => (p.monthGoals || 0) > 0).sort((a,b) => (b.monthGoals||0) - (a.monthGoals||0) || (b.monthAssists||0) - (a.monthAssists||0)),
+                        renderValue: p => p.monthGoals || 0,
+                        subValue: null
+                      },
+                      {
+                        title: `TOP ASSISTS (${getMonthLabel(activeMonth)})`,
+                        color: T_GOLD,
+                        icon: "🅰️",
+                        emptyMsg: "No assists recorded for this month.",
+                        sorted: [...playerMonthlyStats].filter(p => (p.monthAssists || 0) > 0).sort((a,b) => (b.monthAssists||0) - (a.monthAssists||0) || (b.monthGoals||0) - (a.monthGoals||0)),
+                        renderValue: p => p.monthAssists || 0,
+                        subValue: null
+                      },
+                      {
+                        title: `DEFENSIVE LEADERS (${getMonthLabel(activeMonth)})`,
+                        color: "#2563eb",
+                        icon: "🛡️",
+                        emptyMsg: "No defensive actions recorded for this month.",
+                        sorted: [...playerMonthlyStats].filter(p => (p.monthDefActions || 0) > 0).sort((a,b) => (b.monthDefActions||0) - (a.monthDefActions||0) || (b.monthAppearances||0) - (a.monthAppearances||0)),
+                        renderValue: p => p.monthDefActions || 0,
+                        subValue: p => [p.monthBlocks>0&&`${p.monthBlocks} Blk`, p.monthInterceptions>0&&`${p.monthInterceptions} Int`, p.monthClearances>0&&`${p.monthClearances} Clr`].filter(Boolean).join(" · ") || null
+                      },
+                      {
+                        title: `APPEARANCES (${getMonthLabel(activeMonth)})`,
+                        color: "#16a34a",
+                        icon: "🎽",
+                        emptyMsg: "No appearances recorded for this month.",
+                        sorted: [...playerMonthlyStats].filter(p => (p.monthAppearances || 0) > 0).sort((a,b) => (b.monthAppearances||0) - (a.monthAppearances||0) || (b.monthGoals||0) - (a.monthGoals||0)),
+                        renderValue: p => p.monthAppearances || 0,
+                        subValue: null
+                      }
+                    ].map(board => (
+                      <div key={board.title} className="stat-card">
+                        <div style={{ padding:"16px 18px 14px", borderBottom:`1px solid ${T.borderLight}`, background:T.bg2, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                          <div>
+                            <div className="bebas" style={{ fontSize:15, color:T.text, letterSpacing:1.5 }}>{board.title}</div>
+                            <div style={{ fontSize:11, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{board.sorted.length} ACTIVE PLAYERS</div>
                           </div>
-                          <div style={{ padding:"6px 12px 10px", maxHeight:400, overflowY:"auto" }}>
-                            {sorted.length === 0 ? (
-                              <div style={{ textAlign:"center", padding:"34px 10px", color:T.textDim, fontSize:13 }}>
-                                {board.key === "monthAssists" ? "No assists recorded for this month." : board.key === "monthGoals" ? "No goals recorded for this month." : "No appearances recorded for this month."}
-                              </div>
-                            ) : sorted.map((p,i) => (
-                              <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)}>
-                                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                                  <div style={{ width:24, textAlign:"center" }}>
-                                    <div className="bebas" style={{ fontSize:i===0?18:15, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
-                                  </div>
-                                  <div style={{ width:36, height:36, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
-                                    {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }} />:<span className="bebas" style={{ fontSize:11, color:T.textDim }}>#{p.jersey}</span>}
-                                  </div>
-                                  <div>
-                                    <div style={{ fontWeight:600, fontSize:15, color:T.text, lineHeight:1.2 }}>{p.name}</div>
-                                    <div style={{ fontSize:11, letterSpacing:2, color:`${POS_COLOR[p.pos]||T_RED}`, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{p.pos.slice(0,3).toUpperCase()}</div>
-                                  </div>
-                                </div>
-                                <div className="bebas" style={{ fontSize:26, color:i===0?board.color:T.textMuted, lineHeight:1 }}>{p[board.key]||0}</div>
-                              </div>
-                            ))}
-                          </div>
+                          <div style={{ fontSize:18 }}>{board.icon}</div>
                         </div>
-                      );
-                    })}
+                        <div style={{ padding:"6px 12px 10px", maxHeight:400, overflowY:"auto" }}>
+                          {board.sorted.length === 0 ? (
+                            <div style={{ textAlign:"center", padding:"34px 10px", color:T.textDim, fontSize:13 }}>
+                              {board.emptyMsg}
+                            </div>
+                          ) : board.sorted.map((p,i) => (
+                            <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)}>
+                              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                                <div style={{ width:24, textAlign:"center" }}>
+                                  <div className="bebas" style={{ fontSize:i===0?18:15, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
+                                </div>
+                                <div style={{ width:36, height:36, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
+                                  {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }} />:<span className="bebas" style={{ fontSize:11, color:T.textDim }}>#{p.jersey}</span>}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight:600, fontSize:15, color:T.text, lineHeight:1.2 }}>{p.name}</div>
+                                  <div style={{ fontSize:11, letterSpacing:2, color:`${POS_COLOR[p.pos]||T_RED}`, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{p.pos.slice(0,3).toUpperCase()}</div>
+                                </div>
+                              </div>
+                              <div style={{ textAlign:"right" }}>
+                                <div className="bebas" style={{ fontSize:26, color:i===0?board.color:T.textMuted, lineHeight:1 }}>{board.renderValue(p)}</div>
+                                {board.subValue && board.subValue(p) && (
+                                  <div style={{ fontSize:10, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:2 }}>{board.subValue(p)}</div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </>
               ) : (
@@ -1129,41 +1368,84 @@ function AppShell() {
                     ))}
                   </div>
 
-                  {/* Season All-Time Leaderboards */}
-                  <div className="stat-grid-3" style={{ display:"grid", gap:isMobile?12:14 }}>
-                    {[{title:"TOP SCORERS",key:"goals",color:T_RED,icon:"⚽"},{title:"TOP ASSISTS",key:"assists",color:T_GOLD,icon:"🅰️"},{title:"APPEARANCES",key:"appearances",color:"#16a34a",icon:"🎽"}].map(board => {
-                      const sorted = [...plrs].sort((a,b)=>(b[board.key]||0)-(a[board.key]||0));
-                      return (
-                        <div key={board.title} className="stat-card">
-                          <div style={{ padding:"16px 18px 14px", borderBottom:`1px solid ${T.borderLight}`, background:T.bg2, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                            <div>
-                              <div className="bebas" style={{ fontSize:16, color:T.text, letterSpacing:2 }}>{board.title}</div>
-                              <div style={{ fontSize:11, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{sorted.length} PLAYERS</div>
-                            </div>
-                            <div style={{ fontSize:18 }}>{board.icon}</div>
+                  {/* Season All-Time Leaderboards — 4 cols */}
+                  <div className="leaderboard-grid-4">
+                    {[
+                      {
+                        title: "TOP SCORERS",
+                        color: T_RED,
+                        icon: "⚽",
+                        emptyMsg: "No goals recorded yet.",
+                        sorted: [...plrs].filter(p => (p.goals || 0) > 0).sort((a,b) => (b.goals||0) - (a.goals||0) || (b.assists||0) - (a.assists||0)),
+                        renderValue: p => p.goals || 0,
+                        subValue: null
+                      },
+                      {
+                        title: "TOP ASSISTS",
+                        color: T_GOLD,
+                        icon: "🅰️",
+                        emptyMsg: "No assists recorded yet.",
+                        sorted: [...plrs].filter(p => (p.assists || 0) > 0).sort((a,b) => (b.assists||0) - (a.assists||0) || (b.goals||0) - (a.goals||0)),
+                        renderValue: p => p.assists || 0,
+                        subValue: null
+                      },
+                      {
+                        title: "DEFENSIVE LEADERS",
+                        color: "#2563eb",
+                        icon: "🛡️",
+                        emptyMsg: "No defensive actions recorded yet.",
+                        sorted: [...plrs].filter(p => ((p.blocks||0) + (p.interceptions||0) + (p.clearances||0)) > 0).sort((a,b) => ((b.blocks||0)+(b.interceptions||0)+(b.clearances||0)) - ((a.blocks||0)+(a.interceptions||0)+(a.clearances||0)) || (b.appearances||0) - (a.appearances||0)),
+                        renderValue: p => (p.blocks||0) + (p.interceptions||0) + (p.clearances||0),
+                        subValue: p => [p.blocks>0&&`${p.blocks} Blk`, p.interceptions>0&&`${p.interceptions} Int`, p.clearances>0&&`${p.clearances} Clr`].filter(Boolean).join(" · ") || null
+                      },
+                      {
+                        title: "APPEARANCES",
+                        color: "#16a34a",
+                        icon: "🎽",
+                        emptyMsg: "No appearances recorded yet.",
+                        sorted: [...plrs].filter(p => (p.appearances || 0) > 0).sort((a,b) => (b.appearances||0) - (a.appearances||0) || (b.goals||0) - (a.goals||0)),
+                        renderValue: p => p.appearances || 0,
+                        subValue: null
+                      }
+                    ].map(board => (
+                      <div key={board.title} className="stat-card">
+                        <div style={{ padding:"16px 18px 14px", borderBottom:`1px solid ${T.borderLight}`, background:T.bg2, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                          <div>
+                            <div className="bebas" style={{ fontSize:15, color:T.text, letterSpacing:1.5 }}>{board.title}</div>
+                            <div style={{ fontSize:11, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{board.sorted.length} PLAYERS</div>
                           </div>
-                          <div style={{ padding:"6px 12px 10px", maxHeight:400, overflowY:"auto" }}>
-                            {sorted.map((p,i) => (
-                              <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)}>
-                                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                                  <div style={{ width:24, textAlign:"center" }}>
-                                    <div className="bebas" style={{ fontSize:i===0?18:15, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
-                                  </div>
-                                  <div style={{ width:36, height:36, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
-                                    {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }} />:<span className="bebas" style={{ fontSize:11, color:T.textDim }}>#{p.jersey}</span>}
-                                  </div>
-                                  <div>
-                                    <div style={{ fontWeight:600, fontSize:15, color:T.text, lineHeight:1.2 }}>{p.name}</div>
-                                    <div style={{ fontSize:11, letterSpacing:2, color:`${POS_COLOR[p.pos]||T_RED}`, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{p.pos.slice(0,3).toUpperCase()}</div>
-                                  </div>
-                                </div>
-                                <div className="bebas" style={{ fontSize:26, color:i===0?board.color:T.textMuted, lineHeight:1 }}>{p[board.key]||0}</div>
-                              </div>
-                            ))}
-                          </div>
+                          <div style={{ fontSize:18 }}>{board.icon}</div>
                         </div>
-                      );
-                    })}
+                        <div style={{ padding:"6px 12px 10px", maxHeight:400, overflowY:"auto" }}>
+                          {board.sorted.length === 0 ? (
+                            <div style={{ textAlign:"center", padding:"34px 10px", color:T.textDim, fontSize:13 }}>
+                              {board.emptyMsg}
+                            </div>
+                          ) : board.sorted.map((p,i) => (
+                            <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)}>
+                              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                                <div style={{ width:24, textAlign:"center" }}>
+                                  <div className="bebas" style={{ fontSize:i===0?18:15, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
+                                </div>
+                                <div style={{ width:36, height:36, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
+                                  {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }} />:<span className="bebas" style={{ fontSize:11, color:T.textDim }}>#{p.jersey}</span>}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight:600, fontSize:15, color:T.text, lineHeight:1.2 }}>{p.name}</div>
+                                  <div style={{ fontSize:11, letterSpacing:2, color:`${POS_COLOR[p.pos]||T_RED}`, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{p.pos.slice(0,3).toUpperCase()}</div>
+                                </div>
+                              </div>
+                              <div style={{ textAlign:"right" }}>
+                                <div className="bebas" style={{ fontSize:26, color:i===0?board.color:T.textMuted, lineHeight:1 }}>{board.renderValue(p)}</div>
+                                {board.subValue && board.subValue(p) && (
+                                  <div style={{ fontSize:10, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:2 }}>{board.subValue(p)}</div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </>
               )}
@@ -1205,6 +1487,132 @@ function AppShell() {
             </div>
           </div>
         )}
+
+        {/* ══════════════ NEWS & TOURNAMENT HUB ══════════════ */}
+        {pg === "News" && (
+          <div style={{ background:T.bg, minHeight:"100vh", paddingBottom:70 }}>
+            <div style={{ background:T.headerGrad, borderBottom:`1px solid ${T.border}`, padding:`${isMobile?"28px":isTablet?"36px":"50px"} ${px} ${isMobile?"20px":"32px"}`, position:"relative", overflow:"hidden" }}>
+              <div style={{ position:"absolute", inset:0, backgroundImage:`repeating-linear-gradient(0deg,transparent,transparent 59px,${T.borderLight} 59px,${T.borderLight} 60px),repeating-linear-gradient(90deg,transparent,transparent 59px,${T.borderLight} 59px,${T.borderLight} 60px)` }} />
+              <div style={{ maxWidth:1100, margin:"0 auto", position:"relative", zIndex:1 }}>
+                <div className="section-label" style={{ marginBottom:8 }}>CLUB BULLETIN · 2026</div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems: isMobile?"flex-start":"flex-end", flexWrap:"wrap", gap:12 }}>
+                  <div className="bebas" style={{ fontSize: isMobile?40:isTablet?52:64, color:T.text, lineHeight:0.88 }}>NEWS & <span style={{ color:T_RED }}>TOURNAMENTS</span></div>
+                  {/* Category Filter */}
+                  <div style={{ display:"flex", gap:4, background:T.subtleBg, border:`1px solid ${T.border}`, padding:4, borderRadius:8, flexWrap:"wrap" }}>
+                    {["All","Tournament","Club News","Match Report"].map(cat => (
+                      <button key={cat} onClick={() => setNewsFltr(cat)} className="bebas" style={{ background:newsFltr===cat?T_RED:"transparent", color:newsFltr===cat?"#fff":T.textMuted, border:"none", padding: isMobile?"6px 10px":isTablet?"7px 14px":"8px 18px", fontSize:isMobile?11:12, cursor:"pointer", letterSpacing:2, borderRadius:5, transition:"all 0.2s" }}>
+                        {cat.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ maxWidth:1100, margin:"0 auto", padding:`28px ${px} 0` }}>
+              {newsList.filter(n => newsFltr === "All" || n.category === newsFltr).length === 0 ? (
+                <div style={{ textAlign:"center", padding:60, color:T.textDim }}>No announcements in this category yet.</div>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
+                  {newsList.filter(n => newsFltr === "All" || n.category === newsFltr).map((item, idx) => {
+                    const isTournament = item.category === "Tournament" || (item.teams && item.teams.length > 0);
+                    const isLive = item.badge === "LIVE";
+                    const isUpc = item.badge === "UPCOMING" || !item.badge;
+                    const badgeColor = isLive ? "#16a34a" : isUpc ? "#2563eb" : "#7c3aed";
+                    return (
+                      <div key={item.id || idx} style={{ background:T.cardBg, border:`1px solid ${T.border}`, borderRadius:16, overflow:"hidden", boxShadow:"0 6px 24px rgba(0,0,0,0.06)", animation:`fadeUp 0.35s ${idx*0.08}s ease both` }}>
+                        <div style={{ height:4, background: isTournament ? "linear-gradient(90deg, #E8002D 0%, #2563eb 100%)" : `linear-gradient(90deg, ${T_RED}, transparent)` }} />
+                        <div style={{ padding: isMobile?"18px 16px":"28px 32px" }}>
+                          {/* Card header */}
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10, marginBottom:14 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                              <span style={{ background:`${badgeColor}18`, border:`1px solid ${badgeColor}40`, color:badgeColor, padding:"3px 10px", borderRadius:6, fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2 }}>
+                                {item.badge || "UPCOMING"}
+                              </span>
+                              {item.category && (
+                                <span style={{ background:T.subtleBg, color:T.textDim, padding:"3px 10px", borderRadius:6, fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:2 }}>
+                                  {item.category.toUpperCase()}
+                                </span>
+                              )}
+                              {item.format && (
+                                <span style={{ background:"#0033a0", color:"#fff", padding:"3px 10px", borderRadius:6, fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:2 }}>
+                                  {item.format.toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <span style={{ fontSize:12, color:T.textDim, fontWeight:500 }}>
+                              {item.date}{item.venue ? ` · ${item.venue}` : ""}
+                            </span>
+                          </div>
+
+                          {/* Title & Summary */}
+                          <div className="bebas" style={{ fontSize: isMobile?24:isTablet?30:36, color:T.text, lineHeight:1.1, marginBottom:10 }}>
+                            {item.title}
+                          </div>
+                          {item.summary && (
+                            <p style={{ color:T.textMuted, fontSize: isMobile?13:15, lineHeight:1.7, margin:"0 0 20px" }}>
+                              {item.summary}
+                            </p>
+                          )}
+
+                          {/* Optional Tournament Squad Boards */}
+                          {item.teams && item.teams.length > 0 && (
+                            <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr":"1fr 1fr", gap:14, margin:"20px 0" }}>
+                              {item.teams.map((tm, tIdx) => {
+                                const isTeamRed = tm.color === "#E8002D" || tIdx === 0;
+                                const squadAccent = isTeamRed ? T_RED : "#2563eb";
+                                return (
+                                  <div key={tm.name || tIdx} style={{ background: themeMode==="dark" ? (isTeamRed ? "linear-gradient(145deg, rgba(232,0,45,0.08) 0%, rgba(24,24,27,0.9) 100%)" : "linear-gradient(145deg, rgba(37,99,235,0.08) 0%, rgba(24,24,27,0.9) 100%)") : (isTeamRed ? "linear-gradient(145deg, rgba(232,0,45,0.04) 0%, #ffffff 100%)" : "linear-gradient(145deg, rgba(37,99,235,0.04) 0%, #ffffff 100%)"), border:`1px solid ${squadAccent}35`, borderTop:`3px solid ${squadAccent}`, borderRadius:12, padding:"16px 18px" }}>
+                                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, borderBottom:`1px solid ${squadAccent}20`, paddingBottom:8 }}>
+                                      <div className="bebas" style={{ fontSize:18, color:squadAccent, letterSpacing:2 }}>{tm.name}</div>
+                                      <span style={{ fontSize:10, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, background:`${squadAccent}15`, color:squadAccent, padding:"2px 8px", borderRadius:4 }}>
+                                        {tm.players ? `${tm.players.length} SQUAD MEMBERS` : "ROSTER"}
+                                      </span>
+                                    </div>
+                                    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                                      {tm.players && tm.players.map((plyr, pIdx) => {
+                                        const isCap = plyr.isCaptain || (plyr.name && plyr.name.includes('(C)'));
+                                        return (
+                                          <div key={plyr.name || pIdx} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 10px", background:T.bg, borderRadius:6, border: isCap ? `1px solid ${T_GOLD}40` : `1px solid ${T.borderLight}` }}>
+                                            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                              <span className="bebas" style={{ fontSize:13, color:T.textDim, width:18, textAlign:"center" }}>{pIdx + 1}.</span>
+                                              <span style={{ fontWeight:600, fontSize:14, color:T.text }}>{plyr.name}</span>
+                                              {isCap && (
+                                                <span style={{ background:"rgba(217,119,6,0.18)", color:T_GOLD, border:"1px solid rgba(217,119,6,0.4)", borderRadius:4, padding:"1px 6px", fontSize:9, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>CAPTAIN 🎽</span>
+                                              )}
+                                              {plyr.isGuest && (
+                                                <span style={{ background:"rgba(37,99,235,0.15)", color:"#2563eb", border:"1px solid rgba(37,99,235,0.3)", borderRadius:4, padding:"1px 6px", fontSize:9, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>GUEST ⭐</span>
+                                              )}
+                                            </div>
+                                            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                                              {plyr.role && <span style={{ fontSize:11, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>{plyr.role.toUpperCase()}</span>}
+                                              {plyr.jersey && <span className="bebas" style={{ fontSize:13, color:squadAccent }}>#{plyr.jersey}</span>}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Content paragraph */}
+                          {item.content && (
+                            <div style={{ borderTop:`1px solid ${T.borderLight}`, paddingTop:16, marginTop:16, color:T.textMuted, fontSize:14, lineHeight:1.8 }}>
+                              {item.content}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ══════════════ FOOTER ══════════════ */}
@@ -1238,7 +1646,10 @@ function AppShell() {
               </div>
             </div>
             <div>
-              <div className="section-label" style={{ marginBottom:12 }}>FOLLOW US</div>
+              <div className="section-label" style={{ marginBottom:12 }}>CONTACT & INQUIRIES</div>
+              <p style={{ fontSize:13, color:"rgba(255,255,255,0.6)", lineHeight:1.7, margin:"0 0 12px", maxWidth:260 }}>
+                Looking to schedule a friendly (5v5/7v7/11v11) or join our upcoming trials? Drop us a text directly on Instagram:
+              </p>
               <a href="https://www.instagram.com/nafc.blr?igsh=MTJvNzV1cXFyNzRxMA==" target="_blank" rel="noreferrer" style={{ display:"inline-flex", alignItems:"center", gap:10, color:"#fff", textDecoration:"none", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", padding:"10px 16px", borderRadius:8 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
                 <span className="bebas" style={{ fontSize:13, letterSpacing:3 }}>@NAFC.BLR</span>

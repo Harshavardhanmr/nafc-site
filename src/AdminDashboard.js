@@ -40,6 +40,8 @@ export default function AdminDashboard({ onBack }) {
   const [plrs, setPlrs] = useState([]);
   const [mtchs, setMtchs] = useState([]);
   const [gal, setGal] = useState([]);
+  const [anns, setAnns] = useState([]);
+  const [edAnn, setEdAnn] = useState(null);
   const [ld, setLd] = useState(false);
   const [edP, setEdP] = useState(null);
   const [edM, setEdM] = useState(null);
@@ -54,18 +56,19 @@ export default function AdminDashboard({ onBack }) {
 
   const [mF, setMF] = useState({
     op:"", dt:"", vn:"", cp:"Friendly", rs:"W",
-    nS:0, oS:0, ap:[], sc:[], as:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, fmt:"7s"
+    nS:0, oS:0, ap:[], sc:[], as:[], df:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, dI:"", dGuest:"", dB:0, dInt:0, dC:0, fmt:"7s"
   });
 
   useEffect(() => {
     const uP = onSnapshot(collection(db,"players"), s => setPlrs(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.jersey-b.jersey)));
     const uM = onSnapshot(query(collection(db,"matches"),orderBy("date","desc")), s => setMtchs(s.docs.map(d=>({id:d.id,...d.data()}))));
     const uG = onSnapshot(query(collection(db,"gallery"),orderBy("createdAt","desc")), s => setGal(s.docs.map(d=>({id:d.id,...d.data()}))));
+    const uA = onSnapshot(query(collection(db,"announcements"),orderBy("date","desc")), s => setAnns(s.docs.map(d=>({id:d.id,...d.data()}))));
     const uS = onSnapshot(doc(db,"siteSettings","heroImage"), snap => {
       if (snap.exists() && snap.data().url) setCurrentHeroURL(snap.data().url);
       else setCurrentHeroURL(null);
     });
-    return () => { uP(); uM(); uG(); uS(); };
+    return () => { uP(); uM(); uG(); uA(); uS(); };
   }, []);
 
   const showToast = (msg, type="success") => {
@@ -152,7 +155,7 @@ export default function AdminDashboard({ onBack }) {
     setLd(false);
   };
 
-  const oNP = () => setEdP({ name:"", pos:"Midfielder", jersey:0, goals:0, assists:0, appearances:0, cleanSheets:0, saves:0 });
+  const oNP = () => setEdP({ name:"", pos:"Midfielder", jersey:0, goals:0, assists:0, appearances:0, cleanSheets:0, saves:0, blocks:0, interceptions:0, clearances:0 });
 
   const addM = async (e) => {
     e.preventDefault(); setLd(true);
@@ -160,7 +163,7 @@ export default function AdminDashboard({ onBack }) {
       await addDoc(collection(db,"matches"), {
         opponent:mF.op, date:mF.dt, venue:mF.vn, competition:mF.cp,
         result:mF.rs, nafcScore:mF.nS, opponentScore:mF.oS,
-        scorers:mF.sc, assisters:mF.as, fmt:mF.fmt
+        scorers:mF.sc, assisters:mF.as, defensiveActions:mF.df, fmt:mF.fmt
       });
       if (mF.rs !== "upcoming") {
         for (let id of mF.ap) {
@@ -184,8 +187,22 @@ export default function AdminDashboard({ onBack }) {
             if (p.exists()) await updateDoc(r,{ assists:(p.data().assists||0)+a.assists });
           }
         }
+        for (let d of mF.df) {
+          if (!d.isGuest && !String(d.id).startsWith("guest_")) {
+            const r=doc(db,"players",d.id);
+            const p=await getDoc(r);
+            if (p.exists()) {
+              const data = p.data();
+              await updateDoc(r, {
+                blocks: (data.blocks||0) + (d.blocks||0),
+                interceptions: (data.interceptions||0) + (d.interceptions||0),
+                clearances: (data.clearances||0) + (d.clearances||0)
+              });
+            }
+          }
+        }
       }
-      setMF({ op:"", dt:"", vn:"", cp:"Friendly", rs:"W", nS:0, oS:0, ap:[], sc:[], as:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, fmt:"7s" });
+      setMF({ op:"", dt:"", vn:"", cp:"Friendly", rs:"W", nS:0, oS:0, ap:[], sc:[], as:[], df:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, dI:"", dGuest:"", dB:0, dInt:0, dC:0, fmt:"7s" });
       showToast("✅ Match logged and stats updated!");
     } catch (err) { showToast(`❌ Error: ${err.message}`, "error"); }
     setLd(false);
@@ -218,6 +235,24 @@ export default function AdminDashboard({ onBack }) {
   };
   const remA = (i) => setMF(v=>({ ...v, as:v.as.filter((_,idx)=>idx!==i) }));
 
+  const addD = () => {
+    const blocks = parseInt(mF.dB) || 0;
+    const interceptions = parseInt(mF.dInt) || 0;
+    const clearances = parseInt(mF.dC) || 0;
+    if (blocks === 0 && interceptions === 0 && clearances === 0) return;
+
+    if (mF.dGuest && mF.dGuest.trim()) {
+      const name = mF.dGuest.trim();
+      setMF(v=>({ ...v, df:[...v.df, { id:`guest_${Date.now()}`, name:name, isGuest:true, blocks, interceptions, clearances }], dI:"", dGuest:"", dB:0, dInt:0, dC:0 }));
+      return;
+    }
+    if (!mF.dI) return;
+    const p = plrs.find(x=>x.id===mF.dI);
+    if (!p) return;
+    setMF(v=>({ ...v, df:[...v.df, { id:p.id, name:p.name, isGuest:false, blocks, interceptions, clearances }], dI:"", dGuest:"", dB:0, dInt:0, dC:0 }));
+  };
+  const remD = (i) => setMF(v=>({ ...v, df:v.df.filter((_,idx)=>idx!==i) }));
+
   // ── Match Edit Handlers ──
   const oEM = (m) => {
     setEdM({
@@ -231,6 +266,7 @@ export default function AdminDashboard({ onBack }) {
       opponentScore: m.opponentScore ?? 0,
       scorers: m.scorers || [],
       assisters: m.assisters || [],
+      defensiveActions: m.defensiveActions || [],
       ap: m.ap || m.appearances || [],
       fmt: m.fmt || "7s",
       sI: "",
@@ -238,7 +274,12 @@ export default function AdminDashboard({ onBack }) {
       sG: 1,
       aI: "",
       aGuest: "",
-      aG: 1
+      aG: 1,
+      dI: "",
+      dGuest: "",
+      dB: 0,
+      dInt: 0,
+      dC: 0
     });
   };
 
@@ -256,6 +297,7 @@ export default function AdminDashboard({ onBack }) {
         opponentScore: Number(edM.opponentScore),
         scorers: edM.scorers,
         assisters: edM.assisters,
+        defensiveActions: edM.defensiveActions,
         ap: edM.ap,
         fmt: edM.fmt
       });
@@ -293,6 +335,87 @@ export default function AdminDashboard({ onBack }) {
   };
   const remEdA = (i) => setEdM(v => ({ ...v, assisters: v.assisters.filter((_, idx) => idx !== i) }));
 
+  const addEdD = () => {
+    const blocks = parseInt(edM.dB) || 0;
+    const interceptions = parseInt(edM.dInt) || 0;
+    const clearances = parseInt(edM.dC) || 0;
+    if (blocks === 0 && interceptions === 0 && clearances === 0) return;
+
+    if (edM.dGuest && edM.dGuest.trim()) {
+      const name = edM.dGuest.trim();
+      setEdM(v => ({ ...v, defensiveActions: [...(v.defensiveActions || []), { id: `guest_${Date.now()}`, name: name, isGuest: true, blocks, interceptions, clearances }], dI: "", dGuest: "", dB: 0, dInt: 0, dC: 0 }));
+      return;
+    }
+    if (!edM.dI) return;
+    const p = plrs.find(x => x.id === edM.dI);
+    if (!p) return;
+    setEdM(v => ({ ...v, defensiveActions: [...(v.defensiveActions || []), { id: p.id, name: p.name, isGuest: false, blocks, interceptions, clearances }], dI: "", dGuest: "", dB: 0, dInt: 0, dC: 0 }));
+  };
+  const remEdD = (i) => setEdM(v => ({ ...v, defensiveActions: (v.defensiveActions || []).filter((_, idx) => idx !== i) }));
+
+  // ── Announcement Handlers ──
+  const oNAnn = () => setEdAnn({
+    id: "",
+    title: "",
+    category: "Tournament",
+    date: new Date().toISOString().slice(0, 10),
+    badge: "UPCOMING",
+    format: "5-a-Side",
+    venue: "Ballpark Central, Kothanur",
+    summary: "",
+    content: "",
+    teams: [
+      { name: "TEAM 1 — NAFC", color: "#E8002D", players: [] },
+      { name: "TEAM 2 — ENNE FC (EFC)", color: "#2563eb", players: [] }
+    ]
+  });
+
+  const oEAnn = (a) => setEdAnn({ ...a });
+
+  const updAnn = async (e) => {
+    e.preventDefault();
+    setLd(true);
+    try {
+      const data = {
+        title: edAnn.title,
+        category: edAnn.category,
+        date: edAnn.date,
+        badge: edAnn.badge || "UPCOMING",
+        format: edAnn.format || "",
+        venue: edAnn.venue || "",
+        summary: edAnn.summary || "",
+        content: edAnn.content || "",
+        updatedAt: new Date().toISOString()
+      };
+      if (edAnn.teams && edAnn.teams.length > 0) {
+        data.teams = edAnn.teams;
+      }
+      if (edAnn.id) {
+        await updateDoc(doc(db, "announcements", edAnn.id), data);
+        showToast("✅ Announcement updated!");
+      } else {
+        data.createdAt = new Date().toISOString();
+        await addDoc(collection(db, "announcements"), data);
+        showToast("✅ Announcement published!");
+      }
+      setEdAnn(null);
+    } catch (err) {
+      showToast(`❌ Error: ${err.message}`, "error");
+    }
+    setLd(false);
+  };
+
+  const delAnn = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this announcement?")) return;
+    try {
+      await deleteDoc(doc(db, "announcements", id));
+      setEdAnn(null);
+      showToast("🗑️ Announcement deleted");
+    } catch (err) {
+      showToast(`❌ Error: ${err.message}`, "error");
+    }
+  };
+
   const TC = {
     success:{ bg:"#dcfce7", border:"#166534", text:"#166534" },
     error:  { bg:"#fee2e2", border:"#991b1b", text:"#991b1b" },
@@ -304,6 +427,7 @@ export default function AdminDashboard({ onBack }) {
     { i:"sqd",  l:"👥 Squad"    },
     { i:"addM", l:"⚔️ Log Match" },
     { i:"mtch", l:"📋 History"  },
+    { i:"news", l:"📢 News"     },
     { i:"gal",  l:"📷 Gallery"  },
     { i:"hero", l:"🏠 Hero Photo"},
   ];
@@ -539,6 +663,36 @@ export default function AdminDashboard({ onBack }) {
                         </div>
                       ))}
                     </div>
+
+                    {/* Defensive Actions */}
+                    <div style={{ background:"#f8fafc", padding:14, borderRadius:8, border:"1px solid #e2e8f0" }}>
+                      <div style={{ fontSize:14, fontWeight:700, color:"#0f172a", marginBottom:10 }}>🛡️ DEFENSIVE ACTIONS (BLOCKS / INTERCEPTIONS / CLEARANCES)</div>
+                      <div style={{ display:"flex", gap:8, marginBottom:10, flexWrap:isMobile?"wrap":"nowrap" }}>
+                        <select value={mF.dI} onChange={e=>setMF({...mF,dI:e.target.value, dGuest:""})} style={{ ...selectStyle, flex:2, minWidth:0 }}>
+                          <option value="">Select Team Player...</option>
+                          {plrs.map(p=><option key={p.id} value={p.id}>{p.name} ({p.pos.slice(0,3)})</option>)}
+                        </select>
+                        <input type="text" placeholder="Or Guest Name" value={mF.dGuest} onChange={e=>setMF({...mF, dGuest:e.target.value, dI:""})} style={{ ...inp, flex:1.5, minWidth:110 }}/>
+                        <div style={{ display:"flex", gap:4, flexShrink:0 }}>
+                          <input type="number" min="0" value={mF.dB} onChange={e=>setMF({...mF,dB:e.target.value})} style={{ ...inp, width:55 }} placeholder="Blk" title="Blocks"/>
+                          <input type="number" min="0" value={mF.dInt} onChange={e=>setMF({...mF,dInt:e.target.value})} style={{ ...inp, width:55 }} placeholder="Int" title="Interceptions"/>
+                          <input type="number" min="0" value={mF.dC} onChange={e=>setMF({...mF,dC:e.target.value})} style={{ ...inp, width:55 }} placeholder="Clr" title="Clearances"/>
+                        </div>
+                        <button type="button" onClick={addD} style={{ background:"#2563eb", color:"#fff", border:"none", padding:"0 16px", fontSize:13, fontWeight:700, borderRadius:6, cursor:"pointer", whiteSpace:"nowrap", height:42 }}>ADD</button>
+                      </div>
+                      {mF.df.map((d,i) => (
+                        <div key={i} style={{ background:"#fff", padding:"8px 12px", border:"1px solid #e2e8f0", borderLeft:"3px solid #2563eb", display:"flex", justifyContent:"space-between", alignItems:"center", borderRadius:5, fontSize:13, fontWeight:600, marginBottom:5 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                            <span>{d.name}</span>
+                            {d.isGuest && <span style={{ background:"#f1f5f9", color:"#64748b", border:"1px solid #cbd5e1", fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4 }}>GUEST</span>}
+                            <span style={{ color:"#2563eb", marginLeft:4 }}>
+                              {[d.blocks>0&&`${d.blocks} BLK`, d.interceptions>0&&`${d.interceptions} INT`, d.clearances>0&&`${d.clearances} CLR`].filter(Boolean).join(" · ") || "0 DEF"}
+                            </span>
+                          </div>
+                          <button type="button" onClick={()=>remD(i)} style={{ background:"#fee2e2", color:"#ef4444", border:"none", padding:"3px 8px", borderRadius:3, cursor:"pointer", fontWeight:700, fontSize:12 }}>✕</button>
+                        </div>
+                      ))}
+                    </div>
                   </>
                 )}
 
@@ -569,6 +723,39 @@ export default function AdminDashboard({ onBack }) {
                       <div style={{ display:"flex", gap:6, flexShrink:0 }}>
                         <button onClick={()=>oEM(m)} style={{ background:"#e0e7ff", color:"#3730a3", border:"1px solid #c7d2fe", padding:"5px 12px", borderRadius:5, fontWeight:700, fontSize:11, cursor:"pointer" }}>✏️ EDIT</button>
                         <button onClick={()=>del("matches",m.id)} style={{ background:"#fee2e2", color:"#ef4444", border:"1px solid #fca5a5", padding:"5px 10px", borderRadius:5, fontWeight:700, fontSize:11, cursor:"pointer" }}>DELETE</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* NEWS & ANNOUNCEMENTS */}
+          {tb === "news" && (
+            <div>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:"1px solid #e2e8f0", paddingBottom:12, marginBottom:18, gap:10, flexWrap:"wrap" }}>
+                <div style={{ fontSize:isMobile?18:22, fontWeight:800, color:"#0033a0" }}>ANNOUNCEMENTS & TOURNAMENTS</div>
+                <button onClick={oNAnn} style={{ background:"#0033a0", color:"#fff", border:"none", padding:"8px 14px", borderRadius:6, fontWeight:700, cursor:"pointer", fontSize:12, whiteSpace:"nowrap" }}>+ POST ANNOUNCEMENT</button>
+              </div>
+              {anns.length === 0 ? (
+                <div style={{ textAlign:"center", padding:"40px 0", color:"#94a3b8" }}>No announcements posted yet.</div>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  {anns.map(a => (
+                    <div key={a.id} style={{ background:"#f8fafc", border:"1px solid #e2e8f0", borderLeft:`4px solid ${a.badge==="LIVE"?"#16a34a":a.category==="Tournament"?"#0033a0":"#d97706"}`, padding:isMobile?"12px 14px":"14px 18px", borderRadius:8, display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:isMobile?"wrap":"nowrap" }}>
+                      <div style={{ minWidth:0, flex:1 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:4 }}>
+                          <span style={{ background:"#0033a0", color:"#fff", fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4 }}>{a.badge || "UPCOMING"}</span>
+                          <span style={{ background:"#e2e8f0", color:"#475569", fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4 }}>{a.category || "General"}</span>
+                          {a.format && <span style={{ background:"#f1f5f9", color:"#334155", fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4, border:"1px solid #cbd5e1" }}>{a.format}</span>}
+                        </div>
+                        <div style={{ fontSize:15, fontWeight:700, color:"#0f172a" }}>{a.title}</div>
+                        <div style={{ fontSize:12, color:"#64748b", marginTop:2 }}>{a.date}{a.venue ? ` · ${a.venue}` : ""}</div>
+                      </div>
+                      <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                        <button onClick={()=>oEAnn(a)} style={{ background:"#e0e7ff", color:"#3730a3", border:"1px solid #c7d2fe", padding:"6px 12px", borderRadius:5, fontWeight:700, fontSize:11, cursor:"pointer" }}>✏️ EDIT</button>
+                        <button onClick={()=>delAnn(a.id)} style={{ background:"#fee2e2", color:"#ef4444", border:"1px solid #fca5a5", padding:"6px 10px", borderRadius:5, fontWeight:700, fontSize:11, cursor:"pointer" }}>DELETE</button>
                       </div>
                     </div>
                   ))}
@@ -676,7 +863,7 @@ export default function AdminDashboard({ onBack }) {
               <div style={{ borderTop:"1px solid #e2e8f0", paddingTop:14 }}>
                 <div style={{ fontWeight:700, fontSize:11, color:"#0033a0", marginBottom:10, letterSpacing:1 }}>STAT OVERRIDE</div>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-                  {[["GOALS","goals"],["ASSISTS","assists"],["APPEARANCES","appearances"],["CLEAN SHEETS","cleanSheets"],["SAVES","saves"]].map(([l,k]) => (
+                  {[["GOALS","goals"],["ASSISTS","assists"],["APPEARANCES","appearances"],["CLEAN SHEETS","cleanSheets"],["SAVES","saves"],["BLOCKS","blocks"],["INTERCEPTIONS","interceptions"],["CLEARANCES","clearances"]].map(([l,k]) => (
                     <label key={k} style={{ color:"#64748b", fontSize:11, fontWeight:700 }}>{l}
                       <input type="number" min="0" value={edP[k]||0} onChange={e=>setEdP({...edP,[k]:parseInt(e.target.value)})} style={{ ...inp, marginTop:4 }}/>
                     </label>
@@ -785,6 +972,36 @@ export default function AdminDashboard({ onBack }) {
                 ))}
               </div>
 
+              {/* Defensive Actions */}
+              <div style={{ background:"#f8fafc", padding:12, borderRadius:8, border:"1px solid #e2e8f0" }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#0f172a", marginBottom:8 }}>🛡️ DEFENSIVE ACTIONS (BLOCKS / INT / CLEARANCES)</div>
+                <div style={{ display:"flex", gap:8, marginBottom:8, flexWrap:isMobile?"wrap":"nowrap" }}>
+                  <select value={edM.dI} onChange={e=>setEdM({...edM,dI:e.target.value, dGuest:""})} style={{ ...selectStyle, flex:2, minWidth:0 }}>
+                    <option value="">Select Team Player...</option>
+                    {plrs.map(p=><option key={p.id} value={p.id}>{p.name} ({p.pos.slice(0,3)})</option>)}
+                  </select>
+                  <input type="text" placeholder="Or Guest Name" value={edM.dGuest} onChange={e=>setEdM({...edM, dGuest:e.target.value, dI:""})} style={{ ...inp, flex:1.5, minWidth:110 }}/>
+                  <div style={{ display:"flex", gap:4, flexShrink:0 }}>
+                    <input type="number" min="0" value={edM.dB} onChange={e=>setEdM({...edM,dB:e.target.value})} style={{ ...inp, width:50 }} placeholder="Blk" title="Blocks"/>
+                    <input type="number" min="0" value={edM.dInt} onChange={e=>setEdM({...edM,dInt:e.target.value})} style={{ ...inp, width:50 }} placeholder="Int" title="Interceptions"/>
+                    <input type="number" min="0" value={edM.dC} onChange={e=>setEdM({...edM,dC:e.target.value})} style={{ ...inp, width:50 }} placeholder="Clr" title="Clearances"/>
+                  </div>
+                  <button type="button" onClick={addEdD} style={{ background:"#2563eb", color:"#fff", border:"none", padding:"0 14px", fontSize:12, fontWeight:700, borderRadius:6, cursor:"pointer" }}>ADD</button>
+                </div>
+                {(edM.defensiveActions || []).map((d,i) => (
+                  <div key={i} style={{ background:"#fff", padding:"6px 10px", border:"1px solid #e2e8f0", borderLeft:"3px solid #2563eb", display:"flex", justifyContent:"space-between", alignItems:"center", borderRadius:5, fontSize:12, fontWeight:600, marginBottom:4 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <span>{d.name}</span>
+                      {d.isGuest && <span style={{ background:"#f1f5f9", color:"#64748b", border:"1px solid #cbd5e1", fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:4 }}>GUEST</span>}
+                      <span style={{ color:"#2563eb", marginLeft:4 }}>
+                        {[d.blocks>0&&`${d.blocks} BLK`, d.interceptions>0&&`${d.interceptions} INT`, d.clearances>0&&`${d.clearances} CLR`].filter(Boolean).join(" · ") || "0 DEF"}
+                      </span>
+                    </div>
+                    <button type="button" onClick={()=>remEdD(i)} style={{ background:"#fee2e2", color:"#ef4444", border:"none", padding:"2px 6px", borderRadius:3, cursor:"pointer", fontWeight:700, fontSize:11 }}>✕</button>
+                  </div>
+                ))}
+              </div>
+
               {/* Lineup / Appearances */}
               <div style={{ background:"#f8fafc", padding:12, borderRadius:8, border:"1px solid #e2e8f0" }}>
                 <div style={{ fontSize:13, fontWeight:700, color:"#0f172a", marginBottom:8 }}>SQUAD LINEUP ({edM.ap.length} PLAYERS)</div>
@@ -805,6 +1022,69 @@ export default function AdminDashboard({ onBack }) {
             <div style={{ display:"flex", gap:10, marginTop:18 }}>
               <button type="submit" disabled={ld} style={{ background:ld?"#94a3b8":"#0033a0", color:"#fff", flex:2, padding:12, border:"none", fontSize:14, fontWeight:700, cursor:ld?"wait":"pointer", borderRadius:6 }}>{ld?"SAVING...":"SAVE CHANGES"}</button>
               <button type="button" onClick={()=>setEdM(null)} style={{ background:"#f1f5f9", color:"#475569", border:"1px solid #cbd5e1", flex:1, padding:12, fontSize:14, fontWeight:700, cursor:"pointer", borderRadius:6 }}>CANCEL</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* EDIT / ADD ANNOUNCEMENT MODAL */}
+      {edAnn && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.75)", backdropFilter:"blur(3px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, padding:16 }}>
+          <form onSubmit={updAnn} style={{ background:"#fff", padding:isMobile?"20px":"28px", width:"100%", maxWidth:560, borderRadius:10, boxShadow:"0 10px 40px rgba(0,0,0,0.2)", maxHeight:"90vh", overflowY:"auto" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:"2px solid #0033a0", paddingBottom:10, marginBottom:18 }}>
+              <div style={{ fontSize:isMobile?16:20, fontWeight:800, color:"#0033a0" }}>{edAnn.id ? "EDIT ANNOUNCEMENT" : "POST ANNOUNCEMENT"}</div>
+              <div style={{ display:"flex", gap:8 }}>
+                {edAnn.id && <button type="button" onClick={()=>delAnn(edAnn.id)} style={{ background:"#fee2e2", color:"#ef4444", border:"none", padding:"4px 10px", borderRadius:4, fontSize:11, fontWeight:700, cursor:"pointer" }}>DELETE</button>}
+                <button type="button" onClick={()=>setEdAnn(null)} style={{ background:"#f1f5f9", color:"#64748b", border:"1px solid #cbd5e1", padding:"4px 10px", borderRadius:4, fontSize:11, fontWeight:700, cursor:"pointer" }}>✕</button>
+              </div>
+            </div>
+
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Title
+                <input value={edAnn.title} onChange={e=>setEdAnn({...edAnn,title:e.target.value})} placeholder="e.g. Sept 6 5-a-Side Tournament Squad Announcement" required style={{ ...inp, marginTop:4 }}/>
+              </label>
+
+              <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:10 }}>
+                <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Category
+                  <select value={edAnn.category} onChange={e=>setEdAnn({...edAnn,category:e.target.value})} style={{ ...selectStyle, marginTop:4 }}>
+                    <option value="Tournament">🏆 Tournament</option>
+                    <option value="Club News">📢 Club News</option>
+                    <option value="Match Report">⚽ Match Report</option>
+                  </select>
+                </label>
+                <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Status Badge
+                  <select value={edAnn.badge} onChange={e=>setEdAnn({...edAnn,badge:e.target.value})} style={{ ...selectStyle, marginTop:4 }}>
+                    <option value="UPCOMING">UPCOMING</option>
+                    <option value="LIVE">LIVE 🔴</option>
+                    <option value="COMPLETED">COMPLETED</option>
+                  </select>
+                </label>
+              </div>
+
+              <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr", gap:10 }}>
+                <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Date
+                  <input type="date" value={edAnn.date} onChange={e=>setEdAnn({...edAnn,date:e.target.value})} required style={{ ...inp, marginTop:4 }}/>
+                </label>
+                <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Venue
+                  <input value={edAnn.venue} onChange={e=>setEdAnn({...edAnn,venue:e.target.value})} placeholder="e.g. BFS Bengaluru" style={{ ...inp, marginTop:4 }}/>
+                </label>
+                <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Format
+                  <input value={edAnn.format} onChange={e=>setEdAnn({...edAnn,format:e.target.value})} placeholder="e.g. 5-a-Side" style={{ ...inp, marginTop:4 }}/>
+                </label>
+              </div>
+
+              <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Short Summary
+                <textarea rows={2} value={edAnn.summary} onChange={e=>setEdAnn({...edAnn,summary:e.target.value})} placeholder="Brief highlight of the announcement..." style={{ ...inp, marginTop:4, resize:"vertical" }}/>
+              </label>
+
+              <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Full Content / Matchday Report
+                <textarea rows={4} value={edAnn.content} onChange={e=>setEdAnn({...edAnn,content:e.target.value})} placeholder="Full announcement text, updates, results, etc..." style={{ ...inp, marginTop:4, resize:"vertical" }}/>
+              </label>
+            </div>
+
+            <div style={{ display:"flex", gap:10, marginTop:18 }}>
+              <button type="submit" disabled={ld} style={{ background:ld?"#94a3b8":"#0033a0", color:"#fff", flex:2, padding:12, border:"none", fontSize:14, fontWeight:700, cursor:ld?"wait":"pointer", borderRadius:6 }}>{ld?"SAVING...":"SAVE ANNOUNCEMENT"}</button>
+              <button type="button" onClick={()=>setEdAnn(null)} style={{ background:"#f1f5f9", color:"#475569", border:"1px solid #cbd5e1", flex:1, padding:12, fontSize:14, fontWeight:700, cursor:"pointer", borderRadius:6 }}>CANCEL</button>
             </div>
           </form>
         </div>
