@@ -515,7 +515,7 @@ export default function AdminDashboard({ onBack }) {
                   return (
                     <div key={p.id} className="squad-card" style={{ background:"#fafbfc", border:"1px solid #e8ecf0", padding:12, borderRadius:10, display:"flex", gap:10, alignItems:"center" }}>
                       <div style={{ width:54, height:54, background:"#f1f5f9", borderRadius:8, overflow:"hidden", display:"flex", justifyContent:"center", alignItems:"center", border:"1px solid #e2e8f0", position:"relative", flexShrink:0 }}>
-                        {p.photoURL ? <img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover" }}/> : <div style={{ fontSize:26, color:"#cbd5e1" }}>👤</div>}
+                        {p.photoURL ? <img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition: p.photoPosition || (p.jersey===11?"center 60%":"center 25%") }}/> : <div style={{ fontSize:26, color:"#cbd5e1" }}>👤</div>}
                         {pct !== undefined && (
                           <div style={{ position:"absolute", inset:0, background:"rgba(0,51,160,0.8)", display:"flex", alignItems:"center", justifyContent:"center" }}>
                             <div style={{ color:"white", fontSize:12, fontWeight:800 }}>{pct}%</div>
