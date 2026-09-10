@@ -1658,6 +1658,13 @@ function AppShell() {
                             </p>
                           )}
 
+                          {/* Featured Image if present */}
+                          {item.image && (
+                            <div style={{ borderRadius:12, overflow:"hidden", marginBottom:20, border:`1px solid ${T.borderLight}`, maxHeight:440 }}>
+                              <img src={item.image} alt={item.title} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+                            </div>
+                          )}
+
                           {/* Trophies showcase if present */}
                           {item.trophies && item.trophies.length > 0 && (
                             <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr":"1fr 1fr", gap:12, margin:"16px 0 20px" }}>
