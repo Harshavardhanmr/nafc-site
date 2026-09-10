@@ -63,16 +63,21 @@ const PGS = ["Home", "Players", "Fixtures", "Stats", "Gallery", "News"];
 const DEFAULT_ANNOUNCEMENTS = [
   {
     id: "tournament-sept-6-2026",
-    title: "Sept 6 5-a-Side Tournament — Dual Squad Announcement",
+    title: "KFA TCT 2.0 — Historic Double Cup Triumph for NAFC & EFC",
     category: "Tournament",
     date: "2026-09-06",
-    badge: "UPCOMING",
+    badge: "COMPLETED",
     format: "5-a-Side",
     venue: "Ballpark Central, Kothanur",
-    summary: "NAFC is fielding two competitive squads for the Bangalore 5-a-side championship: Team 1 (NAFC) and Team 2 (ENNE FC / EFC).",
+    summary: "Historic day for NAFC at KFA TCT 2.0! ENNE FC (EFC) won the Silver Cup Final (2nd vs 2nd), NAFC won the Bronze Cup Final (3rd vs 3rd), and Hafeez was crowned Best Player of the Tournament.",
+    trophies: [
+      { name: "Silver Cup Champions (2nd vs 2nd Final)", team: "ENNE FC (EFC)", icon: "🥈" },
+      { name: "Bronze Cup Champions (3rd vs 3rd Final)", team: "NAFC", icon: "🥉" },
+      { name: "Best Player of Tournament", team: "Hafeez · NAFC (#9)", icon: "🏅" }
+    ],
     teams: [
       {
-        name: "TEAM 1 — NAFC",
+        name: "TEAM 1 — NAFC (Bronze Cup Champions 🥉)",
         color: "#E8002D",
         players: [
           { name: "Hafeez", role: "Striker", jersey: 9 },
@@ -85,19 +90,19 @@ const DEFAULT_ANNOUNCEMENTS = [
         ]
       },
       {
-        name: "TEAM 2 — ENNE FC (EFC)",
+        name: "TEAM 2 — ENNE FC / EFC (Silver Cup Champions 🥈)",
         color: "#2563eb",
         players: [
           { name: "Vignesh", role: "Defender", jersey: 4 },
           { name: "Gopal (C)", role: "Defender", jersey: 3, isCaptain: true },
           { name: "Shetty", role: "Midfielder", jersey: 11 },
           { name: "Nithin", role: "Winger", jersey: 14 },
-          { name: "Naga", role: "Guest Player", isGuest: true },
+          { name: "Naga", role: "Goalkeeper", jersey: 1 },
           { name: "Danish", role: "Midfielder", jersey: 21 }
         ]
       }
     ],
-    content: "NAFC kicks off the September tournament season with two squads in action. Both teams will compete across the group stages and knockouts representing NAFC tactical depth and pace. Stay tuned for live match updates and scorelines throughout the day!",
+    content: "A landmark double-cup triumph for the club at Ballpark Central, Kothanur! The tournament featured 10 teams across two groups of 5. After round-robin stage matches (including a thrilling 4-2 opening derby between EFC and NAFC), the top 3 teams of each group advanced to the parallel Cup Finals: 1st vs 1st for the Gold Cup, 2nd vs 2nd for the Silver Cup, and 3rd vs 3rd for the Bronze Cup. ENNE FC qualified for and won the Silver Cup with a 1-0 final victory, while NAFC captured the Bronze Cup with a resounding 5-2 final win! To crown the historic campaign, Hafeez was awarded Best Player of the Tournament with 9 goals and 3 assists.",
     createdAt: "2026-09-06T00:00:00.000Z"
   },
   {
@@ -196,25 +201,41 @@ function MatchModal({ match, onClose, T = THEMES.dark }) {
           <button onClick={onClose} style={{ background:T.hoverBg, border:`1px solid ${T.border}`, color:T.text, width:34, height:34, borderRadius:6, cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>✕</button>
         </div>
         <div style={{ padding:"24px 20px", textAlign:"center", borderBottom:`1px solid ${T.borderLight}` }}>
-          <div style={{ fontSize:12, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginBottom:18 }}>{match.date}{match.venue ? ` · ${match.venue}` : ""}</div>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:12 }}>
-            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, flex:1 }}>
-              <div style={{ width:48, height:48, borderRadius:12, background:T.hoverBg, border:`1px solid ${T.borderLight}`, display:"flex", alignItems:"center", justifyContent:"center" }}><img src={LOGO} alt="NAFC" style={{ width:34 }} /></div>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:T.text, letterSpacing:2 }}>NAFC</div>
+          <div style={{ fontSize:12, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginBottom:14 }}>{match.date}{match.venue ? ` · ${match.venue}` : ""}</div>
+          {match.summary && (
+            <div style={{ fontSize:13, color:T.textMuted, lineHeight:1.6, marginBottom:16, background:T.bg2, padding:"10px 14px", borderRadius:8, border:`1px solid ${T.borderLight}` }}>
+              {match.summary}
             </div>
-            {isUpc
-              ? <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:"#2563eb", letterSpacing:4, padding:"8px 18px", background:"rgba(37,99,235,0.08)", border:"1px solid rgba(37,99,235,0.2)", borderRadius:10 }}>VS</div>
-              : <div style={{ display:"flex", alignItems:"center", gap:8, background:`${ac}10`, border:`1px solid ${ac}30`, borderRadius:12, padding:"8px 18px" }}>
-                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:54, color:T.text, lineHeight:1 }}>{match.nafcScore}</span>
-                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:24, color:T.textDim, lineHeight:1 }}>—</span>
-                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:54, color:T.textMuted, lineHeight:1 }}>{match.opponentScore}</span>
+          )}
+          {(() => {
+            const teamName = match.team || "NAFC";
+            const isTeamEFC = teamName.includes("EFC") || teamName.includes("ENNE");
+            const isOppEFC = (match.opponent || "").includes("EFC") || (match.opponent || "").includes("ENNE");
+            return (
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:12 }}>
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, flex:1 }}>
+                  <div style={{ width:48, height:48, borderRadius:12, background: isTeamEFC ? "rgba(37,99,235,0.14)" : T.hoverBg, border:`1px solid ${isTeamEFC ? "rgba(37,99,235,0.35)" : T.borderLight}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    {isTeamEFC ? <span style={{ fontFamily:"'Bebas Neue',sans-serif", color:"#2563eb", fontSize:18, fontWeight:700 }}>EFC</span> : <img src={LOGO} alt="NAFC" style={{ width:34 }} />}
+                  </div>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color: isTeamEFC ? "#3b82f6" : T.text, letterSpacing:2 }}>{teamName}</div>
                 </div>
-            }
-            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, flex:1 }}>
-              <div style={{ width:48, height:48, borderRadius:12, background:T.hoverBg, border:`1px solid ${T.borderLight}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 }}>🛡️</div>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:15, color:T.textMuted, letterSpacing:1 }}>{match.opponent}</div>
-            </div>
-          </div>
+                {isUpc
+                  ? <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:"#2563eb", letterSpacing:4, padding:"8px 18px", background:"rgba(37,99,235,0.08)", border:"1px solid rgba(37,99,235,0.2)", borderRadius:10 }}>VS</div>
+                  : <div style={{ display:"flex", alignItems:"center", gap:8, background:`${ac}10`, border:`1px solid ${ac}30`, borderRadius:12, padding:"8px 18px" }}>
+                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:54, color:T.text, lineHeight:1 }}>{match.nafcScore}</span>
+                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:24, color:T.textDim, lineHeight:1 }}>—</span>
+                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:54, color:T.textMuted, lineHeight:1 }}>{match.opponentScore}</span>
+                    </div>
+                }
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, flex:1 }}>
+                  <div style={{ width:48, height:48, borderRadius:12, background: isOppEFC ? "rgba(37,99,235,0.14)" : T.hoverBg, border:`1px solid ${isOppEFC ? "rgba(37,99,235,0.35)" : T.borderLight}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize: isOppEFC ? 18 : 24 }}>
+                    {isOppEFC ? <span style={{ fontFamily:"'Bebas Neue',sans-serif", color:"#2563eb", fontSize:18, fontWeight:700 }}>EFC</span> : "🛡️"}
+                  </div>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:15, color: isOppEFC ? "#3b82f6" : T.textMuted, letterSpacing:1 }}>{match.opponent}</div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
         <div style={{ padding:"20px" }}>
           {scorers.length > 0 && (
@@ -832,15 +853,54 @@ function AppShell() {
               </div>
             </div>
 
-            {/* ── Breaking / Tournament Alert Banner ── */}
+            {/* ── Breaking / Tournament Double Cup Banner ── */}
             <div style={{ maxWidth:1200, margin:"24px auto 0", padding:`0 ${px}` }}>
               <div onClick={() => go("News")} style={{ background: themeMode==="dark"?"linear-gradient(135deg, rgba(232,0,45,0.16) 0%, rgba(37,99,235,0.16) 100%)":"linear-gradient(135deg, rgba(232,0,45,0.08) 0%, rgba(37,99,235,0.08) 100%)", border:`1px solid ${themeMode==="dark"?"rgba(232,0,45,0.4)":"rgba(232,0,45,0.25)"}`, borderRadius:14, padding: isMobile?"14px 16px":"16px 22px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer", flexWrap:"wrap", gap:12, transition:"all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.borderColor=T_RED;}} onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.borderColor=themeMode==="dark"?"rgba(232,0,45,0.4)":"rgba(232,0,45,0.25)";}}>
                 <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-                  <span style={{ background:T_RED, color:"#fff", fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, padding:"3px 10px", borderRadius:5 }}>🏆 TOURNAMENT DAY · SEPT 6</span>
-                  <span style={{ color:T.text, fontWeight:600, fontSize:isMobile?13:15 }}>5-a-Side Squads Announced: <strong>NAFC</strong> & <strong>ENNE FC (EFC)</strong></span>
+                  <span style={{ background:T_RED, color:"#fff", fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, padding:"3px 10px", borderRadius:5 }}>🏆 KFA TCT 2.0 DOUBLE TRIUMPH</span>
+                  <span style={{ color:T.text, fontWeight:600, fontSize:isMobile?13:15 }}>🥈 <strong>Silver Cup Winners</strong> (ENNE FC) · 🥉 <strong>Bronze Cup Winners</strong> (NAFC)</span>
                 </div>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", color:T_RED, fontSize:13, letterSpacing:2, display:"flex", alignItems:"center", gap:4 }}>
-                  VIEW SQUADS & LIVE UPDATES →
+                  VIEW FULL CAMPAIGN & SQUADS →
+                </div>
+              </div>
+            </div>
+
+            {/* ── Club Honours & Silverware Cabinet ── */}
+            <div style={{ maxWidth:1200, margin:"24px auto 0", padding:`0 ${px}` }}>
+              <div style={{ background:T.cardBg, border:`1px solid ${T.border}`, borderTop:`4px solid ${T_GOLD}`, borderRadius:16, padding: isMobile?"20px 16px":"24px 28px", boxShadow:"0 6px 24px rgba(0,0,0,0.08)" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:8 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ fontSize:20 }}>🏆</span>
+                    <span className="bebas" style={{ fontSize:20, color:T.text, letterSpacing:2 }}>NAFC CLUB HONOURS & SILVERWARE</span>
+                  </div>
+                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, color:T_GOLD, background:"rgba(217,119,6,0.12)", border:"1px solid rgba(217,119,6,0.3)", padding:"3px 10px", borderRadius:6, letterSpacing:1.5 }}>2026 SEASON</span>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr":isTablet?"1fr 1fr":"repeat(3, 1fr)", gap:12 }}>
+                  <div style={{ background: themeMode==="dark" ? "linear-gradient(135deg, rgba(56,189,248,0.12) 0%, rgba(24,24,27,0.8) 100%)" : "linear-gradient(135deg, rgba(56,189,248,0.08) 0%, #ffffff 100%)", border:"1px solid rgba(56,189,248,0.3)", borderRadius:12, padding:"16px 18px", display:"flex", alignItems:"center", gap:14 }}>
+                    <div style={{ width:48, height:48, borderRadius:12, background:"rgba(56,189,248,0.15)", border:"1px solid rgba(56,189,248,0.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>🥈</div>
+                    <div>
+                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:17, color:"#38bdf8", letterSpacing:1 }}>SILVER CUP CHAMPIONS</div>
+                    <div style={{ fontSize:13, fontWeight:600, color:T.text }}>ENNE FC (EFC) · 2nd vs 2nd Final (1–0)</div>
+                    <div style={{ fontSize:11, color:T.textDim, marginTop:2 }}>KFA TCT 2.0 · Ballpark Central</div>
+                  </div>
+                </div>
+                <div style={{ background: themeMode==="dark" ? "linear-gradient(135deg, rgba(251,146,60,0.12) 0%, rgba(24,24,27,0.8) 100%)" : "linear-gradient(135deg, rgba(251,146,60,0.08) 0%, #ffffff 100%)", border:"1px solid rgba(251,146,60,0.3)", borderRadius:12, padding:"16px 18px", display:"flex", alignItems:"center", gap:14 }}>
+                  <div style={{ width:48, height:48, borderRadius:12, background:"rgba(251,146,60,0.15)", border:"1px solid rgba(251,146,60,0.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>🥉</div>
+                  <div>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:17, color:"#fb923c", letterSpacing:1 }}>BRONZE CUP CHAMPIONS</div>
+                    <div style={{ fontSize:13, fontWeight:600, color:T.text }}>NAFC · 3rd vs 3rd Final (5–2)</div>
+                    <div style={{ fontSize:11, color:T.textDim, marginTop:2 }}>KFA TCT 2.0 · Ballpark Central</div>
+                    </div>
+                  </div>
+                  <div style={{ background: themeMode==="dark" ? "linear-gradient(135deg, rgba(234,179,8,0.12) 0%, rgba(24,24,27,0.8) 100%)" : "linear-gradient(135deg, rgba(234,179,8,0.08) 0%, #ffffff 100%)", border:"1px solid rgba(234,179,8,0.3)", borderRadius:12, padding:"16px 18px", display:"flex", alignItems:"center", gap:14 }}>
+                    <div style={{ width:48, height:48, borderRadius:12, background:"rgba(234,179,8,0.15)", border:"1px solid rgba(234,179,8,0.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>🏅</div>
+                    <div>
+                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:17, color:"#eab308", letterSpacing:1 }}>BEST PLAYER OF TOURNAMENT</div>
+                      <div style={{ fontSize:13, fontWeight:600, color:T.text }}>HAFEEZ (#9) · NAFC</div>
+                      <div style={{ fontSize:11, color:T.textDim, marginTop:2 }}>9 Goals · 3 Assists · 5 Matches</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -855,7 +915,7 @@ function AppShell() {
                   </div>
                   <div className="bebas" style={{ fontSize: isMobile?28:36, color:T.text, lineHeight:1, marginBottom:8 }}>WANT TO CHALLENGE <span style={{ color:T_RED }}>NAFC?</span></div>
                   <p style={{ color:T.textMuted, fontSize:14, margin:0, maxWidth:580, lineHeight:1.7 }}>
-                    Looking to book a 5v5, 7v7, or 11v11 friendly match against NAFC in Bengaluru? Or interested in joining the squad for upcoming trials? Drop us a text on our official Instagram page.
+                    Looking to book a 5v5, 7v7, 9v9, or 11v11 friendly match against NAFC in Bengaluru? Or interested in joining the squad for upcoming trials? Drop us a text on our official Instagram page.
                   </p>
                 </div>
                 <a href="https://www.instagram.com/nafc.blr?igsh=MTJvNzV1cXFyNzRxMA==" target="_blank" rel="noreferrer" style={{ textDecoration:"none", flexShrink:0, width: isMobile?"100%":"auto" }}>
@@ -1139,41 +1199,50 @@ function AppShell() {
                               </div>
                               <span style={{ fontSize:12, color:T.textDim, fontWeight:500 }}>{m.date}{m.venue ? ` · ${m.venue}` : ""}</span>
                             </div>
-                            <div style={{ display:"flex", alignItems:"center", gap: isMobile?8:14 }}>
-                              {/* NAFC */}
-                              <div style={{ display:"flex", alignItems:"center", gap: isMobile?6:10, flex:1 }}>
-                                <div style={{ width: isMobile?38:46, height: isMobile?38:46, borderRadius:10, background:T.subtleBg, border:`1px solid ${T.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                                  <img src={LOGO} alt="NAFC" style={{ width: isMobile?24:30 }} />
-                                </div>
-                                <div>
-                                  <div className="bebas" style={{ fontSize: isMobile?18:22, color:T.text, letterSpacing:1, lineHeight:1 }}>NAFC</div>
-                                  <div style={{ fontSize:10, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>HOME</div>
-                                </div>
-                              </div>
-                              {/* Score */}
-                              <div style={{ textAlign:"center", flexShrink:0 }}>
-                                {isUpc ? (
-                                  <div style={{ background:"rgba(37,99,235,0.07)", border:"1px solid rgba(37,99,235,0.18)", borderRadius:10, padding: isMobile?"6px 12px":"8px 20px" }}>
-                                    <div className="bebas" style={{ fontSize: isMobile?15:19, color:"#2563eb", letterSpacing:3, lineHeight:1 }}>VS</div>
-                                    <div style={{ fontSize:10, color:T.textDim, letterSpacing:2, marginTop:2, fontFamily:"'Bebas Neue',sans-serif" }}>TBD</div>
+                            {(() => {
+                              const teamName = m.team || "NAFC";
+                              const isTeamEFC = teamName.includes("EFC") || teamName.includes("ENNE");
+                              const isOppEFC = (m.opponent || "").includes("EFC") || (m.opponent || "").includes("ENNE");
+                              return (
+                                <div style={{ display:"flex", alignItems:"center", gap: isMobile?8:14 }}>
+                                  {/* Team 1 (NAFC / EFC) */}
+                                  <div style={{ display:"flex", alignItems:"center", gap: isMobile?6:10, flex:1 }}>
+                                    <div style={{ width: isMobile?38:46, height: isMobile?38:46, borderRadius:10, background: isTeamEFC ? "rgba(37,99,235,0.12)" : T.subtleBg, border:`1px solid ${isTeamEFC ? "rgba(37,99,235,0.3)" : T.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                                      {isTeamEFC ? <span style={{ fontFamily:"'Bebas Neue',sans-serif", color:"#2563eb", fontSize: isMobile?13:15, fontWeight:700 }}>EFC</span> : <img src={LOGO} alt="NAFC" style={{ width: isMobile?24:30 }} />}
+                                    </div>
+                                    <div>
+                                      <div className="bebas" style={{ fontSize: isMobile?18:22, color: isTeamEFC ? "#3b82f6" : T.text, letterSpacing:1, lineHeight:1 }}>{teamName}</div>
+                                      <div style={{ fontSize:10, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>HOME</div>
+                                    </div>
                                   </div>
-                                ) : (
-                                  <div style={{ display:"flex", alignItems:"center", gap: isMobile?4:8, background:`${ac}08`, border:`1px solid ${ac}18`, borderRadius:12, padding: isMobile?"5px 10px":"7px 16px" }}>
-                                    <span className="bebas fx-score-font" style={{ fontSize: isMobile?38:isTablet?48:54, color:T.text, lineHeight:1, minWidth: isMobile?24:32, textAlign:"center" }}>{m.nafcScore}</span>
-                                    <span style={{ fontSize: isMobile?14:18, color:T.textDim, fontWeight:300 }}>—</span>
-                                    <span className="bebas fx-score-font" style={{ fontSize: isMobile?38:isTablet?48:54, color:T.textMuted, lineHeight:1, minWidth: isMobile?24:32, textAlign:"center" }}>{m.opponentScore}</span>
+                                  {/* Score */}
+                                  <div style={{ textAlign:"center", flexShrink:0 }}>
+                                    {isUpc ? (
+                                      <div style={{ background:"rgba(37,99,235,0.07)", border:"1px solid rgba(37,99,235,0.18)", borderRadius:10, padding: isMobile?"6px 12px":"8px 20px" }}>
+                                        <div className="bebas" style={{ fontSize: isMobile?15:19, color:"#2563eb", letterSpacing:3, lineHeight:1 }}>VS</div>
+                                        <div style={{ fontSize:10, color:T.textDim, letterSpacing:2, marginTop:2, fontFamily:"'Bebas Neue',sans-serif" }}>TBD</div>
+                                      </div>
+                                    ) : (
+                                      <div style={{ display:"flex", alignItems:"center", gap: isMobile?4:8, background:`${ac}08`, border:`1px solid ${ac}18`, borderRadius:12, padding: isMobile?"5px 10px":"7px 16px" }}>
+                                        <span className="bebas fx-score-font" style={{ fontSize: isMobile?38:isTablet?48:54, color:T.text, lineHeight:1, minWidth: isMobile?24:32, textAlign:"center" }}>{m.nafcScore}</span>
+                                        <span style={{ fontSize: isMobile?14:18, color:T.textDim, fontWeight:300 }}>—</span>
+                                        <span className="bebas fx-score-font" style={{ fontSize: isMobile?38:isTablet?48:54, color:T.textMuted, lineHeight:1, minWidth: isMobile?24:32, textAlign:"center" }}>{m.opponentScore}</span>
+                                      </div>
+                                    )}
                                   </div>
-                                )}
-                              </div>
-                              {/* Opponent */}
-                              <div style={{ display:"flex", alignItems:"center", gap: isMobile?6:10, flex:1, justifyContent:"flex-end" }}>
-                                <div style={{ textAlign:"right" }}>
-                                  <div className="bebas" style={{ fontSize: isMobile?16:20, color:T.textMuted, letterSpacing:1, lineHeight:1 }}>{m.opponent}</div>
-                                  <div style={{ fontSize:10, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>AWAY</div>
+                                  {/* Opponent */}
+                                  <div style={{ display:"flex", alignItems:"center", gap: isMobile?6:10, flex:1, justifyContent:"flex-end" }}>
+                                    <div style={{ textAlign:"right" }}>
+                                      <div className="bebas" style={{ fontSize: isMobile?16:20, color: isOppEFC ? "#3b82f6" : T.textMuted, letterSpacing:1, lineHeight:1 }}>{m.opponent}</div>
+                                      <div style={{ fontSize:10, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>AWAY</div>
+                                    </div>
+                                    <div style={{ width: isMobile?38:46, height: isMobile?38:46, borderRadius:10, background: isOppEFC ? "rgba(37,99,235,0.12)" : T.subtleBg, border:`1px solid ${isOppEFC ? "rgba(37,99,235,0.3)" : T.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize: isOppEFC ? 14 : isMobile?20:24 }}>
+                                      {isOppEFC ? <span style={{ fontFamily:"'Bebas Neue',sans-serif", color:"#2563eb", fontSize: isMobile?13:15, fontWeight:700 }}>EFC</span> : "🛡️"}
+                                    </div>
+                                  </div>
                                 </div>
-                                <div style={{ width: isMobile?38:46, height: isMobile?38:46, borderRadius:10, background:T.subtleBg, border:`1px solid ${T.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize: isMobile?20:24 }}>🛡️</div>
-                              </div>
-                            </div>
+                              );
+                            })()}
                             {/* Scorers */}
                             {!isUpc && m.scorers && m.scorers.length > 0 && (
                               <div style={{ marginTop:12, paddingTop:10, borderTop:`1px solid ${T.borderLight}`, display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
@@ -1358,6 +1427,40 @@ function AppShell() {
                 </>
               ) : (
                 <>
+                  {/* Silverware & Honours Showcase */}
+                  <div style={{ background:T.cardBg, border:`1px solid ${T.border}`, borderTop:`4px solid ${T_GOLD}`, borderRadius:14, padding: isMobile?"18px 14px":"22px 24px", marginBottom:24, boxShadow:"0 4px 20px rgba(0,0,0,0.06)" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, flexWrap:"wrap", gap:8 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <span style={{ fontSize:20 }}>🏆</span>
+                        <span className="bebas" style={{ fontSize:18, color:T.text, letterSpacing:1.5 }}>NAFC CLUB HONOURS & SILVERWARE</span>
+                      </div>
+                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, color:T_GOLD, background:"rgba(217,119,6,0.12)", border:"1px solid rgba(217,119,6,0.3)", padding:"2px 8px", borderRadius:4, letterSpacing:1.5 }}>2026 SEASON</span>
+                    </div>
+                    <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr":isTablet?"1fr 1fr":"repeat(3, 1fr)", gap:10 }}>
+                      <div style={{ background: themeMode==="dark" ? "linear-gradient(135deg, rgba(56,189,248,0.12) 0%, rgba(24,24,27,0.8) 100%)" : "linear-gradient(135deg, rgba(56,189,248,0.08) 0%, #ffffff 100%)", border:"1px solid rgba(56,189,248,0.3)", borderRadius:10, padding:"12px 16px", display:"flex", alignItems:"center", gap:12 }}>
+                        <span style={{ fontSize:28 }}>🥈</span>
+                        <div>
+                          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:"#38bdf8", letterSpacing:1 }}>SILVER CUP CHAMPIONS</div>
+                          <div style={{ fontSize:12, fontWeight:600, color:T.text }}>ENNE FC (EFC) · 2nd vs 2nd Final (1–0)</div>
+                        </div>
+                      </div>
+                      <div style={{ background: themeMode==="dark" ? "linear-gradient(135deg, rgba(251,146,60,0.12) 0%, rgba(24,24,27,0.8) 100%)" : "linear-gradient(135deg, rgba(251,146,60,0.08) 0%, #ffffff 100%)", border:"1px solid rgba(251,146,60,0.3)", borderRadius:10, padding:"12px 16px", display:"flex", alignItems:"center", gap:12 }}>
+                        <span style={{ fontSize:28 }}>🥉</span>
+                        <div>
+                          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:"#fb923c", letterSpacing:1 }}>BRONZE CUP CHAMPIONS</div>
+                          <div style={{ fontSize:12, fontWeight:600, color:T.text }}>NAFC · 3rd vs 3rd Final (5–2)</div>
+                        </div>
+                      </div>
+                      <div style={{ background: themeMode==="dark" ? "linear-gradient(135deg, rgba(234,179,8,0.12) 0%, rgba(24,24,27,0.8) 100%)" : "linear-gradient(135deg, rgba(234,179,8,0.08) 0%, #ffffff 100%)", border:"1px solid rgba(234,179,8,0.3)", borderRadius:10, padding:"12px 16px", display:"flex", alignItems:"center", gap:12 }}>
+                        <span style={{ fontSize:28 }}>🏅</span>
+                        <div>
+                          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:"#eab308", letterSpacing:1 }}>BEST PLAYER OF TOURNAMENT</div>
+                          <div style={{ fontSize:12, fontWeight:600, color:T.text }}>HAFEEZ (#9) · NAFC</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Season All-Time Summary cards */}
                   <div className="stat-grid-4" style={{ display:"grid", gap:isMobile?10:14, marginBottom:24 }}>
                     {[["TOTAL GOALS",plrs.reduce((a,p)=>a+(p.goals||0),0),T_RED],["TOTAL ASSISTS",plrs.reduce((a,p)=>a+(p.assists||0),0),T_GOLD],["SQUAD SIZE",plrs.length,"#2563eb"],["MATCHES PLAYED",played.length,"#16a34a"]].map(([l,v,c]) => (
@@ -1550,9 +1653,28 @@ function AppShell() {
                             {item.title}
                           </div>
                           {item.summary && (
-                            <p style={{ color:T.textMuted, fontSize: isMobile?13:15, lineHeight:1.7, margin:"0 0 20px" }}>
+                            <p style={{ color:T.textMuted, fontSize: isMobile?13:15, lineHeight:1.7, margin:"0 0 16px" }}>
                               {item.summary}
                             </p>
+                          )}
+
+                          {/* Trophies showcase if present */}
+                          {item.trophies && item.trophies.length > 0 && (
+                            <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr":"1fr 1fr", gap:12, margin:"16px 0 20px" }}>
+                              {item.trophies.map((tr, ti) => {
+                                const isSilver = tr.icon === "🥈" || (tr.name && tr.name.includes("Silver"));
+                                const trColor = isSilver ? "#38bdf8" : "#fb923c";
+                                return (
+                                  <div key={ti} style={{ background: themeMode==="dark" ? (isSilver ? "linear-gradient(135deg, rgba(56,189,248,0.12) 0%, rgba(24,24,27,0.8) 100%)" : "linear-gradient(135deg, rgba(251,146,60,0.12) 0%, rgba(24,24,27,0.8) 100%)") : (isSilver ? "linear-gradient(135deg, rgba(56,189,248,0.08) 0%, #ffffff 100%)" : "linear-gradient(135deg, rgba(251,146,60,0.08) 0%, #ffffff 100%)"), border:`1px solid ${trColor}40`, borderTop:`3px solid ${trColor}`, borderRadius:10, padding:"14px 16px", display:"flex", alignItems:"center", gap:14 }}>
+                                    <span style={{ fontSize:32 }}>{tr.icon || "🏆"}</span>
+                                    <div>
+                                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:trColor, letterSpacing:1.5 }}>{tr.name}</div>
+                                      <div style={{ fontSize:13, fontWeight:700, color:T.text }}>{tr.team}</div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           )}
 
                           {/* Optional Tournament Squad Boards */}
@@ -1648,7 +1770,7 @@ function AppShell() {
             <div>
               <div className="section-label" style={{ marginBottom:12 }}>CONTACT & INQUIRIES</div>
               <p style={{ fontSize:13, color:"rgba(255,255,255,0.6)", lineHeight:1.7, margin:"0 0 12px", maxWidth:260 }}>
-                Looking to schedule a friendly (5v5/7v7/11v11) or join our upcoming trials? Drop us a text directly on Instagram:
+                Looking to schedule a friendly (5v5/7v7/9v9/11v11) or join our upcoming trials? Drop us a text directly on Instagram:
               </p>
               <a href="https://www.instagram.com/nafc.blr?igsh=MTJvNzV1cXFyNzRxMA==" target="_blank" rel="noreferrer" style={{ display:"inline-flex", alignItems:"center", gap:10, color:"#fff", textDecoration:"none", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", padding:"10px 16px", borderRadius:8 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
