@@ -367,7 +367,8 @@ function PlayerModal({ player, onClose, T = THEMES.dark, potMonthAwards = [] }) 
   const pc = POS_COLOR[p.pos] || T_RED;
   const isGK = p.pos === "Goalkeeper";
   const isDef = p.pos === "Defender";
-  const hasDefStats = isDef && ((p.blocks || 0) + (p.interceptions || 0) + (p.clearances || 0) > 0);
+  const totalDef = (p.blocks || 0) + (p.interceptions || 0) + (p.clearances || 0);
+  const hasDefStats = totalDef > 0;
 
   return (
     <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.80)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:16, backdropFilter:"blur(12px)" }}>
@@ -394,7 +395,7 @@ function PlayerModal({ player, onClose, T = THEMES.dark, potMonthAwards = [] }) 
           <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:12 }}>
             {(isGK
               ? [["SAVES",p.saves,"#60a5fa"],["CLEAN SHT",p.cleanSheets,"#4ade80"],["APPS",p.appearances,T.textMuted]]
-              : hasDefStats
+              : (isDef && hasDefStats)
               ? [["BLOCKS",p.blocks||0,"#60a5fa"],["INTERCEPT",p.interceptions||0,"#38bdf8"],["CLEARANCES",p.clearances||0,"#4ade80"]]
               : [["GOALS",p.goals,T_RED],["ASSISTS",p.assists,"#fbbf24"],["APPS",p.appearances,T.textMuted]]
             ).map(([l,v,c]) => (
@@ -404,11 +405,20 @@ function PlayerModal({ player, onClose, T = THEMES.dark, potMonthAwards = [] }) 
               </div>
             ))}
           </div>
-          {hasDefStats && ((p.goals||0) > 0 || (p.assists||0) > 0) && (
+          {isDef && hasDefStats && ((p.goals||0) > 0 || (p.assists||0) > 0) && (
             <div style={{ background:T.bg2, border:`1px solid ${T.borderLight}`, borderRadius:8, padding:"9px 14px", marginBottom:12, display:"flex", justifyContent:"space-around", alignItems:"center", fontSize:13, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5 }}>
               <span style={{ color:T_RED }}>⚽ {p.goals||0} GOALS</span>
               <span style={{ color:T.borderLight }}>|</span>
               <span style={{ color:T_GOLD }}>🅰️ {p.assists||0} ASSISTS</span>
+            </div>
+          )}
+          {!isDef && !isGK && hasDefStats && (
+            <div style={{ background:T.bg2, border:`1px solid ${T.borderLight}`, borderRadius:8, padding:"9px 14px", marginBottom:12, display:"flex", justifyContent:"space-around", alignItems:"center", fontSize:13, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5 }}>
+              <span style={{ color:"#60a5fa" }}>🛡️ {p.blocks||0} BLK</span>
+              <span style={{ color:T.borderLight }}>|</span>
+              <span style={{ color:"#38bdf8" }}>⚡ {p.interceptions||0} INT</span>
+              <span style={{ color:T.borderLight }}>|</span>
+              <span style={{ color:"#4ade80" }}>🧹 {p.clearances||0} CLR</span>
             </div>
           )}
           {potMonthAwards.length > 0 && (
@@ -1162,7 +1172,8 @@ function AppShell() {
           const pc  = POS_COLOR[sel.pos] || T_RED;
           const isGK= sel.pos === "Goalkeeper";
           const isDef = sel.pos === "Defender";
-          const hasDefStats = isDef && ((sel.blocks||0)+(sel.interceptions||0)+(sel.clearances||0) > 0);
+          const totalDef = (sel.blocks||0) + (sel.interceptions||0) + (sel.clearances||0);
+          const hasDefStats = totalDef > 0;
           return (
             <div style={{ background:T.bg, minHeight:"100vh" }}>
               <div className="player-profile-grid" style={{ position:"relative", overflow: isMobile?"visible":"hidden" }}>
@@ -1198,7 +1209,7 @@ function AppShell() {
                     <div style={{ display:"flex", gap:0, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.14)", borderRadius:12, overflow:"hidden" }}>
                       {(isGK
                         ?[["SAVES",sel.saves,"#60a5fa"],["CLEAN SHT",sel.cleanSheets,"#4ade80"],["APPS",sel.appearances,"rgba(255,255,255,0.85)"]]
-                        :hasDefStats
+                        :(isDef && hasDefStats)
                         ?[["BLOCKS",sel.blocks||0,"#60a5fa"],["INTERCEPT",sel.interceptions||0,"#38bdf8"],["CLEARANCES",sel.clearances||0,"#4ade80"],["APPS",sel.appearances,"rgba(255,255,255,0.85)"]]
                         :[["GOALS",sel.goals,T_RED],["ASSISTS",sel.assists,"#fbbf24"],["APPS",sel.appearances,"rgba(255,255,255,0.85)"]]
                       ).map(([l,v,c],idx,arr) => (
@@ -1265,27 +1276,51 @@ function AppShell() {
                   <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr 1fr":"repeat(3,1fr)", gap:isMobile?10:14, marginBottom:32 }}>
                     {(() => {
                       const selPotMonthAwards = getPlayerPotMonthAwards(sel.id, sel.name);
-                      return (isGK
-                        ? [["SAVES",sel.saves,"#2563eb","Saves this season"],["CLEAN SHEETS",sel.cleanSheets,"#16a34a","Games without conceding"],["APPEARANCES",sel.appearances,T.text,"Games played"],...(selPotMonthAwards.length>0?[["PLAYER OF MONTH",selPotMonthAwards.length,T_GOLD,selPotMonthAwards.map(a=>a.monthLabel.split(" ")[0]).join(", ")]]:[]),...(sel.potmCount>0?[["POTM AWARDS",sel.potmCount,"#eab308","Match MVP awards"]]:[])]
-                        : hasDefStats
-                        ? [
-                            ["BLOCKS",sel.blocks||0,"#2563eb","Crucial shots & passes blocked"],
-                            ["INTERCEPTIONS",sel.interceptions||0,"#0ea5e9","Opponent attacks intercepted"],
-                            ["CLEARANCES",sel.clearances||0,"#10b981","Dangerous balls cleared"],
-                            ["GOALS",sel.goals||0,T_RED,"Goals scored"],
-                            ["ASSISTS",sel.assists||0,T_GOLD,"Assists provided"],
-                            ["APPEARANCES",sel.appearances||0,T.text,"Matches played"],
-                            ...(selPotMonthAwards.length>0?[["PLAYER OF MONTH",selPotMonthAwards.length,T_GOLD,selPotMonthAwards.map(a=>a.monthLabel.split(" ")[0]).join(", ")]]:[]),
-                            ...(sel.potmCount>0?[["POTM AWARDS",sel.potmCount,"#eab308","Match MVP awards"]]:[])
-                          ]
-                        : [
-                            ["GOALS",sel.goals,T_RED,"Goals this season"],
-                            ["ASSISTS",sel.assists,T_GOLD,"Assists provided"],
-                            ["APPEARANCES",sel.appearances,T.text,"Games played"],
-                            ...(selPotMonthAwards.length>0?[["PLAYER OF MONTH",selPotMonthAwards.length,T_GOLD,selPotMonthAwards.map(a=>a.monthLabel.split(" ")[0]).join(", ")]]:[]),
-                            ...(sel.potmCount>0?[["POTM AWARDS",sel.potmCount,"#eab308","Match MVP awards"]]:[])
-                          ]
-                      );
+                      if (isGK) {
+                        return [
+                          ["SAVES", sel.saves, "#2563eb", "Saves this season"],
+                          ["CLEAN SHEETS", sel.cleanSheets, "#16a34a", "Games without conceding"],
+                          ["APPEARANCES", sel.appearances, T.text, "Games played"],
+                          ...(selPotMonthAwards.length>0?[["PLAYER OF MONTH",selPotMonthAwards.length,T_GOLD,selPotMonthAwards.map(a=>a.monthLabel.split(" ")[0]).join(", ")]]:[]),
+                          ...(sel.potmCount>0?[["POTM AWARDS",sel.potmCount,"#eab308","Match MVP awards"]]:[])
+                        ];
+                      }
+                      
+                      const cards = [];
+                      if (isDef && hasDefStats) {
+                        cards.push(
+                          ["BLOCKS", sel.blocks||0, "#2563eb", "Crucial shots & passes blocked"],
+                          ["INTERCEPTIONS", sel.interceptions||0, "#0ea5e9", "Opponent attacks intercepted"],
+                          ["CLEARANCES", sel.clearances||0, "#10b981", "Dangerous balls cleared"],
+                          ["GOALS", sel.goals||0, T_RED, "Goals scored"],
+                          ["ASSISTS", sel.assists||0, T_GOLD, "Assists provided"],
+                          ["APPEARANCES", sel.appearances||0, T.text, "Matches played"]
+                        );
+                      } else if (hasDefStats) {
+                        cards.push(
+                          ["GOALS", sel.goals||0, T_RED, "Goals this season"],
+                          ["ASSISTS", sel.assists||0, T_GOLD, "Assists provided"],
+                          ["APPEARANCES", sel.appearances||0, T.text, "Matches played"],
+                          ["BLOCKS", sel.blocks||0, "#2563eb", "Crucial shots & passes blocked"],
+                          ["INTERCEPTIONS", sel.interceptions||0, "#0ea5e9", "Opponent attacks intercepted"],
+                          ["CLEARANCES", sel.clearances||0, "#10b981", "Dangerous balls cleared"]
+                        );
+                      } else {
+                        cards.push(
+                          ["GOALS", sel.goals||0, T_RED, "Goals this season"],
+                          ["ASSISTS", sel.assists||0, T_GOLD, "Assists provided"],
+                          ["APPEARANCES", sel.appearances||0, T.text, "Games played"]
+                        );
+                      }
+
+                      if (selPotMonthAwards.length > 0) {
+                        cards.push(["PLAYER OF MONTH", selPotMonthAwards.length, T_GOLD, selPotMonthAwards.map(a=>a.monthLabel.split(" ")[0]).join(", ")]);
+                      }
+                      if ((sel.potmCount||0) > 0) {
+                        cards.push(["POTM AWARDS", sel.potmCount, "#eab308", "Match MVP awards"]);
+                      }
+
+                      return cards;
                     })().map(([l,v,c,desc]) => (
                       <div key={l} className="profile-stat-box" style={{ borderTop:`3px solid ${c}` }}>
                         <div className="bebas" style={{ fontSize: isMobile?44:54, color:c, lineHeight:1, marginBottom:4 }}><StatNum value={v||0} /></div>
