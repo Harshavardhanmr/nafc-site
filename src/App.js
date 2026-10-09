@@ -69,6 +69,16 @@ const PGS = ["Home", "Players", "Fixtures", "Stats", "Gallery", "News"];
 
 const DEFAULT_ANNOUNCEMENTS = [
   {
+    id: "squad-evolution-oct-2026",
+    title: "The Next Chapter: Squad Evolution & Youth Transition at NAFC",
+    category: "Club News",
+    date: "2026-10-09",
+    badge: "OFFICIAL STATEMENT",
+    summary: "NAFC announces the initiation of a progressive squad transition as exciting young talent steps up to drive the club's high-tempo football into the future.",
+    content: "Football is ever-evolving, and at NAFC, the future is now. With an influx of dynamic, hungry young talent making an immediate impact on the pitch, club leadership is initiating a strategic squad transition to pave the way for the next generation.\n\nRecent fixtures have underscored this tactical shift: high-tempo pressing, rapid transitions, and clinical finishing (exemplified by the emphatic 10–4 victory over Team VINU) have showcased the immense ceiling of this youthful core. To maintain this dynamic rhythm and competitive edge, the club is beginning to phase out elements of the old guard, with the first of our senior stalwarts preparing to step aside and transition into retirement.\n\nWhile farewells to long-standing club figures are never easy, honoring the club's competitive ambition and creating space for fresh blood is paramount for sustained success. The management extends heartfelt respect to the veterans paving the way, with official retirement tributes and further squad announcements to follow in the coming weeks.\n\nThe foundation is set. The future is bright. Forward NAFC! 🔴⚪",
+    createdAt: "2026-10-09T22:50:00.000Z"
+  },
+  {
     id: "tournament-sept-6-2026",
     title: "KFA TCT 2.0 — Historic Double Cup Triumph for NAFC & EFC",
     category: "Tournament",
