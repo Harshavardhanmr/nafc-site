@@ -245,6 +245,31 @@ function MatchModal({ match, onClose, T = THEMES.dark }) {
           })()}
         </div>
         <div style={{ padding:"20px" }}>
+          {match.potm && (() => {
+            const potmName = typeof match.potm === "object" ? match.potm.name : match.potm;
+            const isGuest = typeof match.potm === "object" ? (match.potm.isGuest || (match.potm.id && String(match.potm.id).startsWith("guest_"))) : false;
+            return (
+              <div style={{ background:"linear-gradient(135deg, rgba(217,119,6,0.14) 0%, rgba(217,119,6,0.04) 100%)", border:"1px solid rgba(217,119,6,0.35)", borderRadius:12, padding:"12px 16px", marginBottom:16, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                  <div style={{ width:38, height:38, borderRadius:"50%", background:"#d97706", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, color:"#fff", flexShrink:0, boxShadow:"0 2px 8px rgba(217,119,6,0.35)" }}>
+                    ⭐
+                  </div>
+                  <div>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:2.5, color:T_GOLD }}>PLAYER OF THE MATCH</div>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:T.text, letterSpacing:1, lineHeight:1.1 }}>{potmName}</div>
+                  </div>
+                </div>
+                {typeof match.potm === "object" && match.potm.jersey && (
+                  <span style={{ fontSize:12, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5 }}>
+                    #{match.potm.jersey}{match.potm.pos ? ` · ${match.potm.pos.toUpperCase()}` : ""}
+                  </span>
+                )}
+                {isGuest && (
+                  <span style={{ background:T.hoverBg, color:T.textMuted, border:`1px solid ${T.border}`, fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:4 }}>GUEST</span>
+                )}
+              </div>
+            );
+          })()}
           {scorers.length > 0 && (
             <div style={{ marginBottom:16 }}>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, letterSpacing:3, color:T_RED, marginBottom:10 }}>⚽ GOALS ({totalGoals})</div>
@@ -337,7 +362,7 @@ function MatchModal({ match, onClose, T = THEMES.dark }) {
   );
 }
 
-function PlayerModal({ player, onClose, T = THEMES.dark }) {
+function PlayerModal({ player, onClose, T = THEMES.dark, potMonthAwards = [] }) {
   const p = player;
   const pc = POS_COLOR[p.pos] || T_RED;
   const isGK = p.pos === "Goalkeeper";
@@ -384,6 +409,18 @@ function PlayerModal({ player, onClose, T = THEMES.dark }) {
               <span style={{ color:T_RED }}>⚽ {p.goals||0} GOALS</span>
               <span style={{ color:T.borderLight }}>|</span>
               <span style={{ color:T_GOLD }}>🅰️ {p.assists||0} ASSISTS</span>
+            </div>
+          )}
+          {potMonthAwards.length > 0 && (
+            <div style={{ background:"rgba(217,119,6,0.12)", border:"1px solid rgba(217,119,6,0.35)", borderRadius:8, padding:"9px 14px", marginBottom:8, display:"flex", alignItems:"center", justifyContent:"center", gap:8, fontSize:12.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, color:T_GOLD, textAlign:"center" }}>
+              <span>🏆</span>
+              <span>{potMonthAwards.length} × PLAYER OF THE MONTH ({potMonthAwards.map(a => a.monthLabel.split(" ")[0]).join(", ")})</span>
+            </div>
+          )}
+          {((p.potmCount||0) > 0) && (
+            <div style={{ background:"rgba(234,179,8,0.08)", border:"1px solid rgba(234,179,8,0.25)", borderRadius:8, padding:"9px 14px", marginBottom:12, display:"flex", alignItems:"center", justifyContent:"center", gap:8, fontSize:12.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, color:T_GOLD }}>
+              <span>⭐</span>
+              <span>{p.potmCount} × PLAYER OF THE MATCH AWARD{p.potmCount > 1 ? "S" : ""}</span>
             </div>
           )}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
@@ -526,13 +563,16 @@ function AppShell() {
     let interceptions = 0;
     let clearances = 0;
 
+      let potmCount = 0;
+
     monthMatches.forEach(m => {
       if ((m.ap && m.ap.includes(p.id)) || (m.appearances && m.appearances.includes(p.id))) {
         appearances += 1;
       } else if (
         (m.scorers && m.scorers.some(s => (typeof s === "object" ? s.id === p.id || s.name === p.name : s === p.name))) ||
         (m.assisters && m.assisters.some(a => (typeof a === "object" ? a.id === p.id || a.name === p.name : a === p.name))) ||
-        (m.defensiveActions && m.defensiveActions.some(d => (typeof d === "object" ? d.id === p.id || d.name === p.name : d === p.name)))
+        (m.defensiveActions && m.defensiveActions.some(d => (typeof d === "object" ? d.id === p.id || d.name === p.name : d === p.name))) ||
+        (m.potm && (typeof m.potm === "object" ? m.potm.id === p.id || m.potm.name === p.name : m.potm === p.name))
       ) {
         appearances += 1;
       }
@@ -572,6 +612,14 @@ function AppShell() {
           }
         });
       }
+
+      if (m.potm) {
+        const potmId = typeof m.potm === "object" ? m.potm.id : null;
+        const potmName = typeof m.potm === "object" ? m.potm.name : m.potm;
+        if (p.id === potmId || (potmName && p.name && p.name.toLowerCase() === String(potmName).toLowerCase())) {
+          potmCount += 1;
+        }
+      }
     });
 
     const monthDefActions = blocks + interceptions + clearances;
@@ -586,6 +634,7 @@ function AppShell() {
       monthDefActions: monthDefActions,
       monthAppearances: appearances,
       monthContributions: goals + assists,
+      monthPotmCount: potmCount,
     };
   });
 
@@ -594,6 +643,107 @@ function AppShell() {
   const topPerformerMonth = [...playerMonthlyStats]
     .filter(p => (p.monthContributions || 0) > 0 || (p.monthAppearances || 0) > 0)
     .sort((a, b) => (b.monthContributions || 0) - (a.monthContributions || 0) || (b.monthGoals || 0) - (a.monthGoals || 0) || (b.monthAppearances || 0) - (a.monthAppearances || 0))[0];
+
+  // ── Auto-Calculate Player of the Month (POTMonth) Winners across all months ──
+  const allHistoricalMonths = Array.from(new Set(played.filter(m => m.date && m.date.length >= 7).map(m => m.date.slice(0, 7)))).sort().reverse();
+
+  const monthlyWinners = allHistoricalMonths.map(ym => {
+    const mMatches = played.filter(m => m.date && String(m.date).startsWith(ym));
+    if (mMatches.length === 0) return null;
+
+    const stats = plrs.map(p => {
+      let g = 0, a = 0, apps = 0, def = 0, potm = 0;
+      mMatches.forEach(m => {
+        if ((m.ap && m.ap.includes(p.id)) || (m.appearances && m.appearances.includes(p.id))) apps++;
+        else if (
+          (m.scorers && m.scorers.some(s => (typeof s === "object" ? s.id === p.id || s.name === p.name : s === p.name))) ||
+          (m.assisters && m.assisters.some(as => (typeof as === "object" ? as.id === p.id || as.name === p.name : as === p.name))) ||
+          (m.defensiveActions && m.defensiveActions.some(d => (typeof d === "object" ? d.id === p.id || d.name === p.name : d === p.name))) ||
+          (m.potm && (typeof m.potm === "object" ? m.potm.id === p.id || m.potm.name === p.name : m.potm === p.name))
+        ) apps++;
+
+        if (m.scorers) {
+          m.scorers.forEach(s => {
+            if (typeof s === "object") {
+              if (s.id === p.id || s.name === p.name) g += Number(s.goals) || 1;
+            } else if (s === p.name) g++;
+          });
+        }
+        if (m.assisters) {
+          m.assisters.forEach(as => {
+            if (typeof as === "object") {
+              if (as.id === p.id || as.name === p.name) a += Number(as.assists) || 1;
+            } else if (as === p.name) a++;
+          });
+        }
+        if (m.defensiveActions) {
+          m.defensiveActions.forEach(d => {
+            if (typeof d === "object" && (d.id === p.id || d.name === p.name)) {
+              def += (Number(d.blocks)||0) + (Number(d.interceptions)||0) + (Number(d.clearances)||0);
+            }
+          });
+        }
+        if (m.potm) {
+          const potmId = typeof m.potm === "object" ? m.potm.id : null;
+          const potmName = typeof m.potm === "object" ? m.potm.name : m.potm;
+          if (p.id === potmId || (potmName && p.name && p.name.toLowerCase() === String(potmName).toLowerCase())) {
+            potm++;
+          }
+        }
+      });
+
+      return {
+        id: p.id,
+        name: p.name,
+        jersey: p.jersey,
+        pos: p.pos,
+        photoURL: p.photoURL,
+        photoPosition: p.photoPosition,
+        goals: g,
+        assists: a,
+        contributions: g + a,
+        defActions: def,
+        potmCount: potm,
+        appearances: apps,
+        score: (potm * 4) + ((g + a) * 2) + (g * 0.5) + (def * 0.5) + (apps * 0.2)
+      };
+    });
+
+    const activePlayers = stats.filter(s => s.contributions > 0 || s.potmCount > 0 || s.defActions > 0 || s.appearances > 0);
+    activePlayers.sort((x, y) => y.score - x.score || y.potmCount - x.potmCount || y.contributions - x.contributions || y.goals - x.goals);
+
+    const winner = activePlayers[0];
+    if (winner && (winner.contributions > 0 || winner.potmCount > 0 || winner.appearances > 0)) {
+      return {
+        ym,
+        monthLabel: getMonthLabel(ym),
+        winnerId: winner.id,
+        winnerName: winner.name,
+        jersey: winner.jersey,
+        pos: winner.pos,
+        photoURL: winner.photoURL,
+        photoPosition: winner.photoPosition,
+        goals: winner.goals,
+        assists: winner.assists,
+        potmCount: winner.potmCount,
+        appearances: winner.appearances
+      };
+    }
+    return null;
+  }).filter(Boolean);
+
+  const getPlayerPotMonthAwards = (playerId, playerName) => {
+    return monthlyWinners.filter(w => w.winnerId === playerId || (playerName && w.winnerName && w.winnerName.toLowerCase() === playerName.toLowerCase()));
+  };
+
+  const plrsWithPotMonth = plrs.map(p => {
+    const awards = getPlayerPotMonthAwards(p.id, p.name);
+    return {
+      ...p,
+      potMonthCount: awards.length,
+      potMonthAwards: awards
+    };
+  });
 
   const go = p => { setPg(p); setSel(null); setSrch(""); setMobileNav(false); window.scrollTo(0,0); };
 
@@ -684,7 +834,7 @@ function AppShell() {
 
       {sLgn && <LoginPage onClose={() => setSLgn(false)} />}
       {selMatch && <MatchModal match={selMatch} onClose={() => setSelMatch(null)} T={T} />}
-      {selStatPlayer && <PlayerModal player={selStatPlayer} onClose={() => setSelStatPlayer(null)} T={T} />}
+      {selStatPlayer && <PlayerModal player={selStatPlayer} onClose={() => setSelStatPlayer(null)} T={T} potMonthAwards={getPlayerPotMonthAwards(selStatPlayer.id, selStatPlayer.name)} />}
 
       {/* Mobile Nav Drawer */}
       {mobileNav && (
@@ -1113,19 +1263,30 @@ function AppShell() {
               <div style={{ background:T.bg, padding: isMobile?`28px ${px} 40px`:`40px ${px} 56px` }}>
                 <div style={{ maxWidth:900, margin:"0 auto" }}>
                   <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr 1fr":"repeat(3,1fr)", gap:isMobile?10:14, marginBottom:32 }}>
-                    {(isGK
-                      ? [["SAVES",sel.saves,"#2563eb","Saves this season"],["CLEAN SHEETS",sel.cleanSheets,"#16a34a","Games without conceding"],["APPEARANCES",sel.appearances,T.text,"Games played"]]
-                      : hasDefStats
-                      ? [
-                          ["BLOCKS",sel.blocks||0,"#2563eb","Crucial shots & passes blocked"],
-                          ["INTERCEPTIONS",sel.interceptions||0,"#0ea5e9","Opponent attacks intercepted"],
-                          ["CLEARANCES",sel.clearances||0,"#10b981","Dangerous balls cleared"],
-                          ["GOALS",sel.goals||0,T_RED,"Goals scored"],
-                          ["ASSISTS",sel.assists||0,T_GOLD,"Assists provided"],
-                          ["APPEARANCES",sel.appearances||0,T.text,"Matches played"]
-                        ]
-                      : [["GOALS",sel.goals,T_RED,"Goals this season"],["ASSISTS",sel.assists,T_GOLD,"Assists provided"],["APPEARANCES",sel.appearances,T.text,"Games played"]]
-                    ).map(([l,v,c,desc]) => (
+                    {(() => {
+                      const selPotMonthAwards = getPlayerPotMonthAwards(sel.id, sel.name);
+                      return (isGK
+                        ? [["SAVES",sel.saves,"#2563eb","Saves this season"],["CLEAN SHEETS",sel.cleanSheets,"#16a34a","Games without conceding"],["APPEARANCES",sel.appearances,T.text,"Games played"],...(selPotMonthAwards.length>0?[["PLAYER OF MONTH",selPotMonthAwards.length,T_GOLD,selPotMonthAwards.map(a=>a.monthLabel.split(" ")[0]).join(", ")]]:[]),...(sel.potmCount>0?[["POTM AWARDS",sel.potmCount,"#eab308","Match MVP awards"]]:[])]
+                        : hasDefStats
+                        ? [
+                            ["BLOCKS",sel.blocks||0,"#2563eb","Crucial shots & passes blocked"],
+                            ["INTERCEPTIONS",sel.interceptions||0,"#0ea5e9","Opponent attacks intercepted"],
+                            ["CLEARANCES",sel.clearances||0,"#10b981","Dangerous balls cleared"],
+                            ["GOALS",sel.goals||0,T_RED,"Goals scored"],
+                            ["ASSISTS",sel.assists||0,T_GOLD,"Assists provided"],
+                            ["APPEARANCES",sel.appearances||0,T.text,"Matches played"],
+                            ...(selPotMonthAwards.length>0?[["PLAYER OF MONTH",selPotMonthAwards.length,T_GOLD,selPotMonthAwards.map(a=>a.monthLabel.split(" ")[0]).join(", ")]]:[]),
+                            ...(sel.potmCount>0?[["POTM AWARDS",sel.potmCount,"#eab308","Match MVP awards"]]:[])
+                          ]
+                        : [
+                            ["GOALS",sel.goals,T_RED,"Goals this season"],
+                            ["ASSISTS",sel.assists,T_GOLD,"Assists provided"],
+                            ["APPEARANCES",sel.appearances,T.text,"Games played"],
+                            ...(selPotMonthAwards.length>0?[["PLAYER OF MONTH",selPotMonthAwards.length,T_GOLD,selPotMonthAwards.map(a=>a.monthLabel.split(" ")[0]).join(", ")]]:[]),
+                            ...(sel.potmCount>0?[["POTM AWARDS",sel.potmCount,"#eab308","Match MVP awards"]]:[])
+                          ]
+                      );
+                    })().map(([l,v,c,desc]) => (
                       <div key={l} className="profile-stat-box" style={{ borderTop:`3px solid ${c}` }}>
                         <div className="bebas" style={{ fontSize: isMobile?44:54, color:c, lineHeight:1, marginBottom:4 }}><StatNum value={v||0} /></div>
                         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:isMobile?12:14, color:T.text, letterSpacing:2, marginBottom:4 }}>{l}</div>
@@ -1250,16 +1411,28 @@ function AppShell() {
                                 </div>
                               );
                             })()}
-                            {/* Scorers */}
-                            {!isUpc && m.scorers && m.scorers.length > 0 && (
-                              <div style={{ marginTop:14, paddingTop:12, borderTop:`1px solid ${T.borderLight}`, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
-                                <span style={{ fontSize:14 }}>⚽</span>
-                                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:T.textDim, letterSpacing:2 }}>SCORERS</span>
-                                {m.scorers.map((s,si) => (
-                                  <span key={si} style={{ fontSize:13, color:T.text, fontWeight:600, background:T.subtleBg, padding:"5px 14px", borderRadius:16, border:`1px solid ${T.borderLight}` }}>
-                                    {typeof s==="string"?s:s.name}{typeof s==="object"&&s.goals>1?` ×${s.goals}`:""}
-                                  </span>
-                                ))}
+                            {/* Scorers & POTM */}
+                            {!isUpc && ((m.scorers && m.scorers.length > 0) || m.potm) && (
+                              <div style={{ marginTop:14, paddingTop:12, borderTop:`1px solid ${T.borderLight}`, display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, flexWrap:"wrap" }}>
+                                {m.scorers && m.scorers.length > 0 ? (
+                                  <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                                    <span style={{ fontSize:14 }}>⚽</span>
+                                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:T.textDim, letterSpacing:2 }}>SCORERS</span>
+                                    {m.scorers.map((s,si) => (
+                                      <span key={si} style={{ fontSize:13, color:T.text, fontWeight:600, background:T.subtleBg, padding:"4px 12px", borderRadius:16, border:`1px solid ${T.borderLight}` }}>
+                                        {typeof s==="string"?s:s.name}{typeof s==="object"&&s.goals>1?` ×${s.goals}`:""}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : <div />}
+                                {m.potm && (
+                                  <div style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(217,119,6,0.12)", border:"1px solid rgba(217,119,6,0.3)", padding:"4px 12px", borderRadius:16 }}>
+                                    <span style={{ fontSize:13 }}>⭐</span>
+                                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:T_GOLD, letterSpacing:1.5 }}>
+                                      POTM: {typeof m.potm === "object" ? m.potm.name : m.potm}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -1342,7 +1515,7 @@ function AppShell() {
 
                   {/* Monthly Summary cards */}
                   <div className="stat-grid-4" style={{ display:"grid", gap:isMobile?10:14, marginBottom:24 }}>
-                    {[["MONTHLY RECORD",`${monthWins}W - ${monthDraws}D - ${monthLosses}L`,"#2563eb"],["GOALS SCORED",monthGoalsCount,T_RED],["TOP SCORER",topScorerMonth&&topScorerMonth.monthGoals>0?`${topScorerMonth.name} (${topScorerMonth.monthGoals})`:"—",T_GOLD],["TOP PLAYMAKER",topAssistMonth&&topAssistMonth.monthAssists>0?`${topAssistMonth.name} (${topAssistMonth.monthAssists})`:"—","#16a34a"]].map(([l,v,c]) => (
+                    {[["MONTHLY RECORD",`${monthWins}W - ${monthDraws}D - ${monthLosses}L`,"#2563eb"],["TEAM GOALS",monthGoalsCount,T_RED],["TOP SCORER",topScorerMonth&&topScorerMonth.monthGoals>0?`${topScorerMonth.name} (${topScorerMonth.monthGoals})`:"—",T_GOLD],["TOP PLAYMAKER",topAssistMonth&&topAssistMonth.monthAssists>0?`${topAssistMonth.name} (${topAssistMonth.monthAssists})`:"—","#16a34a"]].map(([l,v,c]) => (
                       <div key={l} style={{ background:T.cardBg, border:`1px solid ${T.border}`, padding: isMobile?"16px 14px":"22px 20px", borderTop:`3px solid ${c}`, borderRadius:12 }}>
                         <div className="bebas" style={{ fontSize: typeof v==="number"?(isMobile?40:54):(isMobile?24:30), color:c, lineHeight:1.1 }}>
                           {typeof v==="number" ? <StatNum value={v} /> : v}
@@ -1389,6 +1562,15 @@ function AppShell() {
                         emptyMsg: "No appearances recorded for this month.",
                         sorted: [...playerMonthlyStats].filter(p => (p.monthAppearances || 0) > 0).sort((a,b) => (b.monthAppearances||0) - (a.monthAppearances||0) || (b.monthGoals||0) - (a.monthGoals||0)),
                         renderValue: p => p.monthAppearances || 0,
+                        subValue: null
+                      },
+                      {
+                        title: `POTM AWARDS (${getMonthLabel(activeMonth)})`,
+                        color: "#d97706",
+                        icon: "⭐",
+                        emptyMsg: "No POTM awards recorded for this month.",
+                        sorted: [...playerMonthlyStats].filter(p => (p.monthPotmCount || 0) > 0).sort((a,b) => (b.monthPotmCount||0) - (a.monthPotmCount||0) || (b.monthGoals||0) - (a.monthGoals||0)),
+                        renderValue: p => p.monthPotmCount || 0,
                         subValue: null
                       }
                     ].map(board => (
@@ -1468,9 +1650,38 @@ function AppShell() {
                     </div>
                   </div>
 
+                  {/* Monthly MVP Roll of Honour */}
+                  {monthlyWinners.length > 0 && (
+                    <div style={{ background:T.cardBg, border:`1px solid ${T.border}`, borderTop:`4px solid ${T_GOLD}`, borderRadius:14, padding: isMobile?"18px 14px":"22px 24px", marginBottom:24, boxShadow:"0 4px 20px rgba(0,0,0,0.06)" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, flexWrap:"wrap", gap:8 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                          <span style={{ fontSize:22 }}>👑</span>
+                          <span className="bebas" style={{ fontSize:20, color:T.text, letterSpacing:1.5 }}>PLAYER OF THE MONTH ROLL OF HONOUR</span>
+                        </div>
+                        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:T_GOLD, background:"rgba(217,119,6,0.12)", border:"1px solid rgba(217,119,6,0.3)", padding:"3px 10px", borderRadius:4, letterSpacing:1.5 }}>MONTHLY MVPS</span>
+                      </div>
+                      <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr":isTablet?"repeat(2, 1fr)":"repeat(4, 1fr)", gap:10 }}>
+                        {monthlyWinners.map(w => (
+                          <div key={w.ym} onClick={() => { const p = plrs.find(x => x.id === w.winnerId); if (p) setSelStatPlayer(p); }} style={{ background: themeMode==="dark" ? "linear-gradient(135deg, rgba(234,179,8,0.1) 0%, rgba(24,24,27,0.8) 100%)" : "linear-gradient(135deg, rgba(234,179,8,0.06) 0%, #ffffff 100%)", border:"1px solid rgba(234,179,8,0.25)", borderRadius:10, padding:"12px 14px", display:"flex", alignItems:"center", gap:12, cursor:"pointer", transition:"all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.borderColor=T_GOLD;e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(234,179,8,0.25)";e.currentTarget.style.transform="none";}}>
+                            <div style={{ width:42, height:42, borderRadius:"50%", background:"rgba(234,179,8,0.2)", border:`2px solid ${T_GOLD}`, overflow:"hidden", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                              {w.photoURL ? <img src={w.photoURL} alt={w.winnerName} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition: getPhotoPos(w, "center 35%") }} /> : <span className="bebas" style={{ fontSize:14, color:T_GOLD }}>#{w.jersey}</span>}
+                            </div>
+                            <div style={{ minWidth:0 }}>
+                              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, color:T_GOLD, letterSpacing:1.5 }}>{w.monthLabel}</div>
+                              <div style={{ fontWeight:700, fontSize:15, color:T.text, lineHeight:1.1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{w.winnerName}</div>
+                              <div style={{ fontSize:11, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:2 }}>
+                                {w.goals > 0 && `${w.goals}G `}{w.assists > 0 && `${w.assists}A `}{w.potmCount > 0 && `⭐${w.potmCount} `}{w.appearances > 0 && `· ${w.appearances}M`}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Season All-Time Summary cards */}
                   <div className="stat-grid-4" style={{ display:"grid", gap:isMobile?10:14, marginBottom:24 }}>
-                    {[["TOTAL GOALS",plrs.reduce((a,p)=>a+(p.goals||0),0),T_RED],["TOTAL ASSISTS",plrs.reduce((a,p)=>a+(p.assists||0),0),T_GOLD],["SQUAD SIZE",plrs.length,"#2563eb"],["MATCHES PLAYED",played.length,"#16a34a"]].map(([l,v,c]) => (
+                    {[["TOTAL GOALS",plrs.reduce((a,p)=>a+(p.goals||0),0),T_RED],["TOTAL ASSISTS",plrs.reduce((a,p)=>a+(p.assists||0),0),T_GOLD],["MATCH POTMS",plrs.reduce((a,p)=>a+(p.potmCount||0),0),"#d97706"],["MATCHES PLAYED",played.length,"#16a34a"]].map(([l,v,c]) => (
                       <div key={l} style={{ background:T.cardBg, border:`1px solid ${T.border}`, padding: isMobile?"16px 14px":"22px 20px", borderTop:`3px solid ${c}`, borderRadius:12 }}>
                         <div className="bebas" style={{ fontSize: isMobile?40:54, color:c, lineHeight:1 }}><StatNum value={v} /></div>
                         <div style={{ fontSize:13, letterSpacing:2, color:T.textMuted, marginTop:6, fontFamily:"'Bebas Neue',sans-serif" }}>{l}</div>
@@ -1478,7 +1689,7 @@ function AppShell() {
                     ))}
                   </div>
 
-                  {/* Season All-Time Leaderboards — 4 cols */}
+                  {/* Season All-Time Leaderboards */}
                   <div className="leaderboard-grid-4">
                     {[
                       {
@@ -1516,6 +1727,24 @@ function AppShell() {
                         sorted: [...plrs].filter(p => (p.appearances || 0) > 0).sort((a,b) => (b.appearances||0) - (a.appearances||0) || (b.goals||0) - (a.goals||0)),
                         renderValue: p => p.appearances || 0,
                         subValue: null
+                      },
+                      {
+                        title: "MATCH POTM AWARDS",
+                        color: "#d97706",
+                        icon: "⭐",
+                        emptyMsg: "No Player of the Match awards recorded yet.",
+                        sorted: [...plrs].filter(p => (p.potmCount || 0) > 0).sort((a,b) => (b.potmCount||0) - (a.potmCount||0) || (b.goals||0) - (a.goals||0)),
+                        renderValue: p => p.potmCount || 0,
+                        subValue: null
+                      },
+                      {
+                        title: "PLAYER OF THE MONTH",
+                        color: T_GOLD,
+                        icon: "🏆",
+                        emptyMsg: "No Player of the Month awards recorded yet.",
+                        sorted: [...plrsWithPotMonth].filter(p => (p.potMonthCount || 0) > 0).sort((a,b) => (b.potMonthCount||0) - (a.potMonthCount||0) || (b.goals||0) - (a.goals||0)),
+                        renderValue: p => p.potMonthCount || 0,
+                        subValue: p => p.potMonthAwards && p.potMonthAwards.length > 0 ? p.potMonthAwards.map(a => a.monthLabel.split(" ")[0]).join(", ") : null
                       }
                     ].map(board => (
                       <div key={board.title} className="stat-card">

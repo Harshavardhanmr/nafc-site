@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase/config";
-import { collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, getDoc, query, orderBy, setDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, getDocs, query, orderBy, setDoc } from "firebase/firestore";
 import LOGO from "./logo";
 
 const CLOUDINARY_CLOUD_NAME = "dzpti3993";
@@ -56,7 +56,8 @@ export default function AdminDashboard({ onBack }) {
 
   const [mF, setMF] = useState({
     op:"", dt:"", vn:"", cp:"Friendly", rs:"W",
-    nS:0, oS:0, ap:[], sc:[], as:[], df:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, dI:"", dGuest:"", dB:0, dInt:0, dC:0, fmt:"7s"
+    nS:0, oS:0, ap:[], sc:[], as:[], df:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, dI:"", dGuest:"", dB:0, dInt:0, dC:0, fmt:"7s",
+    potmId:"", potmGuest:""
   });
 
   useEffect(() => {
@@ -131,7 +132,14 @@ export default function AdminDashboard({ onBack }) {
 
   const del = async (c, id) => {
     if (window.confirm("Delete?")) {
-      try { await deleteDoc(doc(db,c,id)); showToast("Deleted."); }
+      try {
+        await deleteDoc(doc(db,c,id));
+        showToast("Deleted.");
+        if (c === "matches") {
+          // Sync stats after match delete
+          recalculateAllStatsSilent();
+        }
+      }
       catch { showToast("Delete failed.", "error"); }
     }
   };
@@ -148,8 +156,24 @@ export default function AdminDashboard({ onBack }) {
   const updP = async (e) => {
     e.preventDefault(); setLd(true);
     try {
-      if (edP.id) await updateDoc(doc(db,"players",edP.id), edP);
-      else await addDoc(collection(db,"players"), edP);
+      const cleanPlayer = {
+        name: edP.name ? edP.name.trim() : "",
+        pos: edP.pos || "Midfielder",
+        jersey: Number(edP.jersey) || 0,
+        goals: Number(edP.goals) || 0,
+        assists: Number(edP.assists) || 0,
+        appearances: Number(edP.appearances) || 0,
+        cleanSheets: Number(edP.cleanSheets) || 0,
+        saves: Number(edP.saves) || 0,
+        blocks: Number(edP.blocks) || 0,
+        interceptions: Number(edP.interceptions) || 0,
+        clearances: Number(edP.clearances) || 0,
+      };
+      if (edP.photoURL !== undefined) cleanPlayer.photoURL = edP.photoURL;
+      if (edP.photoPosition !== undefined) cleanPlayer.photoPosition = edP.photoPosition;
+
+      if (edP.id) await updateDoc(doc(db,"players",edP.id), cleanPlayer);
+      else await addDoc(collection(db,"players"), cleanPlayer);
       setEdP(null); showToast("✅ Player saved!");
     } catch (err) { showToast(`❌ Error: ${err.message}`, "error"); }
     setLd(false);
@@ -157,52 +181,225 @@ export default function AdminDashboard({ onBack }) {
 
   const oNP = () => setEdP({ name:"", pos:"Midfielder", jersey:0, goals:0, assists:0, appearances:0, cleanSheets:0, saves:0, blocks:0, interceptions:0, clearances:0 });
 
+  // ── Sync All Player Career Stats from Match History ──
+  const recalculateAllStatsSilent = async () => {
+    try {
+      const [matchesSnap, playersSnap] = await Promise.all([
+        getDocs(collection(db, "matches")),
+        getDocs(collection(db, "players"))
+      ]);
+
+      const allPlayers = [];
+      playersSnap.forEach(d => allPlayers.push({ id: d.id, ...d.data() }));
+
+      const allMatches = [];
+      matchesSnap.forEach(d => allMatches.push({ id: d.id, ...d.data() }));
+      const playedMatches = allMatches.filter(m => m.result !== "upcoming");
+
+      const statsMap = {};
+      allPlayers.forEach(p => {
+        statsMap[p.id] = { goals: 0, assists: 0, appearances: 0, blocks: 0, interceptions: 0, clearances: 0, potmCount: 0 };
+      });
+
+      playedMatches.forEach(m => {
+        const apList = m.ap || m.appearances || [];
+        const matchParticipants = new Set();
+
+        apList.forEach(id => {
+          if (statsMap[id]) matchParticipants.add(id);
+        });
+
+        if (m.scorers && Array.isArray(m.scorers)) {
+          m.scorers.forEach(s => {
+            const sId = typeof s === "object" ? s.id : null;
+            const sName = typeof s === "object" ? s.name : s;
+            const sGoals = typeof s === "object" && s.goals ? Number(s.goals) || 1 : 1;
+            const p = allPlayers.find(x => x.id === sId || (sName && x.name && x.name.toLowerCase() === sName.toLowerCase()));
+            if (p && statsMap[p.id]) {
+              statsMap[p.id].goals += sGoals;
+              matchParticipants.add(p.id);
+            }
+          });
+        }
+
+        if (m.assisters && Array.isArray(m.assisters)) {
+          m.assisters.forEach(a => {
+            const aId = typeof a === "object" ? a.id : null;
+            const aName = typeof a === "object" ? a.name : a;
+            const aAssists = typeof a === "object" && a.assists ? Number(a.assists) || 1 : 1;
+            const p = allPlayers.find(x => x.id === aId || (aName && x.name && x.name.toLowerCase() === aName.toLowerCase()));
+            if (p && statsMap[p.id]) {
+              statsMap[p.id].assists += aAssists;
+              matchParticipants.add(p.id);
+            }
+          });
+        }
+
+        if (m.defensiveActions && Array.isArray(m.defensiveActions)) {
+          m.defensiveActions.forEach(d => {
+            const dId = typeof d === "object" ? d.id : null;
+            const dName = typeof d === "object" ? d.name : d;
+            const p = allPlayers.find(x => x.id === dId || (dName && x.name && x.name.toLowerCase() === dName.toLowerCase()));
+            if (p && statsMap[p.id]) {
+              statsMap[p.id].blocks += Number(d.blocks) || 0;
+              statsMap[p.id].interceptions += Number(d.interceptions) || 0;
+              statsMap[p.id].clearances += Number(d.clearances) || 0;
+              matchParticipants.add(p.id);
+            }
+          });
+        }
+
+        if (m.potm) {
+          const potmId = typeof m.potm === "object" ? m.potm.id : null;
+          const potmName = typeof m.potm === "object" ? m.potm.name : m.potm;
+          const p = allPlayers.find(x => x.id === potmId || (potmName && x.name && x.name.toLowerCase() === String(potmName).toLowerCase()));
+          if (p && statsMap[p.id]) {
+            statsMap[p.id].potmCount += 1;
+            matchParticipants.add(p.id);
+          }
+        }
+
+        matchParticipants.forEach(pId => {
+          if (statsMap[pId]) statsMap[pId].appearances += 1;
+        });
+      });
+
+      for (const p of allPlayers) {
+        if (statsMap[p.id]) {
+          await updateDoc(doc(db, "players", p.id), {
+            potmCount: statsMap[p.id].potmCount
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Silent stats sync failed:", e);
+    }
+  };
+
+  const recalculateAllStats = async () => {
+    if (!window.confirm("Recalculate and synchronize all player career stats from match history?")) return;
+    setLd(true);
+    showToast("🔄 Synchronizing all career stats...", "info");
+    try {
+      await recalculateAllStatsSilent();
+      showToast("✅ All player stats synced successfully from match history!");
+    } catch (err) {
+      showToast(`❌ Sync error: ${err.message}`, "error");
+    }
+    setLd(false);
+  };
+
   const addM = async (e) => {
     e.preventDefault(); setLd(true);
     try {
+      const nafcScore = Number(mF.nS) || 0;
+      const opponentScore = Number(mF.oS) || 0;
+      
+      const cleanScorers = (mF.sc || []).map(s => ({
+        id: s.id || `guest_${Date.now()}_${Math.random().toString(36).slice(2,5)}`,
+        name: s.name || "Unknown",
+        isGuest: Boolean(s.isGuest),
+        goals: Number(s.goals) || 1
+      }));
+
+      const cleanAssisters = (mF.as || []).map(a => ({
+        id: a.id || `guest_${Date.now()}_${Math.random().toString(36).slice(2,5)}`,
+        name: a.name || "Unknown",
+        isGuest: Boolean(a.isGuest),
+        assists: Number(a.assists) || 1
+      }));
+
+      const cleanDefActions = (mF.df || []).map(d => ({
+        id: d.id || `guest_${Date.now()}_${Math.random().toString(36).slice(2,5)}`,
+        name: d.name || "Unknown",
+        isGuest: Boolean(d.isGuest),
+        blocks: Number(d.blocks) || 0,
+        interceptions: Number(d.interceptions) || 0,
+        clearances: Number(d.clearances) || 0
+      }));
+
+      let potm = null;
+      if (mF.potmGuest && mF.potmGuest.trim()) {
+        potm = {
+          id: `guest_${Date.now()}_${Math.random().toString(36).slice(2,5)}`,
+          name: mF.potmGuest.trim(),
+          isGuest: true
+        };
+      } else if (mF.potmId) {
+        const p = plrs.find(x => x.id === mF.potmId);
+        if (p) {
+          potm = {
+            id: p.id,
+            name: p.name,
+            jersey: p.jersey,
+            pos: p.pos,
+            isGuest: false
+          };
+        }
+      }
+
       await addDoc(collection(db,"matches"), {
-        opponent:mF.op, date:mF.dt, venue:mF.vn, competition:mF.cp,
-        result:mF.rs, nafcScore:mF.nS, opponentScore:mF.oS,
-        scorers:mF.sc, assisters:mF.as, defensiveActions:mF.df, fmt:mF.fmt
+        opponent: mF.op ? mF.op.trim() : "",
+        date: mF.dt || new Date().toISOString().slice(0, 10),
+        venue: mF.vn ? mF.vn.trim() : "",
+        competition: mF.cp ? mF.cp.trim() : "Friendly",
+        result: mF.rs || "W",
+        nafcScore: nafcScore,
+        opponentScore: opponentScore,
+        scorers: cleanScorers,
+        assisters: cleanAssisters,
+        defensiveActions: cleanDefActions,
+        potm: potm,
+        fmt: mF.fmt || "7s",
+        ap: mF.ap || []
       });
-      if (mF.rs !== "upcoming") {
-        for (let id of mF.ap) {
-          if (!String(id).startsWith("guest_")) {
-            const r=doc(db,"players",id);
-            const s=await getDoc(r);
-            if (s.exists()) await updateDoc(r,{ appearances:(s.data().appearances||0)+1 });
-          }
-        }
-        for (let s of mF.sc) {
-          if (!s.isGuest && !String(s.id).startsWith("guest_")) {
-            const r=doc(db,"players",s.id);
-            const p=await getDoc(r);
-            if (p.exists()) await updateDoc(r,{ goals:(p.data().goals||0)+s.goals });
-          }
-        }
-        for (let a of mF.as) {
-          if (!a.isGuest && !String(a.id).startsWith("guest_")) {
-            const r=doc(db,"players",a.id);
-            const p=await getDoc(r);
-            if (p.exists()) await updateDoc(r,{ assists:(p.data().assists||0)+a.assists });
-          }
-        }
-        for (let d of mF.df) {
-          if (!d.isGuest && !String(d.id).startsWith("guest_")) {
-            const r=doc(db,"players",d.id);
-            const p=await getDoc(r);
-            if (p.exists()) {
-              const data = p.data();
-              await updateDoc(r, {
-                blocks: (data.blocks||0) + (d.blocks||0),
-                interceptions: (data.interceptions||0) + (d.interceptions||0),
-                clearances: (data.clearances||0) + (d.clearances||0)
-              });
-            }
+
+      // Incrementally update participating players
+      for (const s of cleanScorers) {
+        if (!s.isGuest && s.id) {
+          const pDoc = plrs.find(x => x.id === s.id);
+          if (pDoc) {
+            await updateDoc(doc(db, "players", s.id), {
+              goals: (Number(pDoc.goals) || 0) + (Number(s.goals) || 1)
+            });
           }
         }
       }
-      setMF({ op:"", dt:"", vn:"", cp:"Friendly", rs:"W", nS:0, oS:0, ap:[], sc:[], as:[], df:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, dI:"", dGuest:"", dB:0, dInt:0, dC:0, fmt:"7s" });
+      for (const a of cleanAssisters) {
+        if (!a.isGuest && a.id) {
+          const pDoc = plrs.find(x => x.id === a.id);
+          if (pDoc) {
+            await updateDoc(doc(db, "players", a.id), {
+              assists: (Number(pDoc.assists) || 0) + (Number(a.assists) || 1)
+            });
+          }
+        }
+      }
+      for (const d of cleanDefActions) {
+        if (!d.isGuest && d.id) {
+          const pDoc = plrs.find(x => x.id === d.id);
+          if (pDoc) {
+            await updateDoc(doc(db, "players", d.id), {
+              blocks: (Number(pDoc.blocks) || 0) + (Number(d.blocks) || 0),
+              interceptions: (Number(pDoc.interceptions) || 0) + (Number(d.interceptions) || 0),
+              clearances: (Number(pDoc.clearances) || 0) + (Number(d.clearances) || 0)
+            });
+          }
+        }
+      }
+      for (const pId of (mF.ap || [])) {
+        const pDoc = plrs.find(x => x.id === pId);
+        if (pDoc) {
+          await updateDoc(doc(db, "players", pId), {
+            appearances: (Number(pDoc.appearances) || 0) + 1
+          });
+        }
+      }
+
+      // Synchronize POTM count safely
+      await recalculateAllStatsSilent();
+
+      setMF({ op:"", dt:"", vn:"", cp:"Friendly", rs:"W", nS:0, oS:0, ap:[], sc:[], as:[], df:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, dI:"", dGuest:"", dB:0, dInt:0, dC:0, fmt:"7s", potmId:"", potmGuest:"" });
       showToast("✅ Match logged and stats updated!");
     } catch (err) { showToast(`❌ Error: ${err.message}`, "error"); }
     setLd(false);
@@ -210,40 +407,42 @@ export default function AdminDashboard({ onBack }) {
 
   const tggA = (id) => setMF(p=>({ ...p, ap:p.ap.includes(id)?p.ap.filter(x=>x!==id):[...p.ap,id] }));
   const addS = () => {
-    if (mF.sGuest && mF.sGuest.trim() && mF.sG >= 1) {
+    const goalsCount = Math.max(1, Number(mF.sG) || 1);
+    if (mF.sGuest && mF.sGuest.trim()) {
       const name = mF.sGuest.trim();
-      setMF(v=>({ ...v, sc:[...v.sc, { id:`guest_${Date.now()}`, name:name, isGuest:true, goals:parseInt(v.sG) }], sI:"", sGuest:"", sG:1 }));
+      setMF(v=>({ ...v, sc:[...v.sc, { id:`guest_${Date.now()}_${Math.random().toString(36).slice(2,5)}`, name:name, isGuest:true, goals:goalsCount }], sI:"", sGuest:"", sG:1 }));
       return;
     }
-    if (!mF.sI || mF.sG < 1) return;
+    if (!mF.sI) return;
     const p = plrs.find(x=>x.id===mF.sI);
     if (!p) return;
-    setMF(v=>({ ...v, sc:[...v.sc,{ id:p.id, name:p.name, isGuest:false, goals:parseInt(v.sG) }], sI:"", sGuest:"", sG:1 }));
+    setMF(v=>({ ...v, sc:[...v.sc,{ id:p.id, name:p.name, isGuest:false, goals:goalsCount }], sI:"", sGuest:"", sG:1 }));
   };
   const remS = (i) => setMF(v=>({ ...v, sc:v.sc.filter((_,idx)=>idx!==i) }));
 
   const addA = () => {
-    if (mF.aGuest && mF.aGuest.trim() && mF.aG >= 1) {
+    const assistsCount = Math.max(1, Number(mF.aG) || 1);
+    if (mF.aGuest && mF.aGuest.trim()) {
       const name = mF.aGuest.trim();
-      setMF(v=>({ ...v, as:[...v.as, { id:`guest_${Date.now()}`, name:name, isGuest:true, assists:parseInt(v.aG) }], aI:"", aGuest:"", aG:1 }));
+      setMF(v=>({ ...v, as:[...v.as, { id:`guest_${Date.now()}_${Math.random().toString(36).slice(2,5)}`, name:name, isGuest:true, assists:assistsCount }], aI:"", aGuest:"", aG:1 }));
       return;
     }
-    if (!mF.aI || mF.aG < 1) return;
+    if (!mF.aI) return;
     const p = plrs.find(x=>x.id===mF.aI);
     if (!p) return;
-    setMF(v=>({ ...v, as:[...v.as,{ id:p.id, name:p.name, isGuest:false, assists:parseInt(v.aG) }], aI:"", aGuest:"", aG:1 }));
+    setMF(v=>({ ...v, as:[...v.as,{ id:p.id, name:p.name, isGuest:false, assists:assistsCount }], aI:"", aGuest:"", aG:1 }));
   };
   const remA = (i) => setMF(v=>({ ...v, as:v.as.filter((_,idx)=>idx!==i) }));
 
   const addD = () => {
-    const blocks = parseInt(mF.dB) || 0;
-    const interceptions = parseInt(mF.dInt) || 0;
-    const clearances = parseInt(mF.dC) || 0;
+    const blocks = Number(mF.dB) || 0;
+    const interceptions = Number(mF.dInt) || 0;
+    const clearances = Number(mF.dC) || 0;
     if (blocks === 0 && interceptions === 0 && clearances === 0) return;
 
     if (mF.dGuest && mF.dGuest.trim()) {
       const name = mF.dGuest.trim();
-      setMF(v=>({ ...v, df:[...v.df, { id:`guest_${Date.now()}`, name:name, isGuest:true, blocks, interceptions, clearances }], dI:"", dGuest:"", dB:0, dInt:0, dC:0 }));
+      setMF(v=>({ ...v, df:[...v.df, { id:`guest_${Date.now()}_${Math.random().toString(36).slice(2,5)}`, name:name, isGuest:true, blocks, interceptions, clearances }], dI:"", dGuest:"", dB:0, dInt:0, dC:0 }));
       return;
     }
     if (!mF.dI) return;
@@ -255,6 +454,7 @@ export default function AdminDashboard({ onBack }) {
 
   // ── Match Edit Handlers ──
   const oEM = (m) => {
+    const isGuestPotm = m.potm && (m.potm.isGuest || (m.potm.id && String(m.potm.id).startsWith("guest_")));
     setEdM({
       id: m.id,
       opponent: m.opponent || "",
@@ -262,13 +462,15 @@ export default function AdminDashboard({ onBack }) {
       venue: m.venue || "",
       competition: m.competition || "Friendly",
       result: m.result || "W",
-      nafcScore: m.nafcScore ?? 0,
-      opponentScore: m.opponentScore ?? 0,
+      nafcScore: Number(m.nafcScore) || 0,
+      opponentScore: Number(m.opponentScore) || 0,
       scorers: m.scorers || [],
       assisters: m.assisters || [],
       defensiveActions: m.defensiveActions || [],
       ap: m.ap || m.appearances || [],
       fmt: m.fmt || "7s",
+      potmId: m.potm ? (!isGuestPotm ? m.potm.id : "") : "",
+      potmGuest: m.potm ? (isGuestPotm ? m.potm.name : "") : "",
       sI: "",
       sGuest: "",
       sG: 1,
@@ -287,22 +489,70 @@ export default function AdminDashboard({ onBack }) {
     e.preventDefault();
     setLd(true);
     try {
+      const cleanScorers = (edM.scorers || []).map(s => ({
+        id: s.id || `guest_${Date.now()}`,
+        name: s.name || "Unknown",
+        isGuest: Boolean(s.isGuest),
+        goals: Number(s.goals) || 1
+      }));
+
+      const cleanAssisters = (edM.assisters || []).map(a => ({
+        id: a.id || `guest_${Date.now()}`,
+        name: a.name || "Unknown",
+        isGuest: Boolean(a.isGuest),
+        assists: Number(a.assists) || 1
+      }));
+
+      const cleanDefActions = (edM.defensiveActions || []).map(d => ({
+        id: d.id || `guest_${Date.now()}`,
+        name: d.name || "Unknown",
+        isGuest: Boolean(d.isGuest),
+        blocks: Number(d.blocks) || 0,
+        interceptions: Number(d.interceptions) || 0,
+        clearances: Number(d.clearances) || 0
+      }));
+
+      let potm = null;
+      if (edM.potmGuest && edM.potmGuest.trim()) {
+        potm = {
+          id: `guest_${Date.now()}_${Math.random().toString(36).slice(2,5)}`,
+          name: edM.potmGuest.trim(),
+          isGuest: true
+        };
+      } else if (edM.potmId) {
+        const p = plrs.find(x => x.id === edM.potmId);
+        if (p) {
+          potm = {
+            id: p.id,
+            name: p.name,
+            jersey: p.jersey,
+            pos: p.pos,
+            isGuest: false
+          };
+        }
+      }
+
       await updateDoc(doc(db, "matches", edM.id), {
-        opponent: edM.opponent,
-        date: edM.date,
-        venue: edM.venue,
-        competition: edM.competition,
-        result: edM.result,
-        nafcScore: Number(edM.nafcScore),
-        opponentScore: Number(edM.opponentScore),
-        scorers: edM.scorers,
-        assisters: edM.assisters,
-        defensiveActions: edM.defensiveActions,
-        ap: edM.ap,
-        fmt: edM.fmt
+        opponent: edM.opponent ? edM.opponent.trim() : "",
+        date: edM.date || new Date().toISOString().slice(0, 10),
+        venue: edM.venue ? edM.venue.trim() : "",
+        competition: edM.competition ? edM.competition.trim() : "Friendly",
+        result: edM.result || "W",
+        nafcScore: Number(edM.nafcScore) || 0,
+        opponentScore: Number(edM.opponentScore) || 0,
+        scorers: cleanScorers,
+        assisters: cleanAssisters,
+        defensiveActions: cleanDefActions,
+        potm: potm,
+        ap: edM.ap || [],
+        fmt: edM.fmt || "7s"
       });
+      
       setEdM(null);
       showToast("✅ Match updated successfully!");
+
+      // Re-sync player stats so career stats stay 100% accurate
+      recalculateAllStatsSilent();
     } catch (err) {
       showToast(`❌ Error: ${err.message}`, "error");
     }
@@ -311,39 +561,41 @@ export default function AdminDashboard({ onBack }) {
 
   const tggEdA = (id) => setEdM(p => ({ ...p, ap: p.ap.includes(id) ? p.ap.filter(x => x !== id) : [...p.ap, id] }));
   const addEdS = () => {
-    if (edM.sGuest && edM.sGuest.trim() && edM.sG >= 1) {
+    const goalsCount = Math.max(1, Number(edM.sG) || 1);
+    if (edM.sGuest && edM.sGuest.trim()) {
       const name = edM.sGuest.trim();
-      setEdM(v => ({ ...v, scorers: [...v.scorers, { id: `guest_${Date.now()}`, name: name, isGuest: true, goals: parseInt(v.sG) }], sI: "", sGuest: "", sG: 1 }));
+      setEdM(v => ({ ...v, scorers: [...v.scorers, { id: `guest_${Date.now()}_${Math.random().toString(36).slice(2,5)}`, name: name, isGuest: true, goals: goalsCount }], sI: "", sGuest: "", sG: 1 }));
       return;
     }
-    if (!edM.sI || edM.sG < 1) return;
+    if (!edM.sI) return;
     const p = plrs.find(x => x.id === edM.sI);
     if (!p) return;
-    setEdM(v => ({ ...v, scorers: [...v.scorers, { id: p.id, name: p.name, isGuest: false, goals: parseInt(v.sG) }], sI: "", sGuest: "", sG: 1 }));
+    setEdM(v => ({ ...v, scorers: [...v.scorers, { id: p.id, name: p.name, isGuest: false, goals: goalsCount }], sI: "", sGuest: "", sG: 1 }));
   };
   const remEdS = (i) => setEdM(v => ({ ...v, scorers: v.scorers.filter((_, idx) => idx !== i) }));
   const addEdA = () => {
-    if (edM.aGuest && edM.aGuest.trim() && edM.aG >= 1) {
+    const assistsCount = Math.max(1, Number(edM.aG) || 1);
+    if (edM.aGuest && edM.aGuest.trim()) {
       const name = edM.aGuest.trim();
-      setEdM(v => ({ ...v, assisters: [...v.assisters, { id: `guest_${Date.now()}`, name: name, isGuest: true, assists: parseInt(v.aG) }], aI: "", aGuest: "", aG: 1 }));
+      setEdM(v => ({ ...v, assisters: [...v.assisters, { id: `guest_${Date.now()}_${Math.random().toString(36).slice(2,5)}`, name: name, isGuest: true, assists: assistsCount }], aI: "", aGuest: "", aG: 1 }));
       return;
     }
-    if (!edM.aI || edM.aG < 1) return;
+    if (!edM.aI) return;
     const p = plrs.find(x => x.id === edM.aI);
     if (!p) return;
-    setEdM(v => ({ ...v, assisters: [...v.assisters, { id: p.id, name: p.name, isGuest: false, assists: parseInt(v.aG) }], aI: "", aGuest: "", aG: 1 }));
+    setEdM(v => ({ ...v, assisters: [...v.assisters, { id: p.id, name: p.name, isGuest: false, assists: assistsCount }], aI: "", aGuest: "", aG: 1 }));
   };
   const remEdA = (i) => setEdM(v => ({ ...v, assisters: v.assisters.filter((_, idx) => idx !== i) }));
 
   const addEdD = () => {
-    const blocks = parseInt(edM.dB) || 0;
-    const interceptions = parseInt(edM.dInt) || 0;
-    const clearances = parseInt(edM.dC) || 0;
+    const blocks = Number(edM.dB) || 0;
+    const interceptions = Number(edM.dInt) || 0;
+    const clearances = Number(edM.dC) || 0;
     if (blocks === 0 && interceptions === 0 && clearances === 0) return;
 
     if (edM.dGuest && edM.dGuest.trim()) {
       const name = edM.dGuest.trim();
-      setEdM(v => ({ ...v, defensiveActions: [...(v.defensiveActions || []), { id: `guest_${Date.now()}`, name: name, isGuest: true, blocks, interceptions, clearances }], dI: "", dGuest: "", dB: 0, dInt: 0, dC: 0 }));
+      setEdM(v => ({ ...v, defensiveActions: [...(v.defensiveActions || []), { id: `guest_${Date.now()}_${Math.random().toString(36).slice(2,5)}`, name: name, isGuest: true, blocks, interceptions, clearances }], dI: "", dGuest: "", dB: 0, dInt: 0, dC: 0 }));
       return;
     }
     if (!edM.dI) return;
@@ -507,7 +759,12 @@ export default function AdminDashboard({ onBack }) {
             <div>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:"1px solid #e2e8f0", paddingBottom:12, marginBottom:18, gap:10, flexWrap:"wrap" }}>
                 <div style={{ fontSize:isMobile?18:22, fontWeight:800, color:"#0033a0" }}>FIRST TEAM ROSTER</div>
-                <button onClick={oNP} style={{ background:"#0033a0", color:"#fff", border:"none", padding:"8px 14px", borderRadius:6, fontWeight:700, cursor:"pointer", fontSize:12, whiteSpace:"nowrap" }}>+ ADD PLAYER</button>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  <button onClick={recalculateAllStats} disabled={ld} style={{ background:"#f1f5f9", color:"#0033a0", border:"1px solid #cbd5e1", padding:"8px 14px", borderRadius:6, fontWeight:700, cursor:ld?"wait":"pointer", fontSize:12, whiteSpace:"nowrap" }}>
+                    🔄 SYNC ALL STATS
+                  </button>
+                  <button onClick={oNP} style={{ background:"#0033a0", color:"#fff", border:"none", padding:"8px 14px", borderRadius:6, fontWeight:700, cursor:"pointer", fontSize:12, whiteSpace:"nowrap" }}>+ ADD PLAYER</button>
+                </div>
               </div>
               <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:10 }}>
                 {plrs.map(p => {
@@ -586,12 +843,12 @@ export default function AdminDashboard({ onBack }) {
                     <div style={{ display:"flex", gap:12, alignItems:"center" }}>
                       <div style={{ flex:1, textAlign:"center" }}>
                         <div style={{ fontSize:11, fontWeight:700, color:"#64748b", marginBottom:6 }}>NAFC SCORE</div>
-                        <input type="number" min="0" required value={mF.nS} onChange={e=>setMF({...mF,nS:parseInt(e.target.value)})} style={{ ...inp, fontSize:22, fontWeight:800, textAlign:"center", border:"1px solid #0033a0" }}/>
+                        <input type="number" min="0" required value={mF.nS} onChange={e=>setMF({...mF,nS:e.target.value===""?"":Math.max(0,parseInt(e.target.value)||0)})} style={{ ...inp, fontSize:22, fontWeight:800, textAlign:"center", border:"1px solid #0033a0" }}/>
                       </div>
                       <div style={{ fontSize:22, fontWeight:800, color:"#94a3b8", marginTop:18 }}>–</div>
                       <div style={{ flex:1, textAlign:"center" }}>
                         <div style={{ fontSize:11, fontWeight:700, color:"#64748b", marginBottom:6 }}>OPP SCORE</div>
-                        <input type="number" min="0" required value={mF.oS} onChange={e=>setMF({...mF,oS:parseInt(e.target.value)})} style={{ ...inp, fontSize:22, fontWeight:800, textAlign:"center" }}/>
+                        <input type="number" min="0" required value={mF.oS} onChange={e=>setMF({...mF,oS:e.target.value===""?"":Math.max(0,parseInt(e.target.value)||0)})} style={{ ...inp, fontSize:22, fontWeight:800, textAlign:"center" }}/>
                       </div>
                     </div>
                   )}
@@ -693,6 +950,21 @@ export default function AdminDashboard({ onBack }) {
                         </div>
                       ))}
                     </div>
+                    {/* Player of the Match (POTM) */}
+                    <div style={{ background:"#f8fafc", padding:14, borderRadius:8, border:"1px solid #e2e8f0" }}>
+                      <div style={{ fontSize:14, fontWeight:700, color:"#0f172a", marginBottom:4 }}>⭐ PLAYER OF THE MATCH (POTM)</div>
+                      <div style={{ color:"#64748b", marginBottom:10, fontSize:11 }}>Select the best performer of this fixture.</div>
+                      <div style={{ display:"flex", gap:8, flexWrap:isMobile?"wrap":"nowrap" }}>
+                        <select value={mF.potmId} onChange={e=>setMF({...mF, potmId:e.target.value, potmGuest:""})} style={{ ...selectStyle, flex:2, minWidth:0 }}>
+                          <option value="">No POTM Selected...</option>
+                          {plrs.map(p=><option key={p.id} value={p.id}>#{p.jersey} {p.name} ({p.pos.slice(0,3)})</option>)}
+                        </select>
+                        <input type="text" placeholder="Or Guest Name" value={mF.potmGuest} onChange={e=>setMF({...mF, potmGuest:e.target.value, potmId:""})} style={{ ...inp, flex:1.5, minWidth:120 }}/>
+                        {(mF.potmId || mF.potmGuest) && (
+                          <button type="button" onClick={()=>setMF({...mF, potmId:"", potmGuest:""})} style={{ background:"#fee2e2", color:"#ef4444", border:"1px solid #fca5a5", padding:"0 12px", borderRadius:6, cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>CLEAR</button>
+                        )}
+                      </div>
+                    </div>
                   </>
                 )}
 
@@ -706,7 +978,12 @@ export default function AdminDashboard({ onBack }) {
           {/* MATCH HISTORY */}
           {tb === "mtch" && (
             <div>
-              <div style={{ fontSize:isMobile?18:22, fontWeight:800, color:"#0033a0", borderBottom:"1px solid #e2e8f0", paddingBottom:12, marginBottom:18 }}>MATCH HISTORY</div>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:"1px solid #e2e8f0", paddingBottom:12, marginBottom:18, gap:10, flexWrap:"wrap" }}>
+                <div style={{ fontSize:isMobile?18:22, fontWeight:800, color:"#0033a0" }}>MATCH HISTORY</div>
+                <button onClick={recalculateAllStats} disabled={ld} style={{ background:"#f1f5f9", color:"#0033a0", border:"1px solid #cbd5e1", padding:"8px 14px", borderRadius:6, fontWeight:700, cursor:ld?"wait":"pointer", fontSize:12, whiteSpace:"nowrap" }}>
+                  🔄 SYNC ALL STATS
+                </button>
+              </div>
               {mtchs.length === 0 ? (
                 <div style={{ textAlign:"center", padding:"40px 0", color:"#94a3b8" }}>No matches logged yet.</div>
               ) : (
@@ -717,6 +994,11 @@ export default function AdminDashboard({ onBack }) {
                         <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
                           <div style={{ fontSize:isMobile?13:14, fontWeight:700, color:"#0f172a" }}>NAFC vs {m.opponent}</div>
                           {m.fmt && <span style={{ background:"#0033a0", color:"white", fontSize:9, fontWeight:700, padding:"2px 8px", borderRadius:4, letterSpacing:1 }}>{m.fmt}</span>}
+                          {m.potm && (
+                            <span style={{ background:"#fef3c7", color:"#92400e", border:"1px solid #fde68a", fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4 }}>
+                              ⭐ POTM: {typeof m.potm === "object" ? m.potm.name : m.potm}
+                            </span>
+                          )}
                         </div>
                         <div style={{ fontSize:11, color:"#64748b", fontWeight:600, marginTop:2 }}>{m.date} · {m.competition} · {m.result !== "upcoming" ? `${m.nafcScore}–${m.opponentScore} (${m.result})` : "Upcoming"}</div>
                       </div>
@@ -859,13 +1141,13 @@ export default function AdminDashboard({ onBack }) {
               <select value={edP.pos} onChange={e=>setEdP({...edP,pos:e.target.value})} style={selectStyle}>
                 {["Goalkeeper","Defender","Midfielder","Winger","Forward","Striker"].map(p=><option key={p} value={p}>{p}</option>)}
               </select>
-              <input type="number" value={edP.jersey} onChange={e=>setEdP({...edP,jersey:parseInt(e.target.value)})} placeholder="Jersey #" required style={inp}/>
+              <input type="number" value={edP.jersey ?? 0} onChange={e=>setEdP({...edP,jersey:e.target.value===""?"":parseInt(e.target.value)||0})} placeholder="Jersey #" required style={inp}/>
               <div style={{ borderTop:"1px solid #e2e8f0", paddingTop:14 }}>
                 <div style={{ fontWeight:700, fontSize:11, color:"#0033a0", marginBottom:10, letterSpacing:1 }}>STAT OVERRIDE</div>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-                  {[["GOALS","goals"],["ASSISTS","assists"],["APPEARANCES","appearances"],["CLEAN SHEETS","cleanSheets"],["SAVES","saves"],["BLOCKS","blocks"],["INTERCEPTIONS","interceptions"],["CLEARANCES","clearances"]].map(([l,k]) => (
+                  {[["GOALS","goals"],["ASSISTS","assists"],["APPEARANCES","appearances"],["CLEAN SHEETS","cleanSheets"],["SAVES","saves"],["BLOCKS","blocks"],["INTERCEPTIONS","interceptions"],["CLEARANCES","clearances"],["POTM AWARDS","potmCount"]].map(([l,k]) => (
                     <label key={k} style={{ color:"#64748b", fontSize:11, fontWeight:700 }}>{l}
-                      <input type="number" min="0" value={edP[k]||0} onChange={e=>setEdP({...edP,[k]:parseInt(e.target.value)})} style={{ ...inp, marginTop:4 }}/>
+                      <input type="number" min="0" value={edP[k] ?? 0} onChange={e=>setEdP({...edP,[k]:e.target.value===""?"":parseInt(e.target.value)||0})} style={{ ...inp, marginTop:4 }}/>
                     </label>
                   ))}
                 </div>
@@ -917,10 +1199,10 @@ export default function AdminDashboard({ onBack }) {
                   </select>
                 </label>
                 <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>NAFC Score
-                  <input type="number" min="0" value={edM.nafcScore} onChange={e=>setEdM({...edM,nafcScore:e.target.value})} style={{ ...inp, marginTop:4 }}/>
+                  <input type="number" min="0" value={edM.nafcScore ?? 0} onChange={e=>setEdM({...edM,nafcScore:e.target.value===""?"":Math.max(0,parseInt(e.target.value)||0)})} style={{ ...inp, marginTop:4 }}/>
                 </label>
                 <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Opponent Score
-                  <input type="number" min="0" value={edM.opponentScore} onChange={e=>setEdM({...edM,opponentScore:e.target.value})} style={{ ...inp, marginTop:4 }}/>
+                  <input type="number" min="0" value={edM.opponentScore ?? 0} onChange={e=>setEdM({...edM,opponentScore:e.target.value===""?"":Math.max(0,parseInt(e.target.value)||0)})} style={{ ...inp, marginTop:4 }}/>
                 </label>
               </div>
 
@@ -1000,6 +1282,21 @@ export default function AdminDashboard({ onBack }) {
                     <button type="button" onClick={()=>remEdD(i)} style={{ background:"#fee2e2", color:"#ef4444", border:"none", padding:"2px 6px", borderRadius:3, cursor:"pointer", fontWeight:700, fontSize:11 }}>✕</button>
                   </div>
                 ))}
+              </div>
+
+              {/* Player of the Match (POTM) */}
+              <div style={{ background:"#f8fafc", padding:12, borderRadius:8, border:"1px solid #e2e8f0" }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#0f172a", marginBottom:6 }}>⭐ PLAYER OF THE MATCH (POTM)</div>
+                <div style={{ display:"flex", gap:8, flexWrap:isMobile?"wrap":"nowrap" }}>
+                  <select value={edM.potmId || ""} onChange={e=>setEdM({...edM, potmId:e.target.value, potmGuest:""})} style={{ ...selectStyle, flex:2, minWidth:0 }}>
+                    <option value="">No POTM Selected...</option>
+                    {plrs.map(p=><option key={p.id} value={p.id}>#{p.jersey} {p.name} ({p.pos.slice(0,3)})</option>)}
+                  </select>
+                  <input type="text" placeholder="Or Guest Name" value={edM.potmGuest || ""} onChange={e=>setEdM({...edM, potmGuest:e.target.value, potmId:""})} style={{ ...inp, flex:1.5, minWidth:110 }}/>
+                  {(edM.potmId || edM.potmGuest) && (
+                    <button type="button" onClick={()=>setEdM({...edM, potmId:"", potmGuest:""})} style={{ background:"#fee2e2", color:"#ef4444", border:"1px solid #fca5a5", padding:"0 10px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:700, whiteSpace:"nowrap" }}>CLEAR</button>
+                  )}
+                </div>
               </div>
 
               {/* Lineup / Appearances */}
