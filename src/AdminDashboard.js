@@ -640,7 +640,7 @@ export default function AdminDashboard({ onBack }) {
         updatedAt: new Date().toISOString()
       };
       if (edAnn.teams && edAnn.teams.length > 0) {
-        data.teams = edAnn.teams;
+          data.teams = edAnn.badge === "OFFICIAL STATEMENT" ? [] : edAnn.teams;
       }
       if (edAnn.id) {
         await updateDoc(doc(db, "announcements", edAnn.id), data);
@@ -1390,3 +1390,4 @@ export default function AdminDashboard({ onBack }) {
     </div>
   );
 }
+
