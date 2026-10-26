@@ -405,7 +405,7 @@ function calcPlayerOvr(p, potMonthCount = 0) {
   const base = 72;
 
   // 1. Availability Bonus: up to +8 pts for squad commitment
-  const availBonus = Math.min(8, (apps / 42) * 8);
+  const availBonus = Math.min(8, (apps / 46) * 8);
 
   // 2. Position-specific performance points (up to +12 pts):
   let perfBonus = 0;
@@ -450,7 +450,7 @@ function calcPlayerOvr(p, potMonthCount = 0) {
   else if (impactDensity >= 1.4) archetype = "Dynamic Playmaking Forward";
   else archetype = "Transition Workhorse";
 
-  const availability = Math.min(99, Math.round((apps / 42) * 96));
+  const availability = Math.min(99, Math.round((apps / 46) * 96));
 
   return { ovr, goalsPerMatch, assistsPerMatch, impactDensity, availability, archetype };
 }
@@ -478,7 +478,7 @@ function PlayerDnaRadar({ player, potMonthAwards = [], pc = "#E8002D", isMobile 
     : Math.min(99, Math.max(45, Math.round(((a / 30)*0.5 + (assistsPerMatch / 0.9)*0.5)*95)));
 
   const defensive = Math.min(99, Math.max(40, Math.round((def / 35) * 95)));
-  const availStat = Math.min(99, Math.max(40, Math.round((apps / 42) * 98)));
+  const availStat = Math.min(99, Math.max(40, Math.round((apps / 46) * 98)));
   const clutch = Math.min(99, Math.max(45, Math.round((potm * 18) + (potMonth * 22) + (Math.min(2.5, impactDensity) * 16) + 32)));
 
   const cx = isMobile ? 120 : 135;
@@ -2049,13 +2049,13 @@ function AppShell() {
                         <div>
                           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
                             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, color:"#38bdf8" }}>⚡ IRON MAN & SQUAD ENGINE</span>
-                            <span style={{ fontSize:10.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, color:T.textDim }}>100% ATTENDANCE</span>
+                            <span style={{ fontSize:10.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, color:T.textDim }}>42 / 46 MATCHES (91%)</span>
                           </div>
                           <div className="bebas" style={{ fontSize:28, color:T.text, lineHeight:1, marginBottom:4 }}>HRUTHIK {"{C}"}</div>
-                          <div style={{ fontSize:13, color:T.textDim }}>Played in all 42 matches with 39 goals and 39 assists as club captain.</div>
+                          <div style={{ fontSize:13, color:T.textDim }}>Club appearance leader with 42 matches played (missed only 4 games all season), logging 39 goals and 39 assists.</div>
                         </div>
                         <div style={{ fontSize:12, color:"#38bdf8", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:12 }}>
-                          42/42 APPEARANCES · 78 TOTAL CONTRIBUTIONS
+                          42 APPS IN 46 MATCHES · 78 TOTAL CONTRIBUTIONS
                         </div>
                       </div>
 
