@@ -388,40 +388,64 @@ function PlayerDnaRadar({ player, potMonthAwards = [], pc = "#E8002D", isMobile 
   const isGK = p.pos === "Goalkeeper";
   const isDef = p.pos === "Defender";
 
-  const g = p.goals || 0;
-  const a = p.assists || 0;
-  const apps = p.appearances || 0;
-  const def = (p.blocks || 0) + (p.interceptions || 0) + (p.clearances || 0) + ((p.saves || 0) * 2);
-  const potm = p.potmCount || 0;
+  const g = Number(p.goals) || 0;
+  const a = Number(p.assists) || 0;
+  const apps = Number(p.appearances) || 0;
+  const def = (Number(p.blocks) || 0) + (Number(p.interceptions) || 0) + (Number(p.clearances) || 0) + ((Number(p.saves) || 0) * 2);
+  const potm = Number(p.potmCount) || 0;
   const potMonth = potMonthAwards.length;
 
-  const finishing = isGK ? Math.min(99, Math.max(28, Math.round(((p.saves || 0) / 40) * 95))) : Math.min(99, Math.max(28, Math.round((g / 42) * 94)));
-  const playmaking = isGK ? Math.min(99, Math.max(28, Math.round(((p.cleanSheets || 0) / 4) * 95))) : Math.min(99, Math.max(28, Math.round((a / 30) * 95)));
-  const defensive = Math.min(99, Math.max(28, Math.round((def / 38) * 95)));
-  const workrate = Math.min(99, Math.max(28, Math.round((apps / 38) * 94)));
-  const clutch = Math.min(99, Math.max(28, Math.round(((potm * 28) + (potMonth * 35)) + 40)));
+  // Rate calculations (Sample-size balanced)
+  const safeApps = Math.max(1, apps);
+  const goalsPerMatch = g / safeApps;
+  const assistsPerMatch = a / safeApps;
+  const impactDensity = (g + a) / safeApps;
 
+  // 1. FINISHING / SHOT-STOPPING (Balances raw total + per-game strike rate)
+  const finishing = isGK 
+    ? Math.min(99, Math.max(30, Math.round((((p.saves||0)/40)*0.6 + ((p.saves||0)/safeApps/4)*0.4)*95)))
+    : Math.min(99, Math.max(30, Math.round(((g / 42)*0.55 + (goalsPerMatch / 1.5)*0.45)*95)));
+
+  // 2. CREATIVITY / CLEAN SHEETS (Balances raw assists + assists/game rate)
+  const playmaking = isGK
+    ? Math.min(99, Math.max(30, Math.round(((p.cleanSheets||0)/4)*95)))
+    : Math.min(99, Math.max(30, Math.round(((a / 30)*0.55 + (assistsPerMatch / 0.9)*0.45)*95)));
+
+  // 3. DEFENSIVE DENSITY
+  const defensive = Math.min(99, Math.max(25, Math.round((def / 38) * 95)));
+
+  // 4. AVAILABILITY & RELIABILITY (Engine) - Rewards squad dedication across matches
+  const availability = Math.min(99, Math.max(25, Math.round((apps / 40) * 96)));
+
+  // 5. CLUTCH & LETHALITY INDEX - Rewards MVPs AND high per-game impact in limited minutes
+  const clutch = Math.min(99, Math.max(30, Math.round(
+    (potm * 20) + (potMonth * 25) + (Math.min(2.5, impactDensity) * 16) + 26
+  )));
+
+  // OVR Calculation (Position-weighted with Availability vs Impact balance)
   let ovr = 75;
   if (isGK) {
-    ovr = Math.round((finishing * 0.35) + (playmaking * 0.25) + (workrate * 0.25) + (clutch * 0.15));
+    ovr = Math.round((finishing * 0.35) + (availability * 0.30) + (playmaking * 0.20) + (clutch * 0.15));
   } else if (isDef) {
-    ovr = Math.round((defensive * 0.40) + (workrate * 0.25) + (playmaking * 0.15) + (finishing * 0.10) + (clutch * 0.10));
+    ovr = Math.round((defensive * 0.38) + (availability * 0.30) + (playmaking * 0.14) + (clutch * 0.10) + (finishing * 0.08));
   } else if (p.pos === "Midfielder") {
-    ovr = Math.round((playmaking * 0.30) + (finishing * 0.25) + (workrate * 0.20) + (defensive * 0.15) + (clutch * 0.10));
+    ovr = Math.round((playmaking * 0.28) + (availability * 0.26) + (finishing * 0.22) + (defensive * 0.14) + (clutch * 0.10));
   } else {
-    ovr = Math.round((finishing * 0.40) + (playmaking * 0.25) + (workrate * 0.15) + (clutch * 0.15) + (defensive * 0.05));
+    ovr = Math.round((finishing * 0.38) + (clutch * 0.22) + (playmaking * 0.18) + (availability * 0.18) + (defensive * 0.04));
   }
-  ovr = Math.min(95, Math.max(72, ovr));
+  ovr = Math.min(96, Math.max(72, ovr));
 
   // Determine Role Archetype
   let archetype = "Squad Dynamic";
   if (isGK) archetype = "Shot-Stopper & Sweeper";
   else if (isDef && def > 25) archetype = "Defensive General & Stopper";
-  else if (g >= 35 && a >= 25) archetype = "Elite Complete Forward";
+  else if (g >= 35 && impactDensity >= 1.8) archetype = "Lethal Inside Assassin";
   else if (g >= 35) archetype = "Clinical Goal Poacher";
-  else if (a >= 25) archetype = "Master Playmaker & Architect";
-  else if (apps >= 30) archetype = "High-Workrate Box-to-Box";
-  else archetype = "Transition Specialist";
+  else if (a >= 25 && apps >= 30) archetype = "Elite Midfield Conductor";
+  else if (a >= 20) archetype = "Master Playmaker";
+  else if (apps >= 35) archetype = "Squad Anchor & Iron Man";
+  else if (impactDensity >= 1.4) archetype = "High-Impact Specialist";
+  else archetype = "Transition Workhorse";
 
   const cx = isMobile ? 120 : 135;
   const cy = isMobile ? 115 : 125;
@@ -429,11 +453,11 @@ function PlayerDnaRadar({ player, potMonthAwards = [], pc = "#E8002D", isMobile 
   const angles = [-Math.PI / 2, -Math.PI / 2 + (2 * Math.PI) / 5, -Math.PI / 2 + (4 * Math.PI) / 5, -Math.PI / 2 + (6 * Math.PI) / 5, -Math.PI / 2 + (8 * Math.PI) / 5];
 
   const labels = [
-    { name: isGK ? "SAVES" : "FINISH", val: finishing },
-    { name: isGK ? "CLEAN SHT" : "CREATE", val: playmaking },
-    { name: "ENGINE", val: workrate },
-    { name: "DEFENSE", val: defensive },
-    { name: "CLUTCH", val: clutch }
+    { name: isGK ? "SAVES" : "LETHALITY", val: finishing, sub: isGK ? (p.saves||0)+" Saves" : goalsPerMatch.toFixed(2)+"/GM" },
+    { name: isGK ? "CLEAN SHT" : "CREATIVITY", val: playmaking, sub: isGK ? (p.cleanSheets||0)+" CS" : assistsPerMatch.toFixed(2)+"/GM" },
+    { name: "AVAILABILITY", val: availability, sub: apps+" Apps" },
+    { name: "DEFENSE", val: defensive, sub: def+" Def" },
+    { name: "CLUTCH", val: clutch, sub: impactDensity.toFixed(2)+" Ratio" }
   ];
 
   const dataPoints = labels.map((l, i) => {
@@ -446,41 +470,42 @@ function PlayerDnaRadar({ player, potMonthAwards = [], pc = "#E8002D", isMobile 
   });
 
   const polygonPath = dataPoints.map(pt => pt.x + ',' + pt.y).join(' ');
-
   const rings = [0.35, 0.65, 1.0];
 
   return (
-    <div style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.035) 0%, rgba(20,20,24,0.92) 100%)", border: "1px solid rgba(255,255,255,0.12)", borderTop: "2px solid " + pc, borderRadius: 18, padding: isMobile ? "20px 16px" : "28px 32px", marginBottom: 32, boxShadow: "0 20px 50px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1)", backdropFilter: "blur(20px)" }}>
-      {/* Header bar with OVR */}
+    <div style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.035) 0%, rgba(20,20,24,0.92) 100%)", border: "1px solid rgba(255,255,255,0.12)", borderTop: "3px solid " + pc, borderRadius: 20, padding: isMobile ? "20px 16px" : "28px 32px", marginBottom: 32, boxShadow: "0 24px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12)", backdropFilter: "blur(24px)" }}>
+      {/* Header bar with OVR and Archetype */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 20 }}>🧬</span>
-            <span className="bebas" style={{ fontSize: isMobile ? 20 : 24, letterSpacing: 2, color: "#fff" }}>PLAYER DNA & ATTRIBUTE MATRIX</span>
+            <span style={{ fontSize: 22 }}>🧬</span>
+            <span className="bebas" style={{ fontSize: isMobile ? 22 : 26, letterSpacing: 2, color: "#fff" }}>PLAYER DNA & ATTRIBUTE MATRIX</span>
           </div>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1.5, marginTop: 2 }}>ARCHETYPE: <span style={{ color: pc }}>{archetype.toUpperCase()}</span></div>
+          <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.5)", fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 2, marginTop: 3 }}>
+            ARCHETYPE: <span style={{ color: pc, background: pc+"18", padding: "2px 8px", borderRadius: 4, border: "1px solid "+pc+"40" }}>{archetype.toUpperCase()}</span>
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.14)", padding: "6px 14px", borderRadius: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.14)", padding: "8px 18px", borderRadius: 14, boxShadow: "0 4px 20px rgba(0,0,0,0.25)" }}>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", letterSpacing: 2, fontFamily: "'Bebas Neue',sans-serif" }}>NAFC OVR</div>
-            <div style={{ fontSize: 11, color: pc, fontWeight: 700, letterSpacing: 1 }}>{p.pos.toUpperCase()}</div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: 2, fontFamily: "'Bebas Neue',sans-serif" }}>NAFC OVR</div>
+            <div style={{ fontSize: 12, color: pc, fontWeight: 700, letterSpacing: 1.5 }}>{p.pos.toUpperCase()}</div>
           </div>
-          <div className="bebas" style={{ fontSize: 36, color: "#fff", lineHeight: 1, textShadow: "0 0 20px " + pc + "88" }}>{ovr}</div>
+          <div className="bebas" style={{ fontSize: 42, color: "#fff", lineHeight: 1, textShadow: "0 0 25px " + pc + "aa" }}>{ovr}</div>
         </div>
       </div>
 
-      {/* Bento Grid: Radar Chart + Attribute bars */}
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "280px 1fr", gap: isMobile ? 18 : 28, alignItems: "center" }}>
+      {/* Bento Grid: Radar Chart + Uber-style Metric chips */}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "290px 1fr", gap: isMobile ? 20 : 32, alignItems: "center" }}>
         {/* Radar Graphic */}
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
           <svg width={cx * 2} height={cy * 2} style={{ overflow: "visible" }}>
             <defs>
               <linearGradient id={"radarGrad_" + p.id} x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor={pc} stopOpacity="0.65" />
-                <stop offset="100%" stopColor="#d97706" stopOpacity="0.30" />
+                <stop offset="0%" stopColor={pc} stopOpacity="0.7" />
+                <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.25" />
               </linearGradient>
               <filter id={"glow_" + p.id} x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor={pc} floodOpacity="0.6" />
+                <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor={pc} floodOpacity="0.65" />
               </filter>
             </defs>
 
@@ -506,18 +531,16 @@ function PlayerDnaRadar({ player, potMonthAwards = [], pc = "#E8002D", isMobile 
 
             {/* Glowing Vertices */}
             {dataPoints.map((pt, ptIdx) => (
-              <g key={ptIdx}>
-                <circle cx={pt.x} cy={pt.y} r="4.5" fill="#fff" stroke={pc} strokeWidth="2" />
-              </g>
+              <circle key={ptIdx} cx={pt.x} cy={pt.y} r="4.5" fill="#fff" stroke={pc} strokeWidth="2" />
             ))}
 
             {/* Axis Labels */}
             {dataPoints.map((pt, ptIdx) => {
-              const labelDist = maxR + (isMobile ? 16 : 22);
+              const labelDist = maxR + (isMobile ? 18 : 24);
               const lx = cx + labelDist * Math.cos(angles[ptIdx]);
               const ly = cy + labelDist * Math.sin(angles[ptIdx]);
               return (
-                <text key={ptIdx} x={lx} y={ly + 4} textAnchor="middle" fill="rgba(255,255,255,0.85)" fontFamily="'Bebas Neue',sans-serif" fontSize={isMobile ? "10px" : "12px"} letterSpacing="1.5">
+                <text key={ptIdx} x={lx} y={ly + 4} textAnchor="middle" fill="rgba(255,255,255,0.88)" fontFamily="'Bebas Neue',sans-serif" fontSize={isMobile ? "10.5px" : "12px"} letterSpacing="1.5">
                   {pt.name} {pt.val}
                 </text>
               );
@@ -525,31 +548,35 @@ function PlayerDnaRadar({ player, potMonthAwards = [], pc = "#E8002D", isMobile 
           </svg>
         </div>
 
-        {/* Attribute Breakdown Bars */}
+        {/* Attribute Breakdown Bars with Uber-Style Rate Tags */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {labels.map(l => (
-            <div key={l.name} style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "8px 14px", display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 85, fontFamily: "'Bebas Neue',sans-serif", fontSize: 13, letterSpacing: 1.5, color: "rgba(255,255,255,0.75)" }}>{l.name}</div>
+            <div key={l.name} style={{ background: "rgba(0,0,0,0.32)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "8px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 92, fontFamily: "'Bebas Neue',sans-serif", fontSize: 13, letterSpacing: 1.5, color: "rgba(255,255,255,0.8)" }}>{l.name}</div>
               <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden" }}>
                 <div style={{ width: l.val + "%", height: "100%", background: "linear-gradient(90deg, " + pc + ", #fbbf24)", borderRadius: 3, transition: "width 0.8s ease" }} />
               </div>
-              <div className="bebas" style={{ fontSize: 18, color: "#fff", width: 32, textAlign: "right" }}>{l.val}</div>
+              <div style={{ fontSize: 11, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, color: "rgba(255,255,255,0.45)", width: 55, textAlign: "right" }}>{l.sub}</div>
+              <div className="bebas" style={{ fontSize: 18, color: "#fff", width: 28, textAlign: "right" }}>{l.val}</div>
             </div>
           ))}
 
-          {/* Quick Match Impact Pill */}
-          <div style={{ marginTop: 4, padding: "10px 14px", background: "rgba(" + (p.pos === "Defender" ? "37,99,235" : "232,0,45") + ",0.08)", border: "1px solid " + pc + "35", borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1.5 }}>
-            <span style={{ color: "rgba(255,255,255,0.7)" }}>MATCH IMPACT RATIO</span>
-            <span style={{ color: pc, fontSize: 15 }}>
-              {apps > 0 ? (((g + a) / apps).toFixed(2) + " GOAL CONTRIBUTIONS / MATCH") : "0.00 / MATCH"}
-            </span>
+          {/* Uber-style High-Contrast Dual KPI Pills */}
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 8, marginTop: 4 }}>
+            <div style={{ padding: "9px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11.5, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1.5 }}>
+              <span style={{ color: "rgba(255,255,255,0.55)" }}>AVAILABILITY INDEX</span>
+              <span style={{ color: "#38bdf8", fontSize: 14 }}>{apps} APPS ({availability}%)</span>
+            </div>
+            <div style={{ padding: "9px 14px", background: pc+"12", border: "1px solid " + pc + "35", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11.5, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1.5 }}>
+              <span style={{ color: "rgba(255,255,255,0.7)" }}>IMPACT DENSITY</span>
+              <span style={{ color: pc, fontSize: 14 }}>{impactDensity.toFixed(2)} / MATCH</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 }
-
 
 function PlayerModal({ player, onClose, T = THEMES.dark, potMonthAwards = [] }) {
   const p = player;
@@ -1314,7 +1341,7 @@ function AppShell() {
                 ? <div style={{ textAlign:"center", padding:60, color:T.textDim, fontSize:15 }}>No players found.</div>
                 : <div className="squad-grid" style={{ display:"grid", gap:isMobile?10:14 }}>
                     {fPlrs.map((p,i) => (
-                      <div key={p.id} className="pcard" onClick={() => setSel(p)} style={{ animation:`fadeUp 0.4s ${i*0.04}s ease both` }}>
+                      <div key={p.id} className="pcard" onClick={() => setSel(p)} style={{ animation:`fadeUp 0.4s ${i*0.04}s ease both`, background: themeMode==="dark" ? `linear-gradient(145deg, ${POS_COLOR[p.pos]||T_RED}0a 0%, ${T.cardBg} 100%)` : T.cardBg, borderColor: `${POS_COLOR[p.pos]||T_RED}25` }}>
                         <div style={{ height:3, background:`linear-gradient(90deg,${POS_COLOR[p.pos]||T_RED},transparent)` }} />
                         <div style={{ height: isMobile?200:isTablet?240:270, background:T.subtleBg, position:"relative", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
                           <div className="bebas" style={{ position:"absolute", bottom:-8, right:-4, fontSize:90, color:T.textDim, opacity:0.18, lineHeight:1, userSelect:"none" }}>{p.jersey}</div>
@@ -1687,11 +1714,12 @@ function AppShell() {
                     <div style={{ fontSize:13, color:T.textDim, marginTop:10, letterSpacing:1 }}>↓ Click any player to view their full profile</div>
                   </div>
                   {/* Tab switcher */}
-                  <div style={{ display:"flex", gap:4, background:T.subtleBg, border:`1px solid ${T.border}`, padding:4, borderRadius:10 }}>
-                    <button onClick={() => setStatTab("season")} className="bebas" style={{ background:statTab==="season"?T_RED:"transparent", color:statTab==="season"?"#fff":T.textMuted, border:"none", padding:isMobile?"9px 16px":"11px 24px", fontSize:isMobile?14:16, cursor:"pointer", letterSpacing:2, borderRadius:7, transition:"all 0.2s" }}>
+                  <div style={{ position:"relative", display:"flex", background: themeMode==="dark" ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.06)", border:`1px solid ${T.border}`, padding:4, borderRadius:14, boxShadow:"inset 0 1px 3px rgba(0,0,0,0.3)" }}>
+                    <div style={{ position:"absolute", top:4, bottom:4, left: statTab==="season" ? 4 : "calc(50% + 2px)", width:"calc(50% - 6px)", background:T_RED, borderRadius:10, transition:"all 0.35s cubic-bezier(0.16,1,0.3,1)", boxShadow:`0 4px 16px ${T_RED}66, inset 0 1px 0 rgba(255,255,255,0.3)`, zIndex:1 }} />
+                    <button onClick={() => setStatTab("season")} className="bebas" style={{ position:"relative", zIndex:2, flex:1, background:"transparent", color:statTab==="season"?"#fff":T.textMuted, border:"none", padding:isMobile?"10px 16px":"12px 28px", fontSize:isMobile?14:16, cursor:"pointer", letterSpacing:2, transition:"color 0.25s" }}>
                       🏆 ALL-TIME SEASON
                     </button>
-                    <button onClick={() => setStatTab("month")} className="bebas" style={{ background:statTab==="month"?T_RED:"transparent", color:statTab==="month"?"#fff":T.textMuted, border:"none", padding:isMobile?"9px 16px":"11px 24px", fontSize:isMobile?14:16, cursor:"pointer", letterSpacing:2, borderRadius:7, transition:"all 0.2s" }}>
+                    <button onClick={() => setStatTab("month")} className="bebas" style={{ position:"relative", zIndex:2, flex:1, background:"transparent", color:statTab==="month"?"#fff":T.textMuted, border:"none", padding:isMobile?"10px 16px":"12px 28px", fontSize:isMobile?14:16, cursor:"pointer", letterSpacing:2, transition:"color 0.25s" }}>
                       📅 MONTHLY LEADERS
                     </button>
                   </div>
