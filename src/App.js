@@ -383,10 +383,81 @@ function MatchModal({ match, onClose, T = THEMES.dark }) {
 }
 
 
+
+// ── FIFA / EA FC Realistic Sunday League OVR & Archetype Calculator ──
+function calcPlayerOvr(p, potMonthCount = 0) {
+  if (!p) return { ovr: 72, goalsPerMatch: 0, assistsPerMatch: 0, impactDensity: 0, availability: 50, archetype: "Squad Member" };
+  const g = Number(p.goals) || 0;
+  const a = Number(p.assists) || 0;
+  const apps = Number(p.appearances) || 0;
+  const def = (Number(p.blocks) || 0) + (Number(p.interceptions) || 0) + (Number(p.clearances) || 0) + ((Number(p.saves) || 0) * 2);
+  const potm = (Number(p.potmCount) || 0) + potMonthCount;
+  const isGK = p.pos === "Goalkeeper";
+  const isDef = p.pos === "Defender";
+  const isMid = p.pos === "Midfielder";
+
+  const safeApps = Math.max(1, apps);
+  const goalsPerMatch = g / safeApps;
+  const assistsPerMatch = a / safeApps;
+  const impactDensity = (g + a) / safeApps;
+
+  // Base tier: everyone starts at 72 baseline (amateur squad level)
+  const base = 72;
+
+  // 1. Availability Bonus: up to +8 pts for squad commitment
+  const availBonus = Math.min(8, (apps / 42) * 8);
+
+  // 2. Position-specific performance points (up to +12 pts):
+  let perfBonus = 0;
+  if (isGK) {
+    const savesBonus = Math.min(7, ((p.saves || 0) / 40) * 7);
+    const csBonus = Math.min(5, ((p.cleanSheets || 0) / 4) * 5);
+    perfBonus = savesBonus + csBonus;
+  } else if (isDef) {
+    const defDensity = Math.min(7, (def / 35) * 7);
+    const passContr = Math.min(5, (a / 12) * 5);
+    perfBonus = defDensity + passContr;
+  } else if (isMid) {
+    const assistFactor = Math.min(6, (a / 35) * 6);
+    const goalFactor = Math.min(4, (g / 35) * 4);
+    const rateFactor = Math.min(2, impactDensity * 1.2);
+    perfBonus = assistFactor + goalFactor + rateFactor;
+  } else {
+    // Attackers: reward both raw volume AND clinical efficiency
+    const volumeFactor = Math.min(6, (g / 50) * 6);
+    const rateFactor = Math.min(4, (goalsPerMatch / 1.5) * 4);
+    const assistFactor = Math.min(2, (assistsPerMatch / 0.8) * 2);
+    perfBonus = volumeFactor + rateFactor + assistFactor;
+  }
+
+  // 3. Clutch & MVP Factor (up to +4 pts)
+  const clutchBonus = Math.min(4, (potm * 2.0) + (impactDensity >= 1.5 ? 1.5 : 0));
+
+  // Total OVR (72 to 92 range)
+  const ovr = Math.min(92, Math.max(72, Math.round(base + availBonus + perfBonus + clutchBonus)));
+
+  // Archetype
+  let archetype = "Squad Dynamic";
+  if (isGK) archetype = "Iron Wall & Shot-Stopper";
+  else if (isDef && apps >= 30) archetype = "Defensive General & Anchor";
+  else if (isDef) archetype = "Defensive Stopper";
+  else if (g >= 40 && impactDensity >= 2.0) archetype = "Lethal Inside Assassin";
+  else if (g >= 40) archetype = "Golden Boot Poacher";
+  else if (apps >= 40 && a >= 35) archetype = "Complete Midfield General";
+  else if (apps >= 30 && a >= 25) archetype = "Master Box-to-Box Conductor";
+  else if (apps >= 35) archetype = "Squad Anchor & Iron Man";
+  else if (impactDensity >= 1.8 && apps <= 20) archetype = "Super-Sub Clutch Specialist";
+  else if (impactDensity >= 1.4) archetype = "Dynamic Playmaking Forward";
+  else archetype = "Transition Workhorse";
+
+  const availability = Math.min(99, Math.round((apps / 42) * 96));
+
+  return { ovr, goalsPerMatch, assistsPerMatch, impactDensity, availability, archetype };
+}
+
 function PlayerDnaRadar({ player, potMonthAwards = [], pc = "#E8002D", isMobile = false }) {
   const p = player;
   const isGK = p.pos === "Goalkeeper";
-  const isDef = p.pos === "Defender";
 
   const g = Number(p.goals) || 0;
   const a = Number(p.assists) || 0;
@@ -395,57 +466,20 @@ function PlayerDnaRadar({ player, potMonthAwards = [], pc = "#E8002D", isMobile 
   const potm = Number(p.potmCount) || 0;
   const potMonth = potMonthAwards.length;
 
-  // Rate calculations (Sample-size balanced)
-  const safeApps = Math.max(1, apps);
-  const goalsPerMatch = g / safeApps;
-  const assistsPerMatch = a / safeApps;
-  const impactDensity = (g + a) / safeApps;
+  const { ovr, goalsPerMatch, assistsPerMatch, impactDensity, availability, archetype } = calcPlayerOvr(p, potMonth);
 
-  // 1. FINISHING / SHOT-STOPPING (Balances raw total + per-game strike rate)
+  // Radar Axes (Scaled 40-99 for realistic visual polygon spread)
   const finishing = isGK 
-    ? Math.min(99, Math.max(30, Math.round((((p.saves||0)/40)*0.6 + ((p.saves||0)/safeApps/4)*0.4)*95)))
-    : Math.min(99, Math.max(30, Math.round(((g / 42)*0.55 + (goalsPerMatch / 1.5)*0.45)*95)));
+    ? Math.min(99, Math.max(45, Math.round((((p.saves||0)/40)*0.5 + ((p.saves||0)/Math.max(1,apps)/4)*0.5)*95)))
+    : Math.min(99, Math.max(45, Math.round(((g / 42)*0.5 + (goalsPerMatch / 1.5)*0.5)*95)));
 
-  // 2. CREATIVITY / CLEAN SHEETS (Balances raw assists + assists/game rate)
   const playmaking = isGK
-    ? Math.min(99, Math.max(30, Math.round(((p.cleanSheets||0)/4)*95)))
-    : Math.min(99, Math.max(30, Math.round(((a / 30)*0.55 + (assistsPerMatch / 0.9)*0.45)*95)));
+    ? Math.min(99, Math.max(45, Math.round(((p.cleanSheets||0)/4)*95)))
+    : Math.min(99, Math.max(45, Math.round(((a / 30)*0.5 + (assistsPerMatch / 0.9)*0.5)*95)));
 
-  // 3. DEFENSIVE DENSITY
-  const defensive = Math.min(99, Math.max(25, Math.round((def / 38) * 95)));
-
-  // 4. AVAILABILITY & RELIABILITY (Engine) - Rewards squad dedication across matches
-  const availability = Math.min(99, Math.max(25, Math.round((apps / 40) * 96)));
-
-  // 5. CLUTCH & LETHALITY INDEX - Rewards MVPs AND high per-game impact in limited minutes
-  const clutch = Math.min(99, Math.max(30, Math.round(
-    (potm * 20) + (potMonth * 25) + (Math.min(2.5, impactDensity) * 16) + 26
-  )));
-
-  // OVR Calculation (Position-weighted with Availability vs Impact balance)
-  let ovr = 75;
-  if (isGK) {
-    ovr = Math.round((finishing * 0.35) + (availability * 0.30) + (playmaking * 0.20) + (clutch * 0.15));
-  } else if (isDef) {
-    ovr = Math.round((defensive * 0.38) + (availability * 0.30) + (playmaking * 0.14) + (clutch * 0.10) + (finishing * 0.08));
-  } else if (p.pos === "Midfielder") {
-    ovr = Math.round((playmaking * 0.28) + (availability * 0.26) + (finishing * 0.22) + (defensive * 0.14) + (clutch * 0.10));
-  } else {
-    ovr = Math.round((finishing * 0.38) + (clutch * 0.22) + (playmaking * 0.18) + (availability * 0.18) + (defensive * 0.04));
-  }
-  ovr = Math.min(96, Math.max(72, ovr));
-
-  // Determine Role Archetype
-  let archetype = "Squad Dynamic";
-  if (isGK) archetype = "Shot-Stopper & Sweeper";
-  else if (isDef && def > 25) archetype = "Defensive General & Stopper";
-  else if (g >= 35 && impactDensity >= 1.8) archetype = "Lethal Inside Assassin";
-  else if (g >= 35) archetype = "Clinical Goal Poacher";
-  else if (a >= 25 && apps >= 30) archetype = "Elite Midfield Conductor";
-  else if (a >= 20) archetype = "Master Playmaker";
-  else if (apps >= 35) archetype = "Squad Anchor & Iron Man";
-  else if (impactDensity >= 1.4) archetype = "High-Impact Specialist";
-  else archetype = "Transition Workhorse";
+  const defensive = Math.min(99, Math.max(40, Math.round((def / 35) * 95)));
+  const availStat = Math.min(99, Math.max(40, Math.round((apps / 42) * 98)));
+  const clutch = Math.min(99, Math.max(45, Math.round((potm * 18) + (potMonth * 22) + (Math.min(2.5, impactDensity) * 16) + 32)));
 
   const cx = isMobile ? 120 : 135;
   const cy = isMobile ? 115 : 125;
@@ -455,7 +489,7 @@ function PlayerDnaRadar({ player, potMonthAwards = [], pc = "#E8002D", isMobile 
   const labels = [
     { name: isGK ? "SAVES" : "LETHALITY", val: finishing, sub: isGK ? (p.saves||0)+" Saves" : goalsPerMatch.toFixed(2)+"/GM" },
     { name: isGK ? "CLEAN SHT" : "CREATIVITY", val: playmaking, sub: isGK ? (p.cleanSheets||0)+" CS" : assistsPerMatch.toFixed(2)+"/GM" },
-    { name: "AVAILABILITY", val: availability, sub: apps+" Apps" },
+    { name: "AVAILABILITY", val: availStat, sub: apps+" Apps" },
     { name: "DEFENSE", val: defensive, sub: def+" Def" },
     { name: "CLUTCH", val: clutch, sub: impactDensity.toFixed(2)+" Ratio" }
   ];
@@ -490,13 +524,12 @@ function PlayerDnaRadar({ player, potMonthAwards = [], pc = "#E8002D", isMobile 
             <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: 2, fontFamily: "'Bebas Neue',sans-serif" }}>NAFC OVR</div>
             <div style={{ fontSize: 12, color: pc, fontWeight: 700, letterSpacing: 1.5 }}>{p.pos.toUpperCase()}</div>
           </div>
-          <div className="bebas" style={{ fontSize: 42, color: "#fff", lineHeight: 1, textShadow: "0 0 25px " + pc + "aa" }}>{ovr}</div>
+          <div className="bebas" style={{ fontSize: 44, color: ovr >= 90 ? "#fbbf24" : "#fff", lineHeight: 1, textShadow: ovr >= 90 ? "0 0 25px rgba(251,191,36,0.6)" : "0 0 25px " + pc + "aa" }}>{ovr}</div>
         </div>
       </div>
 
-      {/* Bento Grid: Radar Chart + Uber-style Metric chips */}
+      {/* Bento Grid: Radar Graphic + Metric chips */}
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "290px 1fr", gap: isMobile ? 20 : 32, alignItems: "center" }}>
-        {/* Radar Graphic */}
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
           <svg width={cx * 2} height={cy * 2} style={{ overflow: "visible" }}>
             <defs>
@@ -521,7 +554,7 @@ function PlayerDnaRadar({ player, potMonthAwards = [], pc = "#E8002D", isMobile 
               );
             })}
 
-            {/* Radial Spoke lines */}
+            {/* Radial Spokes */}
             {angles.map((a, aIdx) => (
               <line key={aIdx} x1={cx} y1={cy} x2={cx + maxR * Math.cos(a)} y2={cy + maxR * Math.sin(a)} stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
             ))}
@@ -1166,6 +1199,26 @@ function AppShell() {
               <div style={{ position:"absolute", bottom:0, left:0, right:0, height:"28%", background: T.heroFade }} />
               <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg,${T_RED},#ff6b6b,transparent)` }} />
               <div style={{ position:"absolute", bottom: isMobile?"18%":"14%", left:px, right: isMobile ? px : "auto", zIndex:4, animation:"fadeUp 0.9s ease forwards" }}>
+                {/* Apple TV-style Matchday Banner */}
+                {mtchs.filter(m=>m.played).length > 0 && (() => {
+                  const latestMatch = mtchs.filter(m=>m.played).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+                  if (!latestMatch) return null;
+                  const isWin = (latestMatch.goalsFor||0) > (latestMatch.goalsAgainst||0);
+                  return (
+                    <div onClick={() => { setSelMatch(latestMatch); setPg("Matches"); }} style={{ display:"inline-flex", alignItems:"center", gap:10, background:"rgba(0,0,0,0.68)", backdropFilter:"blur(16px)", border:"1px solid rgba(255,255,255,0.18)", borderRadius:30, padding:"6px 16px", marginBottom:18, cursor:"pointer", transition:"all 0.25s ease", boxShadow:"0 8px 24px rgba(0,0,0,0.4)" }} onMouseEnter={e=>e.currentTarget.style.borderColor=T_RED} onMouseLeave={e=>e.currentTarget.style.borderColor="rgba(255,255,255,0.18)"}>
+                      <span style={{ width:8, height:8, borderRadius:"50%", background: isWin ? "#22c55e" : "#eab308", boxShadow: isWin ? "0 0 10px #22c55e" : "0 0 10px #eab308", display:"inline-block" }} />
+                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13.5, letterSpacing:1.5, color:"rgba(255,255,255,0.95)" }}>
+                        LATEST MATCH: NAFC {latestMatch.goalsFor}–{latestMatch.goalsAgainst} {latestMatch.opponent.toUpperCase()}
+                      </span>
+                      {latestMatch.potm && (
+                        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11.5, letterSpacing:1, color:T_GOLD, background:"rgba(217,119,6,0.18)", padding:"2px 8px", borderRadius:20 }}>
+                          ⭐ {latestMatch.potm.toUpperCase()}
+                        </span>
+                      )}
+                      <span style={{ color:"rgba(255,255,255,0.45)", fontSize:12 }}>→</span>
+                    </div>
+                  );
+                })()}
                 <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
                   <div style={{ width:28, height:2, background:T_RED }} />
                   <div className="section-label" style={{ fontSize:14 }}>BENGALURU · 2026 SEASON</div>
@@ -1350,9 +1403,19 @@ function AppShell() {
                             : <svg width="70" height="70" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="28" r="18" fill={T.text} opacity="0.15" /><path d="M6 76c0-18.778 15.222-34 34-34s34 15.222 34 34" fill={T.text} opacity="0.10" /></svg>
                           }
                           <div style={{ position:"absolute", inset:0, background:`linear-gradient(to top, ${T.cardBg} 0%, transparent 50%)` }} />
-                          <div style={{ position:"absolute", top:10, left:12, background:POS_COLOR[p.pos]||T_RED, borderRadius:4, padding:"4px 12px" }}>
+                          <div style={{ position:"absolute", top:10, left:12, background:POS_COLOR[p.pos]||T_RED, borderRadius:4, padding:"4px 12px", zIndex:2 }}>
                             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:"white", letterSpacing:2 }}>{p.pos.slice(0,3).toUpperCase()}</span>
                           </div>
+                          {(() => {
+                            const pOvr = calcPlayerOvr(p).ovr;
+                            const isElite = pOvr >= 90;
+                            return (
+                              <div style={{ position:"absolute", top:10, right:12, background:"rgba(0,0,0,0.72)", backdropFilter:"blur(12px)", border: isElite ? "1.5px solid #fbbf24" : "1px solid rgba(255,255,255,0.2)", borderRadius:8, padding:"3px 8px", display:"flex", alignItems:"center", gap:5, boxShadow:"0 4px 14px rgba(0,0,0,0.6)", zIndex:2 }}>
+                                <span className="bebas" style={{ fontSize:18, color: isElite ? "#fbbf24" : "#fff", lineHeight:1 }}>{pOvr}</span>
+                                <span style={{ fontSize:10, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, color: isElite ? "#fbbf24" : "rgba(255,255,255,0.55)" }}>OVR</span>
+                              </div>
+                            );
+                          })()}
                         </div>
                         <div style={{ padding:"14px 16px 18px", background:T.cardBg }}>
                           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
@@ -1845,7 +1908,7 @@ function AppShell() {
                               {board.emptyMsg}
                             </div>
                           ) : board.sorted.map((p,i) => (
-                            <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)}>
+                            <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)} style={{ position:"relative", overflow:"hidden", borderLeft: i===0 ? `3px solid ${board.color}` : i===1 ? "3px solid #94a3b8" : i===2 ? "3px solid #b45309" : "3px solid transparent", background: i < 3 ? `linear-gradient(90deg, ${board.color}0d 0%, transparent 100%)` : "transparent" }}>
                               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                                 <div style={{ width:24, textAlign:"center" }}>
                                   <div className="bebas" style={{ fontSize:i===0?20:16, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
@@ -1936,6 +1999,133 @@ function AppShell() {
                     </div>
                   )}
 
+                  {/* Pinterest/Apple Club Records Bento Grid */}
+                  <div style={{ marginBottom:28 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                      <span style={{ fontSize:20 }}>⚡</span>
+                      <span className="bebas" style={{ fontSize:22, color:T.text, letterSpacing:1.5 }}>CLUB RECORDS & HIGHLIGHTS MATRIX</span>
+                    </div>
+
+                    <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "repeat(3, 1fr)", gap:14 }}>
+                      {/* Box 1: Golden Boot Race */}
+                      <div style={{ background: themeMode==="dark" ? "linear-gradient(145deg, rgba(232,0,45,0.08) 0%, rgba(24,24,27,0.9) 100%)" : T.cardBg, border:`1px solid ${T_RED}35`, borderRadius:14, padding:"18px 20px", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                        <div>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, color:T_RED }}>👟 THE GOLDEN BOOT CHASE</span>
+                            <span style={{ fontSize:11, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, color:T.textDim }}>TOP 2 SCORERS</span>
+                          </div>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:6 }}>
+                            <span className="bebas" style={{ fontSize:24, color:T.text }}>HAFEEZ (63G)</span>
+                            <span className="bebas" style={{ fontSize:20, color:T_GOLD }}>SHETTY (43G)</span>
+                          </div>
+                          {/* Visual split progress bar */}
+                          <div style={{ height:7, borderRadius:4, background:"rgba(255,255,255,0.08)", overflow:"hidden", display:"flex", marginBottom:10 }}>
+                            <div style={{ width:"59.4%", background:T_RED }} />
+                            <div style={{ width:"40.6%", background:T_GOLD }} />
+                          </div>
+                        </div>
+                        <div style={{ fontSize:12, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>
+                          STRIKE RATES: <span style={{ color:T.text }}>1.62 G/M</span> vs <span style={{ color:T_GOLD }}>1.30 G/M</span>
+                        </div>
+                      </div>
+
+                      {/* Box 2: Fortress HAL Record */}
+                      <div style={{ background: themeMode==="dark" ? "linear-gradient(145deg, rgba(16,185,129,0.08) 0%, rgba(24,24,27,0.9) 100%)" : T.cardBg, border:"1px solid rgba(16,185,129,0.3)", borderRadius:14, padding:"18px 20px", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                        <div>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, color:"#10b981" }}>🏟️ FORTRESS HAL</span>
+                            <span style={{ background:"rgba(16,185,129,0.15)", color:"#10b981", fontSize:10.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, padding:"2px 8px", borderRadius:4 }}>100% RECORD</span>
+                          </div>
+                          <div className="bebas" style={{ fontSize:32, color:"#fff", lineHeight:1, marginBottom:4 }}>5 MATCHES · 5 WINS</div>
+                          <div style={{ fontSize:13, color:T.textDim }}>Zero losses recorded at HAL Sports Ground across the entire season.</div>
+                        </div>
+                        <div style={{ fontSize:12, color:"#10b981", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:12 }}>
+                          GOAL DIFFERENCE: +19 IN 5 GAMES
+                        </div>
+                      </div>
+
+                      {/* Box 3: Iron Man of the Squad */}
+                      <div style={{ background: themeMode==="dark" ? "linear-gradient(145deg, rgba(56,189,248,0.08) 0%, rgba(24,24,27,0.9) 100%)" : T.cardBg, border:"1px solid rgba(56,189,248,0.3)", borderRadius:14, padding:"18px 20px", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                        <div>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, color:"#38bdf8" }}>⚡ IRON MAN & SQUAD ENGINE</span>
+                            <span style={{ fontSize:10.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, color:T.textDim }}>100% ATTENDANCE</span>
+                          </div>
+                          <div className="bebas" style={{ fontSize:28, color:T.text, lineHeight:1, marginBottom:4 }}>HRUTHIK {"{C}"}</div>
+                          <div style={{ fontSize:13, color:T.textDim }}>Played in all 42 matches with 39 goals and 39 assists as club captain.</div>
+                        </div>
+                        <div style={{ fontSize:12, color:"#38bdf8", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:12 }}>
+                          42/42 APPEARANCES · 78 TOTAL CONTRIBUTIONS
+                        </div>
+                      </div>
+
+                      {/* Box 4: Lethal Chemistry */}
+                      <div style={{ background: themeMode==="dark" ? "linear-gradient(145deg, rgba(245,158,11,0.08) 0%, rgba(24,24,27,0.9) 100%)" : T.cardBg, border:"1px solid rgba(245,158,11,0.3)", borderRadius:14, padding:"18px 20px", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                        <div>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, color:T_GOLD }}>🤝 DEADLIEST COMBINATIONS</span>
+                            <span style={{ fontSize:10.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, color:T.textDim }}>ASSIST ➔ GOAL</span>
+                          </div>
+                          <div style={{ display:"flex", flexDirection:"column", gap:6, marginTop:6 }}>
+                            <div style={{ display:"flex", justifyContent:"space-between", fontSize:14, fontWeight:600, color:T.text }}>
+                              <span>Hruthik ➔ Hafeez</span>
+                              <span className="bebas" style={{ color:T_RED, fontSize:18 }}>10 GOALS</span>
+                            </div>
+                            <div style={{ display:"flex", justifyContent:"space-between", fontSize:14, fontWeight:600, color:T.text }}>
+                              <span>Nithin ➔ Shetty</span>
+                              <span className="bebas" style={{ color:T_GOLD, fontSize:18 }}>8 GOALS</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize:12, color:T_GOLD, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:12 }}>
+                          18 GOALS GENERATED BY TOP 2 DUOS
+                        </div>
+                      </div>
+
+                      {/* Box 5: Impact Density Leaders */}
+                      <div style={{ background: themeMode==="dark" ? "linear-gradient(145deg, rgba(168,85,247,0.08) 0%, rgba(24,24,27,0.9) 100%)" : T.cardBg, border:"1px solid rgba(168,85,247,0.3)", borderRadius:14, padding:"18px 20px", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                        <div>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, color:"#c084fc" }}>🎯 IMPACT DENSITY LEADERS</span>
+                            <span style={{ fontSize:10.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, color:T.textDim }}>G+A / MATCH</span>
+                          </div>
+                          <div style={{ display:"flex", flexDirection:"column", gap:4, marginTop:4 }}>
+                            <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, color:T.text }}>
+                              <span>1. Shetty</span>
+                              <span className="bebas" style={{ color:"#c084fc", fontSize:17 }}>2.27 / GM (33M)</span>
+                            </div>
+                            <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, color:T.text }}>
+                              <span>2. Hafeez</span>
+                              <span className="bebas" style={{ color:"#c084fc", fontSize:17 }}>2.23 / GM (39M)</span>
+                            </div>
+                            <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, color:T.text }}>
+                              <span>3. Prikshit</span>
+                              <span className="bebas" style={{ color:"#c084fc", fontSize:17 }}>1.91 / GM (11M)</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize:12, color:"#c084fc", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:10 }}>
+                          HIGHEST PER-MATCH EFFICIENCY IN SQUAD
+                        </div>
+                      </div>
+
+                      {/* Box 6: The Defensive Rock */}
+                      <div style={{ background: themeMode==="dark" ? "linear-gradient(145deg, rgba(37,99,235,0.08) 0%, rgba(24,24,27,0.9) 100%)" : T.cardBg, border:"1px solid rgba(37,99,235,0.3)", borderRadius:14, padding:"18px 20px", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                        <div>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, color:"#60a5fa" }}>🛡️ DEFENSIVE FOUNDATION</span>
+                            <span style={{ fontSize:10.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, color:T.textDim }}>SAVES & TACKLES</span>
+                          </div>
+                          <div className="bebas" style={{ fontSize:26, color:T.text, lineHeight:1, marginBottom:4 }}>AKARSH (GK) & GOPAL (CB)</div>
+                          <div style={{ fontSize:13, color:T.textDim }}>Akarsh has 36 apps in goal with a POTM award; Gopal anchors the backline with 33 appearances.</div>
+                        </div>
+                        <div style={{ fontSize:12, color:"#60a5fa", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:12 }}>
+                          69 COMBINED DEFENSIVE APPEARANCES
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Season All-Time Summary cards */}
                   <div className="stat-grid-4" style={{ display:"grid", gap:isMobile?10:14, marginBottom:24 }}>
                     {[["TOTAL GOALS",plrs.reduce((a,p)=>a+(p.goals||0),0),T_RED],["TOTAL ASSISTS",plrs.reduce((a,p)=>a+(p.assists||0),0),T_GOLD],["MATCH POTMS",plrs.reduce((a,p)=>a+(p.potmCount||0),0),"#d97706"],["MATCHES PLAYED",played.length,"#16a34a"]].map(([l,v,c]) => (
@@ -2018,7 +2208,7 @@ function AppShell() {
                               {board.emptyMsg}
                             </div>
                           ) : board.sorted.map((p,i) => (
-                            <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)}>
+                            <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)} style={{ position:"relative", overflow:"hidden", borderLeft: i===0 ? `3px solid ${board.color}` : i===1 ? "3px solid #94a3b8" : i===2 ? "3px solid #b45309" : "3px solid transparent", background: i < 3 ? `linear-gradient(90deg, ${board.color}0d 0%, transparent 100%)` : "transparent" }}>
                               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                                 <div style={{ width:24, textAlign:"center" }}>
                                   <div className="bebas" style={{ fontSize:i===0?20:16, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
