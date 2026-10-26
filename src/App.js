@@ -382,6 +382,175 @@ function MatchModal({ match, onClose, T = THEMES.dark }) {
   );
 }
 
+
+function PlayerDnaRadar({ player, potMonthAwards = [], pc = "#E8002D", isMobile = false }) {
+  const p = player;
+  const isGK = p.pos === "Goalkeeper";
+  const isDef = p.pos === "Defender";
+
+  const g = p.goals || 0;
+  const a = p.assists || 0;
+  const apps = p.appearances || 0;
+  const def = (p.blocks || 0) + (p.interceptions || 0) + (p.clearances || 0) + ((p.saves || 0) * 2);
+  const potm = p.potmCount || 0;
+  const potMonth = potMonthAwards.length;
+
+  const finishing = isGK ? Math.min(99, Math.max(28, Math.round(((p.saves || 0) / 40) * 95))) : Math.min(99, Math.max(28, Math.round((g / 42) * 94)));
+  const playmaking = isGK ? Math.min(99, Math.max(28, Math.round(((p.cleanSheets || 0) / 4) * 95))) : Math.min(99, Math.max(28, Math.round((a / 30) * 95)));
+  const defensive = Math.min(99, Math.max(28, Math.round((def / 38) * 95)));
+  const workrate = Math.min(99, Math.max(28, Math.round((apps / 38) * 94)));
+  const clutch = Math.min(99, Math.max(28, Math.round(((potm * 28) + (potMonth * 35)) + 40)));
+
+  let ovr = 75;
+  if (isGK) {
+    ovr = Math.round((finishing * 0.35) + (playmaking * 0.25) + (workrate * 0.25) + (clutch * 0.15));
+  } else if (isDef) {
+    ovr = Math.round((defensive * 0.40) + (workrate * 0.25) + (playmaking * 0.15) + (finishing * 0.10) + (clutch * 0.10));
+  } else if (p.pos === "Midfielder") {
+    ovr = Math.round((playmaking * 0.30) + (finishing * 0.25) + (workrate * 0.20) + (defensive * 0.15) + (clutch * 0.10));
+  } else {
+    ovr = Math.round((finishing * 0.40) + (playmaking * 0.25) + (workrate * 0.15) + (clutch * 0.15) + (defensive * 0.05));
+  }
+  ovr = Math.min(95, Math.max(72, ovr));
+
+  // Determine Role Archetype
+  let archetype = "Squad Dynamic";
+  if (isGK) archetype = "Shot-Stopper & Sweeper";
+  else if (isDef && def > 25) archetype = "Defensive General & Stopper";
+  else if (g >= 35 && a >= 25) archetype = "Elite Complete Forward";
+  else if (g >= 35) archetype = "Clinical Goal Poacher";
+  else if (a >= 25) archetype = "Master Playmaker & Architect";
+  else if (apps >= 30) archetype = "High-Workrate Box-to-Box";
+  else archetype = "Transition Specialist";
+
+  const cx = isMobile ? 120 : 135;
+  const cy = isMobile ? 115 : 125;
+  const maxR = isMobile ? 65 : 78;
+  const angles = [-Math.PI / 2, -Math.PI / 2 + (2 * Math.PI) / 5, -Math.PI / 2 + (4 * Math.PI) / 5, -Math.PI / 2 + (6 * Math.PI) / 5, -Math.PI / 2 + (8 * Math.PI) / 5];
+
+  const labels = [
+    { name: isGK ? "SAVES" : "FINISH", val: finishing },
+    { name: isGK ? "CLEAN SHT" : "CREATE", val: playmaking },
+    { name: "ENGINE", val: workrate },
+    { name: "DEFENSE", val: defensive },
+    { name: "CLUTCH", val: clutch }
+  ];
+
+  const dataPoints = labels.map((l, i) => {
+    const r = (l.val / 100) * maxR;
+    return {
+      x: cx + r * Math.cos(angles[i]),
+      y: cy + r * Math.sin(angles[i]),
+      ...l
+    };
+  });
+
+  const polygonPath = dataPoints.map(pt => pt.x + ',' + pt.y).join(' ');
+
+  const rings = [0.35, 0.65, 1.0];
+
+  return (
+    <div style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.035) 0%, rgba(20,20,24,0.92) 100%)", border: "1px solid rgba(255,255,255,0.12)", borderTop: "2px solid " + pc, borderRadius: 18, padding: isMobile ? "20px 16px" : "28px 32px", marginBottom: 32, boxShadow: "0 20px 50px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1)", backdropFilter: "blur(20px)" }}>
+      {/* Header bar with OVR */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 20 }}>🧬</span>
+            <span className="bebas" style={{ fontSize: isMobile ? 20 : 24, letterSpacing: 2, color: "#fff" }}>PLAYER DNA & ATTRIBUTE MATRIX</span>
+          </div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1.5, marginTop: 2 }}>ARCHETYPE: <span style={{ color: pc }}>{archetype.toUpperCase()}</span></div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.14)", padding: "6px 14px", borderRadius: 12 }}>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", letterSpacing: 2, fontFamily: "'Bebas Neue',sans-serif" }}>NAFC OVR</div>
+            <div style={{ fontSize: 11, color: pc, fontWeight: 700, letterSpacing: 1 }}>{p.pos.toUpperCase()}</div>
+          </div>
+          <div className="bebas" style={{ fontSize: 36, color: "#fff", lineHeight: 1, textShadow: "0 0 20px " + pc + "88" }}>{ovr}</div>
+        </div>
+      </div>
+
+      {/* Bento Grid: Radar Chart + Attribute bars */}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "280px 1fr", gap: isMobile ? 18 : 28, alignItems: "center" }}>
+        {/* Radar Graphic */}
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+          <svg width={cx * 2} height={cy * 2} style={{ overflow: "visible" }}>
+            <defs>
+              <linearGradient id={"radarGrad_" + p.id} x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor={pc} stopOpacity="0.65" />
+                <stop offset="100%" stopColor="#d97706" stopOpacity="0.30" />
+              </linearGradient>
+              <filter id={"glow_" + p.id} x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor={pc} floodOpacity="0.6" />
+              </filter>
+            </defs>
+
+            {/* Concentric rings */}
+            {rings.map((ringFrac, rIdx) => {
+              const ringPts = angles.map(a => {
+                const rx = cx + maxR * ringFrac * Math.cos(a);
+                const ry = cy + maxR * ringFrac * Math.sin(a);
+                return rx + ',' + ry;
+              }).join(' ');
+              return (
+                <polygon key={rIdx} points={ringPts} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray={rIdx < 2 ? "3,3" : "none"} />
+              );
+            })}
+
+            {/* Radial Spoke lines */}
+            {angles.map((a, aIdx) => (
+              <line key={aIdx} x1={cx} y1={cy} x2={cx + maxR * Math.cos(a)} y2={cy + maxR * Math.sin(a)} stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
+            ))}
+
+            {/* Filled Polygon */}
+            <polygon points={polygonPath} fill={"url(#radarGrad_" + p.id + ")"} stroke={pc} strokeWidth="2.5" filter={"url(#glow_" + p.id + ")"} />
+
+            {/* Glowing Vertices */}
+            {dataPoints.map((pt, ptIdx) => (
+              <g key={ptIdx}>
+                <circle cx={pt.x} cy={pt.y} r="4.5" fill="#fff" stroke={pc} strokeWidth="2" />
+              </g>
+            ))}
+
+            {/* Axis Labels */}
+            {dataPoints.map((pt, ptIdx) => {
+              const labelDist = maxR + (isMobile ? 16 : 22);
+              const lx = cx + labelDist * Math.cos(angles[ptIdx]);
+              const ly = cy + labelDist * Math.sin(angles[ptIdx]);
+              return (
+                <text key={ptIdx} x={lx} y={ly + 4} textAnchor="middle" fill="rgba(255,255,255,0.85)" fontFamily="'Bebas Neue',sans-serif" fontSize={isMobile ? "10px" : "12px"} letterSpacing="1.5">
+                  {pt.name} {pt.val}
+                </text>
+              );
+            })}
+          </svg>
+        </div>
+
+        {/* Attribute Breakdown Bars */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {labels.map(l => (
+            <div key={l.name} style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "8px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 85, fontFamily: "'Bebas Neue',sans-serif", fontSize: 13, letterSpacing: 1.5, color: "rgba(255,255,255,0.75)" }}>{l.name}</div>
+              <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden" }}>
+                <div style={{ width: l.val + "%", height: "100%", background: "linear-gradient(90deg, " + pc + ", #fbbf24)", borderRadius: 3, transition: "width 0.8s ease" }} />
+              </div>
+              <div className="bebas" style={{ fontSize: 18, color: "#fff", width: 32, textAlign: "right" }}>{l.val}</div>
+            </div>
+          ))}
+
+          {/* Quick Match Impact Pill */}
+          <div style={{ marginTop: 4, padding: "10px 14px", background: "rgba(" + (p.pos === "Defender" ? "37,99,235" : "232,0,45") + ",0.08)", border: "1px solid " + pc + "35", borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1.5 }}>
+            <span style={{ color: "rgba(255,255,255,0.7)" }}>MATCH IMPACT RATIO</span>
+            <span style={{ color: pc, fontSize: 15 }}>
+              {apps > 0 ? (((g + a) / apps).toFixed(2) + " GOAL CONTRIBUTIONS / MATCH") : "0.00 / MATCH"}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function PlayerModal({ player, onClose, T = THEMES.dark, potMonthAwards = [] }) {
   const p = player;
   const pc = POS_COLOR[p.pos] || T_RED;
@@ -799,7 +968,9 @@ function AppShell() {
         .nav-link:hover{color:${T.text};}
         .nav-link:hover::after,.nav-link.active::after{width:100%;}
         .nav-link.active{color:${T.text};}
-        .pcard{position:relative;cursor:pointer;overflow:hidden;border-radius:14px;background:${T.cardBg};border:1px solid ${T.border};transition:transform 0.35s cubic-bezier(0.23,1,0.32,1),border-color 0.3s,box-shadow 0.3s;}
+        .pcard{position:relative;cursor:pointer;overflow:hidden;border-radius:16px;background:${T.cardBg};border:1px solid ${T.border};box-shadow:0 4px 20px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.08);transition:transform 0.4s cubic-bezier(0.16,1,0.3,1),border-color 0.3s,box-shadow 0.4s;transform-style:preserve-3d;}
+        .pcard::before{content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.09),transparent);transform:skewX(-20deg);transition:left 0.75s ease;pointer-events:none;z-index:5;}
+        .pcard:hover::before{left:160%;}
         .pcard:hover{transform:translateY(-6px);border-color:rgba(232,0,45,0.5);box-shadow:0 16px 48px rgba(232,0,45,0.22);}
         .pcard:hover .pcard-glow{opacity:1;}
         .pcard-glow{position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(to right,${T_RED},#ff6b6b,${T_RED});opacity:0;transition:opacity 0.3s;}
@@ -1293,6 +1464,9 @@ function AppShell() {
               {/* Stats section */}
               <div style={{ background:T.bg, padding: isMobile?`28px ${px} 40px`:`40px ${px} 56px` }}>
                 <div style={{ maxWidth:900, margin:"0 auto" }}>
+                  {/* Apple-grade Player DNA Matrix */}
+                  <PlayerDnaRadar player={sel} potMonthAwards={getPlayerPotMonthAwards(sel.id, sel.name)} pc={pc} isMobile={isMobile} />
+
                   <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr 1fr":"repeat(3,1fr)", gap:isMobile?10:14, marginBottom:32 }}>
                     {(() => {
                       const selPotMonthAwards = getPlayerPotMonthAwards(sel.id, sel.name);
