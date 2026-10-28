@@ -386,52 +386,61 @@ function MatchModal({ match, onClose, T = THEMES.dark }) {
 
 // ── FIFA / EA FC Realistic Sunday League OVR & Archetype Calculator ──
 function calcPlayerOvr(p, potMonthCount = 0, totalSeasonMatches = 47) {
-  if (!p) return { ovr: 72, goalsPerMatch: 0, assistsPerMatch: 0, impactDensity: 0, availability: 50, archetype: "Squad Member" };
+  if (!p) return { ovr: 73, goalsPerMatch: 0, assistsPerMatch: 0, impactDensity: 0, availability: 50, archetype: "Squad Member" };
   const g = Number(p.goals) || 0;
   const a = Number(p.assists) || 0;
   const apps = Number(p.appearances) || 0;
-  const def = (Number(p.blocks) || 0) + (Number(p.interceptions) || 0) + (Number(p.clearances) || 0) + ((Number(p.saves) || 0) * 2);
+  const def = (Number(p.blocks) || 0) + (Number(p.interceptions) || 0) + (Number(p.clearances) || 0);
+  const saves = Number(p.saves) || 0;
+  const cs = Number(p.cleanSheets) || 0;
   const potm = (Number(p.potmCount) || 0) + potMonthCount;
   const isGK = p.pos === "Goalkeeper";
   const isDef = p.pos === "Defender";
   const isMid = p.pos === "Midfielder";
 
   const safeApps = Math.max(1, apps);
+  const totalM = Math.max(1, totalSeasonMatches || 47);
+
+  // 1. Availability (Commitment): 0 to 7 pts
+  const availScore = (apps / totalM) * 7.0;
+
+  // 2. Position-Weighted Performance: 0 to 12 pts
+  let perfScore = 0;
   const goalsPerMatch = g / safeApps;
   const assistsPerMatch = a / safeApps;
   const impactDensity = (g + a) / safeApps;
   const defPerMatch = def / safeApps;
 
-  const base = 72;
-  const totalM = Math.max(1, totalSeasonMatches || 47);
-  const availBonus = Math.min(8, (apps / totalM) * 8);
-
-  let perfBonus = 0;
   if (isGK) {
-    const savesRate = Math.min(6, ((p.saves || 0) / safeApps / 2.5) * 6);
-    const csBonus = Math.min(5, ((p.cleanSheets || 0) / 4) * 5);
-    perfBonus = savesRate + csBonus;
+    const savesRate = Math.min(6.5, (saves / safeApps / 2.5) * 6.5);
+    const csScore = Math.min(4.5, (cs / 4.0) * 4.5);
+    perfScore = savesRate + csScore;
   } else if (isDef) {
-    // Rate-based defense (max 5) + passing/attack contribution (max 3.5)
-    const defRate = Math.min(5, (defPerMatch / 1.0) * 5);
-    const passContr = Math.min(3.5, ((a + g) / safeApps / 0.4) * 3.5);
-    perfBonus = defRate + passContr;
+    // Defense rate (max 5.5) + offensive support (max 2.5) = max 8.0
+    const defRateScore = Math.min(5.5, (defPerMatch / 1.0) * 5.5);
+    const attackContr = Math.min(2.5, (impactDensity / 0.4) * 2.5);
+    perfScore = defRateScore + attackContr;
   } else if (isMid) {
-    // Creative Midfielders: heavily reward impact density (goals+assists/game) + assist rate
-    const rateFactor = Math.min(5, (impactDensity / 1.0) * 5);
-    const assistFactor = Math.min(4, ((a / safeApps) / 0.6) * 4);
-    const volumeFactor = Math.min(3, ((g + a) / 30) * 3);
-    perfBonus = rateFactor + assistFactor + volumeFactor;
+    // Creative Midfielders: Impact rate (6.5) + Assist rate (3.5) + Volume (2.0)
+    const rateScore = Math.min(6.5, (impactDensity / 0.95) * 6.5);
+    const assistRateScore = Math.min(3.5, (assistsPerMatch / 0.5) * 3.5);
+    const volumeScore = Math.min(2.0, ((g + a) / 50) * 2.0);
+    perfScore = rateScore + assistRateScore + volumeScore;
   } else {
-    // Attackers: rate factor (max 5) + volume factor (max 4.5) + assist rate (max 2.5)
-    const rateFactor = Math.min(5, (goalsPerMatch / 1.3) * 5);
-    const volumeFactor = Math.min(4.5, (g / 45) * 4.5);
-    const assistRate = Math.min(2.5, (assistsPerMatch / 0.6) * 2.5);
-    perfBonus = rateFactor + volumeFactor + assistRate;
+    // Attackers: Goals (1.0 weight) + Assists (0.5 weight)
+    const weightedGoals = (g * 1.0) + (a * 0.5);
+    const weightedPerMatch = weightedGoals / safeApps;
+    const rateScore = Math.min(6.5, (weightedPerMatch / 1.4) * 6.5);
+    const volumeScore = Math.min(5.5, (g / 60) * 5.5);
+    perfScore = rateScore + volumeScore;
   }
 
-  const clutchBonus = Math.min(4, (potm * 1.8) + (impactDensity >= 1.5 ? 1.5 : impactDensity >= 1.0 ? 0.8 : 0));
-  const ovr = Math.min(93, Math.max(72, Math.round(base + availBonus + perfBonus + clutchBonus)));
+  // 3. Clutch & Match Impact: 0 to 4 pts
+  const clutchScore = Math.min(4.0, (potm * 1.5) + (impactDensity >= 1.5 ? 1.5 : impactDensity >= 0.8 ? 0.8 : 0));
+
+  // Base tier: 73
+  const base = 73;
+  const ovr = Math.min(94, Math.max(73, Math.round(base + availScore + perfScore + clutchScore)));
 
   // Archetype
   let archetype = "Squad Dynamic";
