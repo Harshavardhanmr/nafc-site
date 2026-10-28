@@ -386,7 +386,7 @@ function MatchModal({ match, onClose, T = THEMES.dark }) {
 
 // ── FIFA / EA FC Realistic Sunday League OVR & Archetype Calculator ──
 function calcPlayerOvr(p, potMonthCount = 0, totalSeasonMatches = 47) {
-  if (!p) return { ovr: 73, goalsPerMatch: 0, assistsPerMatch: 0, impactDensity: 0, availability: 50, archetype: "Squad Member" };
+  if (!p) return { ovr: 73, goalsPerMatch: 0, assistsPerMatch: 0, impactDensity: 0, availability: 50, archetype: "Squad Regular" };
   const g = Number(p.goals) || 0;
   const a = Number(p.assists) || 0;
   const apps = Number(p.appearances) || 0;
@@ -401,8 +401,8 @@ function calcPlayerOvr(p, potMonthCount = 0, totalSeasonMatches = 47) {
   const safeApps = Math.max(1, apps);
   const totalM = Math.max(1, totalSeasonMatches || 47);
 
-  // 1. Availability (Commitment): 0 to 7 pts
-  const availScore = (apps / totalM) * 7.0;
+  // 1. Availability: 0 to 6 pts
+  const availScore = (apps / totalM) * 6.0;
 
   // 2. Position-Weighted Performance: 0 to 12 pts
   let perfScore = 0;
@@ -412,49 +412,48 @@ function calcPlayerOvr(p, potMonthCount = 0, totalSeasonMatches = 47) {
   const defPerMatch = def / safeApps;
 
   if (isGK) {
-    const savesRate = Math.min(6.5, (saves / safeApps / 2.5) * 6.5);
-    const csScore = Math.min(4.5, (cs / 4.0) * 4.5);
-    perfScore = savesRate + csScore;
+    perfScore = Math.min(6.5, (saves / safeApps / 2.5) * 6.5) + Math.min(4.5, (cs / 4.0) * 4.5);
   } else if (isDef) {
-    // Defense rate (max 5.5) + offensive support (max 2.5) = max 8.0
-    const defRateScore = Math.min(5.5, (defPerMatch / 1.0) * 5.5);
-    const attackContr = Math.min(2.5, (impactDensity / 0.4) * 2.5);
-    perfScore = defRateScore + attackContr;
+    perfScore = Math.min(5.0, (defPerMatch / 1.0) * 5.0) + Math.min(2.5, (impactDensity / 0.4) * 2.5) + Math.min(1.5, (apps / 35) * 1.5);
   } else if (isMid) {
-    // Creative Midfielders: Impact rate (6.5) + Assist rate (3.5) + Volume (2.0)
-    const rateScore = Math.min(6.5, (impactDensity / 0.95) * 6.5);
-    const assistRateScore = Math.min(3.5, (assistsPerMatch / 0.5) * 3.5);
-    const volumeScore = Math.min(2.0, ((g + a) / 50) * 2.0);
-    perfScore = rateScore + assistRateScore + volumeScore;
+    const rateScore = Math.min(5.5, (impactDensity / 1.5) * 5.5);
+    const assistScore = Math.min(3.0, (assistsPerMatch / 0.8) * 3.0);
+    const volumeScore = Math.min(3.5, ((g + a) / 75) * 3.5);
+    perfScore = rateScore + assistScore + volumeScore;
   } else {
-    // Attackers: Goals (1.0 weight) + Assists (0.5 weight)
-    const weightedGoals = (g * 1.0) + (a * 0.5);
-    const weightedPerMatch = weightedGoals / safeApps;
-    const rateScore = Math.min(6.5, (weightedPerMatch / 1.4) * 6.5);
-    const volumeScore = Math.min(5.5, (g / 60) * 5.5);
-    perfScore = rateScore + volumeScore;
+    const rateScore = Math.min(6.0, (impactDensity / 2.0) * 6.0);
+    const goalScore = Math.min(4.5, (g / 60) * 4.5);
+    const assistScore = Math.min(1.5, (a / 30) * 1.5);
+    perfScore = rateScore + goalScore + assistScore;
   }
 
-  // 3. Clutch & Match Impact: 0 to 4 pts
-  const clutchScore = Math.min(4.0, (potm * 1.5) + (impactDensity >= 1.5 ? 1.5 : impactDensity >= 0.8 ? 0.8 : 0));
+  // 3. Clutch Bonus: 0 to 3 pts
+  const clutchScore = Math.min(3.0, (potm * 1.0) + (impactDensity >= 2.0 ? 1.0 : impactDensity >= 1.0 ? 0.5 : 0));
 
   // Base tier: 73
   const base = 73;
-  const ovr = Math.min(94, Math.max(73, Math.round(base + availScore + perfScore + clutchScore)));
+  const ovr = Math.min(93, Math.max(73, Math.round(base + availScore + perfScore + clutchScore)));
 
-  // Archetype
-  let archetype = "Squad Dynamic";
-  if (isGK) archetype = "Iron Wall & Shot-Stopper";
-  else if (isDef && apps >= 30) archetype = "Defensive General & Anchor";
-  else if (isDef) archetype = "Defensive Stopper";
-  else if (g >= 40 && impactDensity >= 2.0) archetype = "Lethal Inside Assassin";
-  else if (g >= 40) archetype = "Golden Boot Poacher";
-  else if (apps >= 40 && a >= 35) archetype = "Complete Midfield General";
-  else if (apps >= 30 && a >= 25) archetype = "Master Box-to-Box Conductor";
-  else if (apps >= 35) archetype = "Squad Anchor & Iron Man";
-  else if (impactDensity >= 1.8 && apps <= 20) archetype = "Super-Sub Clutch Specialist";
-  else if (impactDensity >= 1.4) archetype = "Dynamic Playmaking Forward";
-  else archetype = "Transition Workhorse";
+  // Authentic Football Archetypes
+  let archetype = "Squad Regular";
+  if (isGK) {
+    archetype = "Shot-Stopper";
+  } else if (isDef) {
+    if (a >= 5 || g >= 5) archetype = "Ball-Playing Defender";
+    else if (apps >= 30) archetype = "Central Defensive Anchor";
+    else archetype = "Central Defender";
+  } else if (isMid) {
+    if (g >= 25 && a >= 25) archetype = "Complete Box-to-Box Midfielder";
+    else if (a >= 20) archetype = "Attacking Playmaker";
+    else if (impactDensity >= 1.0) archetype = "Creative Midfielder";
+    else if (apps >= 30) archetype = "Central Midfielder";
+    else archetype = "Midfield Rotation";
+  } else {
+    if (g >= 35 && a >= 25) archetype = "Complete Forward";
+    else if (g >= 35) archetype = "Clinical Finisher";
+    else if (impactDensity >= 1.2) archetype = "Direct Inside Forward";
+    else archetype = p.pos === "Winger" ? "Wide Forward" : "Centre Forward";
+  }
 
   const availability = Math.min(99, Math.round((apps / totalM) * 96));
 
