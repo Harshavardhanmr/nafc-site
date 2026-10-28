@@ -385,7 +385,7 @@ function MatchModal({ match, onClose, T = THEMES.dark }) {
 
 
 // ── FIFA / EA FC Realistic Sunday League OVR & Archetype Calculator ──
-function calcPlayerOvr(p, potMonthCount = 0, totalSeasonMatches = 46) {
+function calcPlayerOvr(p, potMonthCount = 0, totalSeasonMatches = 47) {
   if (!p) return { ovr: 72, goalsPerMatch: 0, assistsPerMatch: 0, impactDensity: 0, availability: 50, archetype: "Squad Member" };
   const g = Number(p.goals) || 0;
   const a = Number(p.assists) || 0;
@@ -400,42 +400,38 @@ function calcPlayerOvr(p, potMonthCount = 0, totalSeasonMatches = 46) {
   const goalsPerMatch = g / safeApps;
   const assistsPerMatch = a / safeApps;
   const impactDensity = (g + a) / safeApps;
+  const defPerMatch = def / safeApps;
 
-  // Base tier: everyone starts at 72 baseline (amateur squad level)
   const base = 72;
-
-  // 1. Availability Bonus: up to +8 pts for squad commitment
-  const totalM = Math.max(1, totalSeasonMatches || 46);
+  const totalM = Math.max(1, totalSeasonMatches || 47);
   const availBonus = Math.min(8, (apps / totalM) * 8);
 
-  // 2. Position-specific performance points (up to +12 pts):
   let perfBonus = 0;
   if (isGK) {
-    const savesBonus = Math.min(7, ((p.saves || 0) / 40) * 7);
+    const savesRate = Math.min(6, ((p.saves || 0) / safeApps / 2.5) * 6);
     const csBonus = Math.min(5, ((p.cleanSheets || 0) / 4) * 5);
-    perfBonus = savesBonus + csBonus;
+    perfBonus = savesRate + csBonus;
   } else if (isDef) {
-    const defDensity = Math.min(7, (def / 35) * 7);
-    const passContr = Math.min(5, (a / 12) * 5);
-    perfBonus = defDensity + passContr;
+    // Rate-based defense (max 5) + passing/attack contribution (max 3.5)
+    const defRate = Math.min(5, (defPerMatch / 1.0) * 5);
+    const passContr = Math.min(3.5, ((a + g) / safeApps / 0.4) * 3.5);
+    perfBonus = defRate + passContr;
   } else if (isMid) {
-    const assistFactor = Math.min(6, (a / 35) * 6);
-    const goalFactor = Math.min(4, (g / 35) * 4);
-    const rateFactor = Math.min(2, impactDensity * 1.2);
-    perfBonus = assistFactor + goalFactor + rateFactor;
+    // Creative Midfielders: heavily reward impact density (goals+assists/game) + assist rate
+    const rateFactor = Math.min(5, (impactDensity / 1.0) * 5);
+    const assistFactor = Math.min(4, ((a / safeApps) / 0.6) * 4);
+    const volumeFactor = Math.min(3, ((g + a) / 30) * 3);
+    perfBonus = rateFactor + assistFactor + volumeFactor;
   } else {
-    // Attackers: reward both raw volume AND clinical efficiency
-    const volumeFactor = Math.min(6, (g / 50) * 6);
-    const rateFactor = Math.min(4, (goalsPerMatch / 1.5) * 4);
-    const assistFactor = Math.min(2, (assistsPerMatch / 0.8) * 2);
-    perfBonus = volumeFactor + rateFactor + assistFactor;
+    // Attackers: rate factor (max 5) + volume factor (max 4.5) + assist rate (max 2.5)
+    const rateFactor = Math.min(5, (goalsPerMatch / 1.3) * 5);
+    const volumeFactor = Math.min(4.5, (g / 45) * 4.5);
+    const assistRate = Math.min(2.5, (assistsPerMatch / 0.6) * 2.5);
+    perfBonus = rateFactor + volumeFactor + assistRate;
   }
 
-  // 3. Clutch & MVP Factor (up to +4 pts)
-  const clutchBonus = Math.min(4, (potm * 2.0) + (impactDensity >= 1.5 ? 1.5 : 0));
-
-  // Total OVR (72 to 92 range)
-  const ovr = Math.min(92, Math.max(72, Math.round(base + availBonus + perfBonus + clutchBonus)));
+  const clutchBonus = Math.min(4, (potm * 1.8) + (impactDensity >= 1.5 ? 1.5 : impactDensity >= 1.0 ? 0.8 : 0));
+  const ovr = Math.min(93, Math.max(72, Math.round(base + availBonus + perfBonus + clutchBonus)));
 
   // Archetype
   let archetype = "Squad Dynamic";
@@ -1201,19 +1197,22 @@ function AppShell() {
               <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg,${T_RED},#ff6b6b,transparent)` }} />
               <div style={{ position:"absolute", bottom: isMobile?"18%":"14%", left:px, right: isMobile ? px : "auto", zIndex:4, animation:"fadeUp 0.9s ease forwards" }}>
                 {/* Apple TV-style Matchday Banner */}
-                {mtchs.filter(m=>m.played).length > 0 && (() => {
-                  const latestMatch = mtchs.filter(m=>m.played).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+                {played.length > 0 && (() => {
+                  const latestMatch = [...played].sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
                   if (!latestMatch) return null;
-                  const isWin = (latestMatch.goalsFor||0) > (latestMatch.goalsAgainst||0);
+                  const nScore = latestMatch.nafcScore ?? latestMatch.goalsFor ?? 0;
+                  const oScore = latestMatch.opponentScore ?? latestMatch.goalsAgainst ?? 0;
+                  const isWin = latestMatch.result === "W" || nScore > oScore;
+                  const potmStr = typeof latestMatch.potm === "object" && latestMatch.potm ? latestMatch.potm.name : (latestMatch.potm || "");
                   return (
                     <div onClick={() => { setSelMatch(latestMatch); setPg("Matches"); }} style={{ display:"inline-flex", alignItems:"center", gap:10, background:"rgba(0,0,0,0.68)", backdropFilter:"blur(16px)", border:"1px solid rgba(255,255,255,0.18)", borderRadius:30, padding:"6px 16px", marginBottom:18, cursor:"pointer", transition:"all 0.25s ease", boxShadow:"0 8px 24px rgba(0,0,0,0.4)" }} onMouseEnter={e=>e.currentTarget.style.borderColor=T_RED} onMouseLeave={e=>e.currentTarget.style.borderColor="rgba(255,255,255,0.18)"}>
                       <span style={{ width:8, height:8, borderRadius:"50%", background: isWin ? "#22c55e" : "#eab308", boxShadow: isWin ? "0 0 10px #22c55e" : "0 0 10px #eab308", display:"inline-block" }} />
                       <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13.5, letterSpacing:1.5, color:"rgba(255,255,255,0.95)" }}>
-                        LATEST MATCH: NAFC {latestMatch.goalsFor}–{latestMatch.goalsAgainst} {latestMatch.opponent.toUpperCase()}
+                        LATEST MATCH: NAFC {nScore}–{oScore} {latestMatch.opponent.toUpperCase()}
                       </span>
-                      {latestMatch.potm && (
+                      {potmStr && (
                         <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11.5, letterSpacing:1, color:T_GOLD, background:"rgba(217,119,6,0.18)", padding:"2px 8px", borderRadius:20 }}>
-                          ⭐ {latestMatch.potm.toUpperCase()}
+                          ⭐ {potmStr.trim().toUpperCase()}
                         </span>
                       )}
                       <span style={{ color:"rgba(255,255,255,0.45)", fontSize:12 }}>→</span>
@@ -2337,7 +2336,7 @@ function AppShell() {
               ) : (
                 <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
                   {newsList.filter(n => newsFltr === "All" || n.category === newsFltr).map((item, idx) => {
-                    const isTournament = item.category === "Tournament" || (item.teams && item.teams.length > 0);
+                    const isTournament = item.badge !== "OFFICIAL STATEMENT" && (item.category === "Tournament" || (item.teams && item.teams.length > 0));
                     const isLive = item.badge === "LIVE";
                     const isUpc = item.badge === "UPCOMING" || !item.badge;
                     const badgeColor = isLive ? "#16a34a" : isUpc ? "#2563eb" : "#7c3aed";

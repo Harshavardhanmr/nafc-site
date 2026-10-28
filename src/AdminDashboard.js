@@ -640,7 +640,7 @@ export default function AdminDashboard({ onBack }) {
         updatedAt: new Date().toISOString()
       };
       if (edAnn.teams && edAnn.teams.length > 0) {
-        data.teams = edAnn.teams;
+        data.teams = edAnn.badge === "OFFICIAL STATEMENT" ? [] : edAnn.teams;
       }
       if (edAnn.id) {
         await updateDoc(doc(db, "announcements", edAnn.id), data);
@@ -1352,6 +1352,7 @@ export default function AdminDashboard({ onBack }) {
                 <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Status Badge
                   <select value={edAnn.badge} onChange={e=>setEdAnn({...edAnn,badge:e.target.value})} style={{ ...selectStyle, marginTop:4 }}>
                     <option value="UPCOMING">UPCOMING</option>
+                    <option value="OFFICIAL STATEMENT">OFFICIAL STATEMENT</option>
                     <option value="LIVE">LIVE 🔴</option>
                     <option value="COMPLETED">COMPLETED</option>
                   </select>
