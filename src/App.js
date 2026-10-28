@@ -67,104 +67,7 @@ function getPhotoPos(p, defaultPos = "center 25%") {
 
 const PGS = ["Home", "Players", "Fixtures", "Stats", "Gallery", "News"];
 
-const DEFAULT_ANNOUNCEMENTS = [
-  {
-    id: "leadership-announcement-oct-2026",
-    title: "Official Announcement: Hruthik Appointed Club Captain, Ruddy Named Vice-Captain",
-    category: "Club News",
-    date: "2026-10-26",
-    badge: "LEADERSHIP APPOINTMENT",
-    summary: "NAFC officially confirms a new on-pitch leadership group as Hruthik takes the captain's armband alongside Ruddy as vice-captain to steer the squad forward.",
-    content: "NAFC is proud to officially confirm the appointment of our new leadership team to guide the squad into our next competitive era.\n\nHruthik (#10) has been named Club Captain. With 42 appearances, 39 career goals, and 39 assists, Hruthik consistently sets the standard on the pitch through his relentless energy, midfield control, and clutch performances. His passion and commitment embody the spirit of NAFC.\n\nSupporting him as Vice-Captain is Ruddy (#8). Having previously captained Team 1 to Bronze Cup glory at KFA TCT 2.0 and recording 24 goals and 26 assists in 35 appearances, Ruddy brings tactical maturity, elite vision, and strong respect across the squad.\n\nTogether, Hruthik and Ruddy form an inspiring leadership core to guide our youthful, hungry side into upcoming tournament campaigns and fixtures.\n\nJoin the entire club in congratulating our new Captain and Vice-Captain! Forward NAFC! 🔴⚫🎽",
-    createdAt: "2026-10-26T18:00:00.000Z"
-  },
-  {
-    id: "squad-evolution-oct-2026",
-    title: "The Next Chapter: Squad Evolution & Youth Transition at NAFC",
-    category: "Club News",
-    date: "2026-10-09",
-    badge: "OFFICIAL STATEMENT",
-    summary: "NAFC announces the initiation of a progressive squad transition as exciting young talent steps up to drive the club's high-tempo football into the future.",
-    content: "Football is ever-evolving, and at NAFC, the future is now. With an influx of dynamic, hungry young talent making an immediate impact on the pitch, club leadership is initiating a strategic squad transition to pave the way for the next generation.\n\nRecent fixtures have underscored this tactical shift: high-tempo pressing, rapid transitions, and clinical finishing (exemplified by the emphatic 10–4 victory over Team VINU) have showcased the immense ceiling of this youthful core. To maintain this dynamic rhythm and competitive edge, the club is beginning to phase out elements of the old guard, with the first of our senior stalwarts preparing to step aside and transition into retirement.\n\nWhile farewells to long-standing club figures are never easy, honoring the club's competitive ambition and creating space for fresh blood is paramount for sustained success. The management extends heartfelt respect to the veterans paving the way, with official retirement tributes and further squad announcements to follow in the coming weeks.\n\nThe foundation is set. The future is bright. Forward NAFC! 🔴⚫",
-    createdAt: "2026-10-09T22:50:00.000Z"
-  },
-  {
-    id: "tournament-sept-6-2026",
-    title: "KFA TCT 2.0 — Historic Double Cup Triumph for NAFC & EFC",
-    category: "Tournament",
-    date: "2026-09-06",
-    badge: "COMPLETED",
-    format: "5-a-Side",
-    venue: "Ballpark Central, Kothanur",
-    summary: "Historic day for NAFC at KFA TCT 2.0! ENNE FC (EFC) won the Silver Cup Final (2nd vs 2nd), NAFC won the Bronze Cup Final (3rd vs 3rd), and Hafeez was crowned Best Player of the Tournament.",
-    trophies: [
-      { name: "Silver Cup Champions (2nd vs 2nd Final)", team: "ENNE FC (EFC)", icon: "🥈" },
-      { name: "Bronze Cup Champions (3rd vs 3rd Final)", team: "NAFC", icon: "🥉" },
-      { name: "Best Player of Tournament", team: "Hafeez · NAFC (#9)", icon: "🏅" }
-    ],
-    teams: [
-      {
-        name: "TEAM 1 — NAFC (Bronze Cup Champions 🥉)",
-        color: "#E8002D",
-        players: [
-          { name: "Hafeez", role: "Striker", jersey: 9 },
-          { name: "Hruthik", role: "Midfielder", jersey: 10 },
-          { name: "Ruddy (C)", role: "Midfielder", jersey: 8, isCaptain: true },
-          { name: "Dheemanth", role: "Defender", jersey: 30 },
-          { name: "Akarsh", role: "Goalkeeper", jersey: 1 },
-          { name: "Harsha", role: "Defender", jersey: 6 },
-          { name: "Megur", role: "Forward", jersey: 17 }
-        ]
-      },
-      {
-        name: "TEAM 2 — ENNE FC / EFC (Silver Cup Champions 🥈)",
-        color: "#2563eb",
-        players: [
-          { name: "Vignesh", role: "Defender", jersey: 4 },
-          { name: "Gopal (C)", role: "Defender", jersey: 3, isCaptain: true },
-          { name: "Shetty", role: "Midfielder", jersey: 11 },
-          { name: "Nithin", role: "Winger", jersey: 14 },
-          { name: "Naga", role: "Goalkeeper", jersey: 1 },
-          { name: "Danish", role: "Midfielder", jersey: 21 }
-        ]
-      }
-    ],
-    content: "A landmark double-cup triumph for the club at Ballpark Central, Kothanur! The tournament featured 10 teams across two groups of 5. After round-robin stage matches (including a thrilling 4-2 opening derby between EFC and NAFC), the top 3 teams of each group advanced to the parallel Cup Finals: 1st vs 1st for the Gold Cup, 2nd vs 2nd for the Silver Cup, and 3rd vs 3rd for the Bronze Cup. ENNE FC qualified for and won the Silver Cup with a 1-0 final victory, while NAFC captured the Bronze Cup with a resounding 5-2 final win! To crown the historic campaign, Hafeez was awarded Best Player of the Tournament with 9 goals and 3 assists.",
-    createdAt: "2026-09-06T00:00:00.000Z"
-  },
-  {
-    id: "tournament-christ-aug-2026",
-    title: "Christ Tournament 9v9 — NAFC Campaign & Squad Roster",
-    category: "Tournament",
-    date: "2026-08-01",
-    badge: "COMPLETED",
-    format: "9v9",
-    venue: "Christ Academy Bengaluru",
-    summary: "NAFC's first official tournament campaign at the Christ 9v9 Tournament featuring 12 squad members across 2 matches.",
-    teams: [
-      {
-        name: "NAFC TOURNAMENT SQUAD (9v9)",
-        color: "#E8002D",
-        players: [
-          { name: "Nithin", role: "Striker", jersey: 14 },
-          { name: "Gopal (C)", role: "Defender", jersey: 3 },
-          { name: "Harsha Vardhan", role: "Defender", jersey: 6 },
-          { name: "Ruddy", role: "Midfielder", jersey: 8 },
-          { name: "Hruthik", role: "Midfielder", jersey: 10 },
-          { name: "Akarsh", role: "Goalkeeper", jersey: 1 },
-          { name: "Danish", role: "Midfielder", jersey: 21 },
-          { name: "Dheemanth", role: "Defender", jersey: 30 },
-          { name: "Megur", role: "Forward", jersey: 17 },
-          { name: "Vignesh", role: "Defender", jersey: 4 },
-          { name: "Shetty", role: "Forward", jersey: 11 },
-          { name: "Hafeez", role: "Winger", jersey: 9 }
-        ]
-      }
-    ],
-    content: "NAFC participated in the prestigious Christ 9v9 Tournament on August 1st and 2nd. Match 1 saw a hard-fought 1–0 victory over BMSC with Hruthik scoring the winning goal, followed by a tough knockout encounter against TFC. A foundational tournament for the squad!",
-    createdAt: "2026-08-02T20:00:00.000Z"
-  }
-];
+const DEFAULT_ANNOUNCEMENTS = [];
 
 const POS_COLOR = {
   Goalkeeper: "#2563eb",
@@ -756,11 +659,7 @@ function AppShell() {
       else setHeroURL(HUDDLE_DEFAULT);
     });
     const uA = onSnapshot(query(collection(db,"announcements"),orderBy("date","desc")), s => {
-      if (!s.empty) {
-        setNewsList(s.docs.map(d=>({id:d.id,...d.data()})));
-      } else {
-        setNewsList(DEFAULT_ANNOUNCEMENTS);
-      }
+      setNewsList(s.docs.map(d=>({id:d.id,...d.data()})));
     });
     return () => { uP(); uM(); uG(); uS(); uA(); };
   }, []);
@@ -2049,20 +1948,28 @@ function AppShell() {
                         );
                       })()}
 
-                      {/* Box 2: Fortress HAL Record */}
-                      <div style={{ background: themeMode==="dark" ? "linear-gradient(145deg, rgba(16,185,129,0.08) 0%, rgba(24,24,27,0.9) 100%)" : T.cardBg, border:"1px solid rgba(16,185,129,0.3)", borderRadius:14, padding:"18px 20px", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
-                        <div>
-                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, color:"#10b981" }}>🏟️ FORTRESS HAL</span>
-                            <span style={{ background:"rgba(16,185,129,0.15)", color:"#10b981", fontSize:10.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, padding:"2px 8px", borderRadius:4 }}>100% RECORD</span>
+                      {/* Box 2: Dynamic Season Form & Clean Sheets */}
+                      {(() => {
+                        const csCount = played.filter(m => (m.opponentScore ?? m.goalsAgainst) === 0).length;
+                        const csPct = played.length ? Math.round((csCount / played.length) * 100) : 0;
+                        const totalWins = played.filter(m => m.result === "W").length;
+                        const winPct = played.length ? Math.round((totalWins / played.length) * 100) : 0;
+                        return (
+                          <div style={{ background: themeMode==="dark" ? "linear-gradient(145deg, rgba(16,185,129,0.08) 0%, rgba(24,24,27,0.9) 100%)" : T.cardBg, border:"1px solid rgba(16,185,129,0.3)", borderRadius:14, padding:"18px 20px", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                            <div>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, color:"#10b981" }}>🛡️ SEASON FORM & RESILIENCE</span>
+                                <span style={{ background:"rgba(16,185,129,0.15)", color:"#10b981", fontSize:10.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, padding:"2px 8px", borderRadius:4 }}>{winPct}% WIN RATE</span>
+                              </div>
+                              <div className="bebas" style={{ fontSize:30, color:T.text, lineHeight:1, marginBottom:4 }}>{totalWins} WINS · {csCount} CLEAN SHEETS</div>
+                              <div style={{ fontSize:13, color:T.textDim }}>From {played.length} competitive matches played this season ({csPct}% clean sheet rate).</div>
+                            </div>
+                            <div style={{ fontSize:12, color:"#10b981", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:12 }}>
+                              {wins}W · {draws}D · {losses}L RECORD ACROSS ALL FIXTURES
+                            </div>
                           </div>
-                          <div className="bebas" style={{ fontSize:32, color:"#fff", lineHeight:1, marginBottom:4 }}>5 MATCHES · 5 WINS</div>
-                          <div style={{ fontSize:13, color:T.textDim }}>Zero losses recorded at HAL Sports Ground across the entire season.</div>
-                        </div>
-                        <div style={{ fontSize:12, color:"#10b981", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:12 }}>
-                          GOAL DIFFERENCE: +19 IN 5 GAMES
-                        </div>
-                      </div>
+                        );
+                      })()}
 
                       {/* Box 3: Dynamic Iron Man of the Squad */}
                       {(() => {
@@ -2089,28 +1996,38 @@ function AppShell() {
                         );
                       })()}
 
-                      {/* Box 4: Lethal Chemistry */}
-                      <div style={{ background: themeMode==="dark" ? "linear-gradient(145deg, rgba(245,158,11,0.08) 0%, rgba(24,24,27,0.9) 100%)" : T.cardBg, border:"1px solid rgba(245,158,11,0.3)", borderRadius:14, padding:"18px 20px", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
-                        <div>
-                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, color:T_GOLD }}>🤝 DEADLIEST COMBINATIONS</span>
-                            <span style={{ fontSize:10.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, color:T.textDim }}>ASSIST ➔ GOAL</span>
-                          </div>
-                          <div style={{ display:"flex", flexDirection:"column", gap:6, marginTop:6 }}>
-                            <div style={{ display:"flex", justifyContent:"space-between", fontSize:14, fontWeight:600, color:T.text }}>
-                              <span>Hruthik ➔ Hafeez</span>
-                              <span className="bebas" style={{ color:T_RED, fontSize:18 }}>10 GOALS</span>
+                      {/* Box 4: Dynamic Playmaking Leaders */}
+                      {(() => {
+                        const topAssisters = [...plrs].filter(p => (p.assists||0) > 0).sort((a,b) => (b.assists||0) - (a.assists||0));
+                        const a1 = topAssisters[0] || { name:"—", assists:0, appearances:1 };
+                        const a2 = topAssisters[1] || { name:"—", assists:0, appearances:1 };
+                        const totalTopA = (a1.assists||0) + (a2.assists||0) || 1;
+                        const a1Pct = Math.round(((a1.assists||0) / totalTopA) * 100);
+                        const a2Pct = 100 - a1Pct;
+                        const a1Rate = ((a1.assists||0) / Math.max(1, a1.appearances||0)).toFixed(2);
+                        const a2Rate = ((a2.assists||0) / Math.max(1, a2.appearances||0)).toFixed(2);
+                        return (
+                          <div style={{ background: themeMode==="dark" ? "linear-gradient(145deg, rgba(245,158,11,0.08) 0%, rgba(24,24,27,0.9) 100%)" : T.cardBg, border:"1px solid rgba(245,158,11,0.3)", borderRadius:14, padding:"18px 20px", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                            <div>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, color:T_GOLD }}>🎯 CREATIVE PLAYMAKERS</span>
+                                <span style={{ fontSize:10.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, color:T.textDim }}>TOP 2 ASSISTERS</span>
+                              </div>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:6 }}>
+                                <span className="bebas" style={{ fontSize:24, color:T.text }}>{a1.name} ({a1.assists}A)</span>
+                                <span className="bebas" style={{ fontSize:20, color:T_RED }}>{a2.name} ({a2.assists}A)</span>
+                              </div>
+                              <div style={{ height:7, borderRadius:4, background:"rgba(255,255,255,0.08)", overflow:"hidden", display:"flex", marginBottom:10 }}>
+                                <div style={{ width: a1Pct + "%", background:T_GOLD, transition:"width 0.6s ease" }} />
+                                <div style={{ width: a2Pct + "%", background:T_RED, transition:"width 0.6s ease" }} />
+                              </div>
                             </div>
-                            <div style={{ display:"flex", justifyContent:"space-between", fontSize:14, fontWeight:600, color:T.text }}>
-                              <span>Nithin ➔ Shetty</span>
-                              <span className="bebas" style={{ color:T_GOLD, fontSize:18 }}>8 GOALS</span>
+                            <div style={{ fontSize:12, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>
+                              ASSIST RATES: <span style={{ color:T_GOLD }}>{a1Rate} A/M</span> vs <span style={{ color:T_RED }}>{a2Rate} A/M</span>
                             </div>
                           </div>
-                        </div>
-                        <div style={{ fontSize:12, color:T_GOLD, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:12 }}>
-                          18 GOALS GENERATED BY TOP 2 DUOS
-                        </div>
-                      </div>
+                        );
+                      })()}
 
                       {/* Box 5: Dynamic Impact Density Leaders */}
                       {(() => {
