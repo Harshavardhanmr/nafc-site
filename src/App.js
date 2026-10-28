@@ -2261,7 +2261,7 @@ function AppShell() {
               ) : (
                 <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
                   {newsList.filter(n => newsFltr === "All" || n.category === newsFltr).map((item, idx) => {
-                    const isTournament = item.badge !== "OFFICIAL STATEMENT" && (item.category === "Tournament" || (item.teams && item.teams.length > 0));
+                 const isTournament = item.badge !== "OFFICIAL STATEMENT" && (item.category === "Tournament" || (item.teams && item.teams.length > 0));
                     const isLive = item.badge === "LIVE";
                     const isUpc = item.badge === "UPCOMING" || !item.badge;
                     const badgeColor = isLive ? "#16a34a" : isUpc ? "#2563eb" : "#7c3aed";
