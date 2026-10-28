@@ -67,94 +67,7 @@ function getPhotoPos(p, defaultPos = "center 25%") {
 
 const PGS = ["Home", "Players", "Fixtures", "Stats", "Gallery", "News"];
 
-const DEFAULT_ANNOUNCEMENTS = [
-  {
-    id: "squad-evolution-oct-2026",
-    title: "The Next Chapter: Squad Evolution & Youth Transition at NAFC",
-    category: "Club News",
-    date: "2026-10-09",
-    badge: "OFFICIAL STATEMENT",
-    summary: "NAFC announces the initiation of a progressive squad transition as exciting young talent steps up to drive the club's high-tempo football into the future.",
-    content: "Football is ever-evolving, and at NAFC, the future is now. With an influx of dynamic, hungry young talent making an immediate impact on the pitch, club leadership is initiating a strategic squad transition to pave the way for the next generation.\n\nRecent fixtures have underscored this tactical shift: high-tempo pressing, rapid transitions, and clinical finishing (exemplified by the emphatic 10–4 victory over Team VINU) have showcased the immense ceiling of this youthful core. To maintain this dynamic rhythm and competitive edge, the club is beginning to phase out elements of the old guard, with the first of our senior stalwarts preparing to step aside and transition into retirement.\n\nWhile farewells to long-standing club figures are never easy, honoring the club's competitive ambition and creating space for fresh blood is paramount for sustained success. The management extends heartfelt respect to the veterans paving the way, with official retirement tributes and further squad announcements to follow in the coming weeks.\n\nThe foundation is set. The future is bright. Forward NAFC! 🔴⚪",
-    createdAt: "2026-10-09T22:50:00.000Z"
-  },
-  {
-    id: "tournament-sept-6-2026",
-    title: "KFA TCT 2.0 — Historic Double Cup Triumph for NAFC & EFC",
-    category: "Tournament",
-    date: "2026-09-06",
-    badge: "COMPLETED",
-    format: "5-a-Side",
-    venue: "Ballpark Central, Kothanur",
-    summary: "Historic day for NAFC at KFA TCT 2.0! ENNE FC (EFC) won the Silver Cup Final (2nd vs 2nd), NAFC won the Bronze Cup Final (3rd vs 3rd), and Hafeez was crowned Best Player of the Tournament.",
-    trophies: [
-      { name: "Silver Cup Champions (2nd vs 2nd Final)", team: "ENNE FC (EFC)", icon: "🥈" },
-      { name: "Bronze Cup Champions (3rd vs 3rd Final)", team: "NAFC", icon: "🥉" },
-      { name: "Best Player of Tournament", team: "Hafeez · NAFC (#9)", icon: "🏅" }
-    ],
-    teams: [
-      {
-        name: "TEAM 1 — NAFC (Bronze Cup Champions 🥉)",
-        color: "#E8002D",
-        players: [
-          { name: "Hafeez", role: "Striker", jersey: 9 },
-          { name: "Hruthik", role: "Midfielder", jersey: 10 },
-          { name: "Ruddy (C)", role: "Midfielder", jersey: 8, isCaptain: true },
-          { name: "Dheemanth", role: "Defender", jersey: 30 },
-          { name: "Akarsh", role: "Goalkeeper", jersey: 1 },
-          { name: "Harsha", role: "Defender", jersey: 6 },
-          { name: "Megur", role: "Forward", jersey: 17 }
-        ]
-      },
-      {
-        name: "TEAM 2 — ENNE FC / EFC (Silver Cup Champions 🥈)",
-        color: "#2563eb",
-        players: [
-          { name: "Vignesh", role: "Defender", jersey: 4 },
-          { name: "Gopal (C)", role: "Defender", jersey: 3, isCaptain: true },
-          { name: "Shetty", role: "Midfielder", jersey: 11 },
-          { name: "Nithin", role: "Winger", jersey: 14 },
-          { name: "Naga", role: "Goalkeeper", jersey: 1 },
-          { name: "Danish", role: "Midfielder", jersey: 21 }
-        ]
-      }
-    ],
-    content: "A landmark double-cup triumph for the club at Ballpark Central, Kothanur! The tournament featured 10 teams across two groups of 5. After round-robin stage matches (including a thrilling 4-2 opening derby between EFC and NAFC), the top 3 teams of each group advanced to the parallel Cup Finals: 1st vs 1st for the Gold Cup, 2nd vs 2nd for the Silver Cup, and 3rd vs 3rd for the Bronze Cup. ENNE FC qualified for and won the Silver Cup with a 1-0 final victory, while NAFC captured the Bronze Cup with a resounding 5-2 final win! To crown the historic campaign, Hafeez was awarded Best Player of the Tournament with 9 goals and 3 assists.",
-    createdAt: "2026-09-06T00:00:00.000Z"
-  },
-  {
-    id: "tournament-christ-aug-2026",
-    title: "Christ Tournament 9v9 — NAFC Campaign & Squad Roster",
-    category: "Tournament",
-    date: "2026-08-01",
-    badge: "COMPLETED",
-    format: "9v9",
-    venue: "Christ Academy Bengaluru",
-    summary: "NAFC's first official tournament campaign at the Christ 9v9 Tournament featuring 12 squad members across 2 matches.",
-    teams: [
-      {
-        name: "NAFC TOURNAMENT SQUAD (9v9)",
-        color: "#E8002D",
-        players: [
-          { name: "Nithin", role: "Striker", jersey: 14 },
-          { name: "Gopal (C)", role: "Defender", jersey: 3 },
-          { name: "Harsha Vardhan", role: "Defender", jersey: 6 },
-          { name: "Ruddy", role: "Midfielder", jersey: 8 },
-          { name: "Hruthik", role: "Midfielder", jersey: 10 },
-          { name: "Akarsh", role: "Goalkeeper", jersey: 1 },
-          { name: "Danish", role: "Midfielder", jersey: 21 },
-          { name: "Dheemanth", role: "Defender", jersey: 30 },
-          { name: "Megur", role: "Forward", jersey: 17 },
-          { name: "Vignesh", role: "Defender", jersey: 4 },
-          { name: "Shetty", role: "Forward", jersey: 11 },
-          { name: "Hafeez", role: "Winger", jersey: 9 }
-        ]
-      }
-    ],
-    content: "NAFC participated in the prestigious Christ 9v9 Tournament on August 1st and 2nd. Match 1 saw a hard-fought 1–0 victory over BMSC with Hruthik scoring the winning goal, followed by a tough knockout encounter against TFC. A foundational tournament for the squad!",
-    createdAt: "2026-08-02T20:00:00.000Z"
-  }
-];
+const DEFAULT_ANNOUNCEMENTS = [];
 
 const POS_COLOR = {
   Goalkeeper: "#2563eb",
@@ -372,6 +285,240 @@ function MatchModal({ match, onClose, T = THEMES.dark }) {
   );
 }
 
+
+
+// ── FIFA / EA FC Realistic Sunday League OVR & Archetype Calculator ──
+function calcPlayerOvr(p, potMonthCount = 0, totalSeasonMatches = 47) {
+  if (!p) return { ovr: 73, goalsPerMatch: 0, assistsPerMatch: 0, impactDensity: 0, availability: 50, archetype: "Squad Regular" };
+  const g = Number(p.goals) || 0;
+  const a = Number(p.assists) || 0;
+  const apps = Number(p.appearances) || 0;
+  const def = (Number(p.blocks) || 0) + (Number(p.interceptions) || 0) + (Number(p.clearances) || 0);
+  const saves = Number(p.saves) || 0;
+  const cs = Number(p.cleanSheets) || 0;
+  const potm = (Number(p.potmCount) || 0) + potMonthCount;
+  const isGK = p.pos === "Goalkeeper";
+  const isDef = p.pos === "Defender";
+  const isMid = p.pos === "Midfielder";
+
+  const safeApps = Math.max(1, apps);
+  const totalM = Math.max(1, totalSeasonMatches || 47);
+
+  // 1. Availability: 0 to 6 pts
+  const availScore = (apps / totalM) * 6.0;
+
+  // 2. Position-Weighted Performance: 0 to 12 pts
+  let perfScore = 0;
+  const goalsPerMatch = g / safeApps;
+  const assistsPerMatch = a / safeApps;
+  const impactDensity = (g + a) / safeApps;
+  const defPerMatch = def / safeApps;
+
+  if (isGK) {
+    perfScore = Math.min(6.5, (saves / safeApps / 2.5) * 6.5) + Math.min(4.5, (cs / 4.0) * 4.5);
+  } else if (isDef) {
+    perfScore = Math.min(5.0, (defPerMatch / 1.0) * 5.0) + Math.min(2.5, (impactDensity / 0.4) * 2.5) + Math.min(1.5, (apps / 35) * 1.5);
+  } else if (isMid) {
+    const rateScore = Math.min(5.5, (impactDensity / 1.5) * 5.5);
+    const assistScore = Math.min(3.0, (assistsPerMatch / 0.8) * 3.0);
+    const volumeScore = Math.min(3.5, ((g + a) / 75) * 3.5);
+    perfScore = rateScore + assistScore + volumeScore;
+  } else {
+    const rateScore = Math.min(6.0, (impactDensity / 2.0) * 6.0);
+    const goalScore = Math.min(4.5, (g / 60) * 4.5);
+    const assistScore = Math.min(1.5, (a / 30) * 1.5);
+    perfScore = rateScore + goalScore + assistScore;
+  }
+
+  // 3. Clutch Bonus: 0 to 3 pts
+  const clutchScore = Math.min(3.0, (potm * 1.0) + (impactDensity >= 2.0 ? 1.0 : impactDensity >= 1.0 ? 0.5 : 0));
+
+  // Base tier: 73
+  const base = 73;
+  const ovr = Math.min(93, Math.max(73, Math.round(base + availScore + perfScore + clutchScore)));
+
+  // Authentic Football Archetypes
+  let archetype = "Squad Regular";
+  if (isGK) {
+    archetype = "Shot-Stopper";
+  } else if (isDef) {
+    if (a >= 5 || g >= 5) archetype = "Ball-Playing Defender";
+    else if (apps >= 30) archetype = "Central Defensive Anchor";
+    else archetype = "Central Defender";
+  } else if (isMid) {
+    if (g >= 25 && a >= 25) archetype = "Complete Box-to-Box Midfielder";
+    else if (a >= 20) archetype = "Attacking Playmaker";
+    else if (impactDensity >= 1.0) archetype = "Creative Midfielder";
+    else if (apps >= 30) archetype = "Central Midfielder";
+    else archetype = "Midfield Rotation";
+  } else {
+    if (g >= 35 && a >= 25) archetype = "Complete Forward";
+    else if (g >= 35) archetype = "Clinical Finisher";
+    else if (impactDensity >= 1.2) archetype = "Direct Inside Forward";
+    else archetype = p.pos === "Winger" ? "Wide Forward" : "Centre Forward";
+  }
+
+  const availability = Math.min(99, Math.round((apps / totalM) * 96));
+
+  return { ovr, goalsPerMatch, assistsPerMatch, impactDensity, availability, archetype };
+}
+
+function PlayerDnaRadar({ player, potMonthAwards = [], pc = "#E8002D", isMobile = false, totalSeasonMatches = 46 }) {
+  const p = player;
+  const isGK = p.pos === "Goalkeeper";
+
+  const g = Number(p.goals) || 0;
+  const a = Number(p.assists) || 0;
+  const apps = Number(p.appearances) || 0;
+  const def = (Number(p.blocks) || 0) + (Number(p.interceptions) || 0) + (Number(p.clearances) || 0) + ((Number(p.saves) || 0) * 2);
+  const potm = Number(p.potmCount) || 0;
+  const potMonth = potMonthAwards.length;
+
+  const { ovr, goalsPerMatch, assistsPerMatch, impactDensity, availability, archetype } = calcPlayerOvr(p, potMonth, totalSeasonMatches);
+
+  // Radar Axes (Scaled 40-99 for realistic visual polygon spread)
+  const finishing = isGK 
+    ? Math.min(99, Math.max(45, Math.round((((p.saves||0)/40)*0.5 + ((p.saves||0)/Math.max(1,apps)/4)*0.5)*95)))
+    : Math.min(99, Math.max(45, Math.round(((g / 42)*0.5 + (goalsPerMatch / 1.5)*0.5)*95)));
+
+  const playmaking = isGK
+    ? Math.min(99, Math.max(45, Math.round(((p.cleanSheets||0)/4)*95)))
+    : Math.min(99, Math.max(45, Math.round(((a / 30)*0.5 + (assistsPerMatch / 0.9)*0.5)*95)));
+
+  const defensive = Math.min(99, Math.max(40, Math.round((def / 35) * 95)));
+  const availStat = Math.min(99, Math.max(40, Math.round((apps / Math.max(1, totalSeasonMatches)) * 98)));
+  const clutch = Math.min(99, Math.max(45, Math.round((potm * 18) + (potMonth * 22) + (Math.min(2.5, impactDensity) * 16) + 32)));
+
+  const cx = isMobile ? 120 : 135;
+  const cy = isMobile ? 115 : 125;
+  const maxR = isMobile ? 65 : 78;
+  const angles = [-Math.PI / 2, -Math.PI / 2 + (2 * Math.PI) / 5, -Math.PI / 2 + (4 * Math.PI) / 5, -Math.PI / 2 + (6 * Math.PI) / 5, -Math.PI / 2 + (8 * Math.PI) / 5];
+
+  const labels = [
+    { name: isGK ? "SAVES" : "LETHALITY", val: finishing, sub: isGK ? (p.saves||0)+" Saves" : goalsPerMatch.toFixed(2)+"/GM" },
+    { name: isGK ? "CLEAN SHT" : "CREATIVITY", val: playmaking, sub: isGK ? (p.cleanSheets||0)+" CS" : assistsPerMatch.toFixed(2)+"/GM" },
+    { name: "AVAILABILITY", val: availStat, sub: apps+" Apps" },
+    { name: "DEFENSE", val: defensive, sub: def+" Def" },
+    { name: "CLUTCH", val: clutch, sub: impactDensity.toFixed(2)+" Ratio" }
+  ];
+
+  const dataPoints = labels.map((l, i) => {
+    const r = (l.val / 100) * maxR;
+    return {
+      x: cx + r * Math.cos(angles[i]),
+      y: cy + r * Math.sin(angles[i]),
+      ...l
+    };
+  });
+
+  const polygonPath = dataPoints.map(pt => pt.x + ',' + pt.y).join(' ');
+  const rings = [0.35, 0.65, 1.0];
+
+  return (
+    <div style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.035) 0%, rgba(20,20,24,0.92) 100%)", border: "1px solid rgba(255,255,255,0.12)", borderTop: "3px solid " + pc, borderRadius: 20, padding: isMobile ? "20px 16px" : "28px 32px", marginBottom: 32, boxShadow: "0 24px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12)", backdropFilter: "blur(24px)" }}>
+      {/* Header bar with OVR and Archetype */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 22 }}>🧬</span>
+            <span className="bebas" style={{ fontSize: isMobile ? 22 : 26, letterSpacing: 2, color: "#fff" }}>PLAYER DNA & ATTRIBUTE MATRIX</span>
+          </div>
+          <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.5)", fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 2, marginTop: 3 }}>
+            ARCHETYPE: <span style={{ color: pc, background: pc+"18", padding: "2px 8px", borderRadius: 4, border: "1px solid "+pc+"40" }}>{archetype.toUpperCase()}</span>
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.14)", padding: "8px 18px", borderRadius: 14, boxShadow: "0 4px 20px rgba(0,0,0,0.25)" }}>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: 2, fontFamily: "'Bebas Neue',sans-serif" }}>NAFC OVR</div>
+            <div style={{ fontSize: 12, color: pc, fontWeight: 700, letterSpacing: 1.5 }}>{p.pos.toUpperCase()}</div>
+          </div>
+          <div className="bebas" style={{ fontSize: 44, color: ovr >= 90 ? "#fbbf24" : "#fff", lineHeight: 1, textShadow: ovr >= 90 ? "0 0 25px rgba(251,191,36,0.6)" : "0 0 25px " + pc + "aa" }}>{ovr}</div>
+        </div>
+      </div>
+
+      {/* Bento Grid: Radar Graphic + Metric chips */}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "290px 1fr", gap: isMobile ? 20 : 32, alignItems: "center" }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+          <svg width={cx * 2} height={cy * 2} style={{ overflow: "visible" }}>
+            <defs>
+              <linearGradient id={"radarGrad_" + p.id} x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor={pc} stopOpacity="0.7" />
+                <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.25" />
+              </linearGradient>
+              <filter id={"glow_" + p.id} x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor={pc} floodOpacity="0.65" />
+              </filter>
+            </defs>
+
+            {/* Concentric rings */}
+            {rings.map((ringFrac, rIdx) => {
+              const ringPts = angles.map(a => {
+                const rx = cx + maxR * ringFrac * Math.cos(a);
+                const ry = cy + maxR * ringFrac * Math.sin(a);
+                return rx + ',' + ry;
+              }).join(' ');
+              return (
+                <polygon key={rIdx} points={ringPts} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray={rIdx < 2 ? "3,3" : "none"} />
+              );
+            })}
+
+            {/* Radial Spokes */}
+            {angles.map((a, aIdx) => (
+              <line key={aIdx} x1={cx} y1={cy} x2={cx + maxR * Math.cos(a)} y2={cy + maxR * Math.sin(a)} stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
+            ))}
+
+            {/* Filled Polygon */}
+            <polygon points={polygonPath} fill={"url(#radarGrad_" + p.id + ")"} stroke={pc} strokeWidth="2.5" filter={"url(#glow_" + p.id + ")"} />
+
+            {/* Glowing Vertices */}
+            {dataPoints.map((pt, ptIdx) => (
+              <circle key={ptIdx} cx={pt.x} cy={pt.y} r="4.5" fill="#fff" stroke={pc} strokeWidth="2" />
+            ))}
+
+            {/* Axis Labels */}
+            {dataPoints.map((pt, ptIdx) => {
+              const labelDist = maxR + (isMobile ? 18 : 24);
+              const lx = cx + labelDist * Math.cos(angles[ptIdx]);
+              const ly = cy + labelDist * Math.sin(angles[ptIdx]);
+              return (
+                <text key={ptIdx} x={lx} y={ly + 4} textAnchor="middle" fill="rgba(255,255,255,0.88)" fontFamily="'Bebas Neue',sans-serif" fontSize={isMobile ? "10.5px" : "12px"} letterSpacing="1.5">
+                  {pt.name} {pt.val}
+                </text>
+              );
+            })}
+          </svg>
+        </div>
+
+        {/* Attribute Breakdown Bars with Uber-Style Rate Tags */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {labels.map(l => (
+            <div key={l.name} style={{ background: "rgba(0,0,0,0.32)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "8px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 92, fontFamily: "'Bebas Neue',sans-serif", fontSize: 13, letterSpacing: 1.5, color: "rgba(255,255,255,0.8)" }}>{l.name}</div>
+              <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden" }}>
+                <div style={{ width: l.val + "%", height: "100%", background: "linear-gradient(90deg, " + pc + ", #fbbf24)", borderRadius: 3, transition: "width 0.8s ease" }} />
+              </div>
+              <div style={{ fontSize: 11, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, color: "rgba(255,255,255,0.45)", width: 55, textAlign: "right" }}>{l.sub}</div>
+              <div className="bebas" style={{ fontSize: 18, color: "#fff", width: 28, textAlign: "right" }}>{l.val}</div>
+            </div>
+          ))}
+
+          {/* Uber-style High-Contrast Dual KPI Pills */}
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 8, marginTop: 4 }}>
+            <div style={{ padding: "9px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11.5, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1.5 }}>
+              <span style={{ color: "rgba(255,255,255,0.55)" }}>AVAILABILITY INDEX</span>
+              <span style={{ color: "#38bdf8", fontSize: 14 }}>{apps} APPS ({availability}%)</span>
+            </div>
+            <div style={{ padding: "9px 14px", background: pc+"12", border: "1px solid " + pc + "35", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11.5, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1.5 }}>
+              <span style={{ color: "rgba(255,255,255,0.7)" }}>IMPACT DENSITY</span>
+              <span style={{ color: pc, fontSize: 14 }}>{impactDensity.toFixed(2)} / MATCH</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PlayerModal({ player, onClose, T = THEMES.dark, potMonthAwards = [] }) {
   const p = player;
   const pc = POS_COLOR[p.pos] || T_RED;
@@ -512,11 +659,7 @@ function AppShell() {
       else setHeroURL(HUDDLE_DEFAULT);
     });
     const uA = onSnapshot(query(collection(db,"announcements"),orderBy("date","desc")), s => {
-      if (!s.empty) {
-        setNewsList(s.docs.map(d=>({id:d.id,...d.data()})));
-      } else {
-        setNewsList(DEFAULT_ANNOUNCEMENTS);
-      }
+      setNewsList(s.docs.map(d=>({id:d.id,...d.data()})));
     });
     return () => { uP(); uM(); uG(); uS(); uA(); };
   }, []);
@@ -789,7 +932,9 @@ function AppShell() {
         .nav-link:hover{color:${T.text};}
         .nav-link:hover::after,.nav-link.active::after{width:100%;}
         .nav-link.active{color:${T.text};}
-        .pcard{position:relative;cursor:pointer;overflow:hidden;border-radius:14px;background:${T.cardBg};border:1px solid ${T.border};transition:transform 0.35s cubic-bezier(0.23,1,0.32,1),border-color 0.3s,box-shadow 0.3s;}
+        .pcard{position:relative;cursor:pointer;overflow:hidden;border-radius:16px;background:${T.cardBg};border:1px solid ${T.border};box-shadow:0 4px 20px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.08);transition:transform 0.4s cubic-bezier(0.16,1,0.3,1),border-color 0.3s,box-shadow 0.4s;transform-style:preserve-3d;}
+        .pcard::before{content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.09),transparent);transform:skewX(-20deg);transition:left 0.75s ease;pointer-events:none;z-index:5;}
+        .pcard:hover::before{left:160%;}
         .pcard:hover{transform:translateY(-6px);border-color:rgba(232,0,45,0.5);box-shadow:0 16px 48px rgba(232,0,45,0.22);}
         .pcard:hover .pcard-glow{opacity:1;}
         .pcard-glow{position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(to right,${T_RED},#ff6b6b,${T_RED});opacity:0;transition:opacity 0.3s;}
@@ -958,6 +1103,29 @@ function AppShell() {
               <div style={{ position:"absolute", bottom:0, left:0, right:0, height:"28%", background: T.heroFade }} />
               <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg,${T_RED},#ff6b6b,transparent)` }} />
               <div style={{ position:"absolute", bottom: isMobile?"18%":"14%", left:px, right: isMobile ? px : "auto", zIndex:4, animation:"fadeUp 0.9s ease forwards" }}>
+                {/* Apple TV-style Matchday Banner */}
+                {played.length > 0 && (() => {
+                  const latestMatch = [...played].sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+                  if (!latestMatch) return null;
+                  const nScore = latestMatch.nafcScore ?? latestMatch.goalsFor ?? 0;
+                  const oScore = latestMatch.opponentScore ?? latestMatch.goalsAgainst ?? 0;
+                  const isWin = latestMatch.result === "W" || nScore > oScore;
+                  const potmStr = typeof latestMatch.potm === "object" && latestMatch.potm ? latestMatch.potm.name : (latestMatch.potm || "");
+                  return (
+                    <div onClick={() => { setSelMatch(latestMatch); setPg("Matches"); }} style={{ display:"inline-flex", alignItems:"center", gap:10, background:"rgba(0,0,0,0.68)", backdropFilter:"blur(16px)", border:"1px solid rgba(255,255,255,0.18)", borderRadius:30, padding:"6px 16px", marginBottom:18, cursor:"pointer", transition:"all 0.25s ease", boxShadow:"0 8px 24px rgba(0,0,0,0.4)" }} onMouseEnter={e=>e.currentTarget.style.borderColor=T_RED} onMouseLeave={e=>e.currentTarget.style.borderColor="rgba(255,255,255,0.18)"}>
+                      <span style={{ width:8, height:8, borderRadius:"50%", background: isWin ? "#22c55e" : "#eab308", boxShadow: isWin ? "0 0 10px #22c55e" : "0 0 10px #eab308", display:"inline-block" }} />
+                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13.5, letterSpacing:1.5, color:"rgba(255,255,255,0.95)" }}>
+                        LATEST MATCH: NAFC {nScore}–{oScore} {latestMatch.opponent.toUpperCase()}
+                      </span>
+                      {potmStr && (
+                        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11.5, letterSpacing:1, color:T_GOLD, background:"rgba(217,119,6,0.18)", padding:"2px 8px", borderRadius:20 }}>
+                          ⭐ {potmStr.trim().toUpperCase()}
+                        </span>
+                      )}
+                      <span style={{ color:"rgba(255,255,255,0.45)", fontSize:12 }}>→</span>
+                    </div>
+                  );
+                })()}
                 <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
                   <div style={{ width:28, height:2, background:T_RED }} />
                   <div className="section-label" style={{ fontSize:14 }}>BENGALURU · 2026 SEASON</div>
@@ -1133,7 +1301,7 @@ function AppShell() {
                 ? <div style={{ textAlign:"center", padding:60, color:T.textDim, fontSize:15 }}>No players found.</div>
                 : <div className="squad-grid" style={{ display:"grid", gap:isMobile?10:14 }}>
                     {fPlrs.map((p,i) => (
-                      <div key={p.id} className="pcard" onClick={() => setSel(p)} style={{ animation:`fadeUp 0.4s ${i*0.04}s ease both` }}>
+                      <div key={p.id} className="pcard" onClick={() => setSel(p)} style={{ animation:`fadeUp 0.4s ${i*0.04}s ease both`, background: themeMode==="dark" ? `linear-gradient(145deg, ${POS_COLOR[p.pos]||T_RED}0a 0%, ${T.cardBg} 100%)` : T.cardBg, borderColor: `${POS_COLOR[p.pos]||T_RED}25` }}>
                         <div style={{ height:3, background:`linear-gradient(90deg,${POS_COLOR[p.pos]||T_RED},transparent)` }} />
                         <div style={{ height: isMobile?200:isTablet?240:270, background:T.subtleBg, position:"relative", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
                           <div className="bebas" style={{ position:"absolute", bottom:-8, right:-4, fontSize:90, color:T.textDim, opacity:0.18, lineHeight:1, userSelect:"none" }}>{p.jersey}</div>
@@ -1142,9 +1310,20 @@ function AppShell() {
                             : <svg width="70" height="70" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="28" r="18" fill={T.text} opacity="0.15" /><path d="M6 76c0-18.778 15.222-34 34-34s34 15.222 34 34" fill={T.text} opacity="0.10" /></svg>
                           }
                           <div style={{ position:"absolute", inset:0, background:`linear-gradient(to top, ${T.cardBg} 0%, transparent 50%)` }} />
-                          <div style={{ position:"absolute", top:10, left:12, background:POS_COLOR[p.pos]||T_RED, borderRadius:4, padding:"4px 12px" }}>
+                          <div style={{ position:"absolute", top:10, left:12, background:POS_COLOR[p.pos]||T_RED, borderRadius:4, padding:"4px 12px", zIndex:2 }}>
                             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:"white", letterSpacing:2 }}>{p.pos.slice(0,3).toUpperCase()}</span>
                           </div>
+                          {(() => {
+                            const potCount = getPlayerPotMonthAwards(p.id, p.name).length;
+                            const pOvr = calcPlayerOvr(p, potCount, played.length).ovr;
+                            const isElite = pOvr >= 90;
+                            return (
+                              <div style={{ position:"absolute", top:10, right:12, background:"rgba(0,0,0,0.72)", backdropFilter:"blur(12px)", border: isElite ? "1.5px solid #fbbf24" : "1px solid rgba(255,255,255,0.2)", borderRadius:8, padding:"3px 8px", display:"flex", alignItems:"center", gap:5, boxShadow:"0 4px 14px rgba(0,0,0,0.6)", zIndex:2 }}>
+                                <span className="bebas" style={{ fontSize:18, color: isElite ? "#fbbf24" : "#fff", lineHeight:1 }}>{pOvr}</span>
+                                <span style={{ fontSize:10, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, color: isElite ? "#fbbf24" : "rgba(255,255,255,0.55)" }}>OVR</span>
+                              </div>
+                            );
+                          })()}
                         </div>
                         <div style={{ padding:"14px 16px 18px", background:T.cardBg }}>
                           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
@@ -1283,6 +1462,9 @@ function AppShell() {
               {/* Stats section */}
               <div style={{ background:T.bg, padding: isMobile?`28px ${px} 40px`:`40px ${px} 56px` }}>
                 <div style={{ maxWidth:900, margin:"0 auto" }}>
+                  {/* Apple-grade Player DNA Matrix */}
+                  <PlayerDnaRadar player={sel} potMonthAwards={getPlayerPotMonthAwards(sel.id, sel.name)} pc={pc} isMobile={isMobile} totalSeasonMatches={played.length} />
+
                   <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr 1fr":"repeat(3,1fr)", gap:isMobile?10:14, marginBottom:32 }}>
                     {(() => {
                       const selPotMonthAwards = getPlayerPotMonthAwards(sel.id, sel.name);
@@ -1503,11 +1685,12 @@ function AppShell() {
                     <div style={{ fontSize:13, color:T.textDim, marginTop:10, letterSpacing:1 }}>↓ Click any player to view their full profile</div>
                   </div>
                   {/* Tab switcher */}
-                  <div style={{ display:"flex", gap:4, background:T.subtleBg, border:`1px solid ${T.border}`, padding:4, borderRadius:10 }}>
-                    <button onClick={() => setStatTab("season")} className="bebas" style={{ background:statTab==="season"?T_RED:"transparent", color:statTab==="season"?"#fff":T.textMuted, border:"none", padding:isMobile?"9px 16px":"11px 24px", fontSize:isMobile?14:16, cursor:"pointer", letterSpacing:2, borderRadius:7, transition:"all 0.2s" }}>
+                  <div style={{ position:"relative", display:"flex", background: themeMode==="dark" ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.06)", border:`1px solid ${T.border}`, padding:4, borderRadius:14, boxShadow:"inset 0 1px 3px rgba(0,0,0,0.3)" }}>
+                    <div style={{ position:"absolute", top:4, bottom:4, left: statTab==="season" ? 4 : "calc(50% + 2px)", width:"calc(50% - 6px)", background:T_RED, borderRadius:10, transition:"all 0.35s cubic-bezier(0.16,1,0.3,1)", boxShadow:`0 4px 16px ${T_RED}66, inset 0 1px 0 rgba(255,255,255,0.3)`, zIndex:1 }} />
+                    <button onClick={() => setStatTab("season")} className="bebas" style={{ position:"relative", zIndex:2, flex:1, background:"transparent", color:statTab==="season"?"#fff":T.textMuted, border:"none", padding:isMobile?"10px 16px":"12px 28px", fontSize:isMobile?14:16, cursor:"pointer", letterSpacing:2, transition:"color 0.25s" }}>
                       🏆 ALL-TIME SEASON
                     </button>
-                    <button onClick={() => setStatTab("month")} className="bebas" style={{ background:statTab==="month"?T_RED:"transparent", color:statTab==="month"?"#fff":T.textMuted, border:"none", padding:isMobile?"9px 16px":"11px 24px", fontSize:isMobile?14:16, cursor:"pointer", letterSpacing:2, borderRadius:7, transition:"all 0.2s" }}>
+                    <button onClick={() => setStatTab("month")} className="bebas" style={{ position:"relative", zIndex:2, flex:1, background:"transparent", color:statTab==="month"?"#fff":T.textMuted, border:"none", padding:isMobile?"10px 16px":"12px 28px", fontSize:isMobile?14:16, cursor:"pointer", letterSpacing:2, transition:"color 0.25s" }}>
                       📅 MONTHLY LEADERS
                     </button>
                   </div>
@@ -1633,7 +1816,7 @@ function AppShell() {
                               {board.emptyMsg}
                             </div>
                           ) : board.sorted.map((p,i) => (
-                            <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)}>
+                            <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)} style={{ position:"relative", overflow:"hidden", borderLeft: i===0 ? `3px solid ${board.color}` : i===1 ? "3px solid #94a3b8" : i===2 ? "3px solid #b45309" : "3px solid transparent", background: i < 3 ? `linear-gradient(90deg, ${board.color}0d 0%, transparent 100%)` : "transparent" }}>
                               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                                 <div style={{ width:24, textAlign:"center" }}>
                                   <div className="bebas" style={{ fontSize:i===0?20:16, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
@@ -1724,6 +1907,185 @@ function AppShell() {
                     </div>
                   )}
 
+                  {/* Pinterest/Apple Dynamic Club Records Bento Grid */}
+                  <div style={{ marginBottom:28 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                      <span style={{ fontSize:20 }}>⚡</span>
+                      <span className="bebas" style={{ fontSize:22, color:T.text, letterSpacing:1.5 }}>CLUB RECORDS & HIGHLIGHTS MATRIX</span>
+                    </div>
+
+                    <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "repeat(3, 1fr)", gap:14 }}>
+                      {/* Box 1: Dynamic Golden Boot Chase */}
+                      {(() => {
+                        const topScorers = [...plrs].filter(p => (p.goals||0) > 0).sort((a,b) => (b.goals||0) - (a.goals||0));
+                        const s1 = topScorers[0] || { name:"—", goals:0, appearances:1 };
+                        const s2 = topScorers[1] || { name:"—", goals:0, appearances:1 };
+                        const totalTopG = (s1.goals||0) + (s2.goals||0) || 1;
+                        const s1Pct = Math.round(((s1.goals||0) / totalTopG) * 100);
+                        const s2Pct = 100 - s1Pct;
+                        const s1Rate = ((s1.goals||0) / Math.max(1, s1.appearances||0)).toFixed(2);
+                        const s2Rate = ((s2.goals||0) / Math.max(1, s2.appearances||0)).toFixed(2);
+                        return (
+                          <div style={{ background: themeMode==="dark" ? "linear-gradient(145deg, rgba(232,0,45,0.08) 0%, rgba(24,24,27,0.9) 100%)" : T.cardBg, border:`1px solid ${T_RED}35`, borderRadius:14, padding:"18px 20px", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                            <div>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, color:T_RED }}>👟 THE GOLDEN BOOT CHASE</span>
+                                <span style={{ fontSize:11, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, color:T.textDim }}>TOP 2 SCORERS</span>
+                              </div>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:6 }}>
+                                <span className="bebas" style={{ fontSize:24, color:T.text }}>{s1.name} ({s1.goals}G)</span>
+                                <span className="bebas" style={{ fontSize:20, color:T_GOLD }}>{s2.name} ({s2.goals}G)</span>
+                              </div>
+                              <div style={{ height:7, borderRadius:4, background:"rgba(255,255,255,0.08)", overflow:"hidden", display:"flex", marginBottom:10 }}>
+                                <div style={{ width: s1Pct + "%", background:T_RED, transition:"width 0.6s ease" }} />
+                                <div style={{ width: s2Pct + "%", background:T_GOLD, transition:"width 0.6s ease" }} />
+                              </div>
+                            </div>
+                            <div style={{ fontSize:12, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>
+                              STRIKE RATES: <span style={{ color:T.text }}>{s1Rate} G/M</span> vs <span style={{ color:T_GOLD }}>{s2Rate} G/M</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Box 2: Dynamic Season Form & Clean Sheets */}
+                      {(() => {
+                        const csCount = played.filter(m => (m.opponentScore ?? m.goalsAgainst) === 0).length;
+                        const csPct = played.length ? Math.round((csCount / played.length) * 100) : 0;
+                        const totalWins = played.filter(m => m.result === "W").length;
+                        const winPct = played.length ? Math.round((totalWins / played.length) * 100) : 0;
+                        return (
+                          <div style={{ background: themeMode==="dark" ? "linear-gradient(145deg, rgba(16,185,129,0.08) 0%, rgba(24,24,27,0.9) 100%)" : T.cardBg, border:"1px solid rgba(16,185,129,0.3)", borderRadius:14, padding:"18px 20px", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                            <div>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, color:"#10b981" }}>🛡️ SEASON FORM & RESILIENCE</span>
+                                <span style={{ background:"rgba(16,185,129,0.15)", color:"#10b981", fontSize:10.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, padding:"2px 8px", borderRadius:4 }}>{winPct}% WIN RATE</span>
+                              </div>
+                              <div className="bebas" style={{ fontSize:30, color:T.text, lineHeight:1, marginBottom:4 }}>{totalWins} WINS · {csCount} CLEAN SHEETS</div>
+                              <div style={{ fontSize:13, color:T.textDim }}>From {played.length} competitive matches played this season ({csPct}% clean sheet rate).</div>
+                            </div>
+                            <div style={{ fontSize:12, color:"#10b981", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:12 }}>
+                              {wins}W · {draws}D · {losses}L RECORD ACROSS ALL FIXTURES
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Box 3: Dynamic Iron Man of the Squad */}
+                      {(() => {
+                        const ironMan = [...plrs].sort((a,b) => (b.appearances||0) - (a.appearances||0))[0];
+                        const totalM = played.length || 1;
+                        const ironApps = ironMan ? (ironMan.appearances||0) : 0;
+                        const ironPct = Math.round((ironApps / totalM) * 100);
+                        const missed = Math.max(0, totalM - ironApps);
+                        const totalContrib = ironMan ? ((ironMan.goals||0) + (ironMan.assists||0)) : 0;
+                        return (
+                          <div style={{ background: themeMode==="dark" ? "linear-gradient(145deg, rgba(56,189,248,0.08) 0%, rgba(24,24,27,0.9) 100%)" : T.cardBg, border:"1px solid rgba(56,189,248,0.3)", borderRadius:14, padding:"18px 20px", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                            <div>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, color:"#38bdf8" }}>⚡ IRON MAN & SQUAD ENGINE</span>
+                                <span style={{ fontSize:10.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, color:T.textDim }}>{ironApps} / {totalM} MATCHES ({ironPct}%)</span>
+                              </div>
+                              <div className="bebas" style={{ fontSize:28, color:T.text, lineHeight:1, marginBottom:4 }}>{ironMan ? ironMan.name : "—"}</div>
+                              <div style={{ fontSize:13, color:T.textDim }}>Club appearance leader with {ironApps} matches played (missed only {missed} of {totalM} games all season), logging {ironMan?ironMan.goals:0} goals and {ironMan?ironMan.assists:0} assists.</div>
+                            </div>
+                            <div style={{ fontSize:12, color:"#38bdf8", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:12 }}>
+                              {ironApps} APPS IN {totalM} MATCHES · {totalContrib} TOTAL CONTRIBUTIONS
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Box 4: Dynamic Playmaking Leaders */}
+                      {(() => {
+                        const topAssisters = [...plrs].filter(p => (p.assists||0) > 0).sort((a,b) => (b.assists||0) - (a.assists||0));
+                        const a1 = topAssisters[0] || { name:"—", assists:0, appearances:1 };
+                        const a2 = topAssisters[1] || { name:"—", assists:0, appearances:1 };
+                        const totalTopA = (a1.assists||0) + (a2.assists||0) || 1;
+                        const a1Pct = Math.round(((a1.assists||0) / totalTopA) * 100);
+                        const a2Pct = 100 - a1Pct;
+                        const a1Rate = ((a1.assists||0) / Math.max(1, a1.appearances||0)).toFixed(2);
+                        const a2Rate = ((a2.assists||0) / Math.max(1, a2.appearances||0)).toFixed(2);
+                        return (
+                          <div style={{ background: themeMode==="dark" ? "linear-gradient(145deg, rgba(245,158,11,0.08) 0%, rgba(24,24,27,0.9) 100%)" : T.cardBg, border:"1px solid rgba(245,158,11,0.3)", borderRadius:14, padding:"18px 20px", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                            <div>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, color:T_GOLD }}>🎯 CREATIVE PLAYMAKERS</span>
+                                <span style={{ fontSize:10.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, color:T.textDim }}>TOP 2 ASSISTERS</span>
+                              </div>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:6 }}>
+                                <span className="bebas" style={{ fontSize:24, color:T.text }}>{a1.name} ({a1.assists}A)</span>
+                                <span className="bebas" style={{ fontSize:20, color:T_RED }}>{a2.name} ({a2.assists}A)</span>
+                              </div>
+                              <div style={{ height:7, borderRadius:4, background:"rgba(255,255,255,0.08)", overflow:"hidden", display:"flex", marginBottom:10 }}>
+                                <div style={{ width: a1Pct + "%", background:T_GOLD, transition:"width 0.6s ease" }} />
+                                <div style={{ width: a2Pct + "%", background:T_RED, transition:"width 0.6s ease" }} />
+                              </div>
+                            </div>
+                            <div style={{ fontSize:12, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>
+                              ASSIST RATES: <span style={{ color:T_GOLD }}>{a1Rate} A/M</span> vs <span style={{ color:T_RED }}>{a2Rate} A/M</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Box 5: Dynamic Impact Density Leaders */}
+                      {(() => {
+                        const densityLeaders = [...plrs]
+                          .filter(p => (p.appearances||0) >= 5)
+                          .map(p => ({
+                            ...p,
+                            density: ((p.goals||0) + (p.assists||0)) / Math.max(1, p.appearances||0)
+                          }))
+                          .sort((a,b) => b.density - a.density)
+                          .slice(0, 3);
+                        return (
+                          <div style={{ background: themeMode==="dark" ? "linear-gradient(145deg, rgba(168,85,247,0.08) 0%, rgba(24,24,27,0.9) 100%)" : T.cardBg, border:"1px solid rgba(168,85,247,0.3)", borderRadius:14, padding:"18px 20px", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                            <div>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, color:"#c084fc" }}>🎯 IMPACT DENSITY LEADERS</span>
+                                <span style={{ fontSize:10.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, color:T.textDim }}>G+A / MATCH</span>
+                              </div>
+                              <div style={{ display:"flex", flexDirection:"column", gap:4, marginTop:4 }}>
+                                {densityLeaders.map((dl, idx) => (
+                                  <div key={dl.id} style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, color:T.text }}>
+                                    <span>{idx+1}. {dl.name}</span>
+                                    <span className="bebas" style={{ color:"#c084fc", fontSize:17 }}>{dl.density.toFixed(2)} / GM ({dl.appearances}M)</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            <div style={{ fontSize:12, color:"#c084fc", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:10 }}>
+                              HIGHEST PER-MATCH EFFICIENCY IN SQUAD
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Box 6: Dynamic Defensive Foundation */}
+                      {(() => {
+                        const topGk = plrs.find(p => p.pos === "Goalkeeper") || { name: "Akarsh", appearances: 0 };
+                        const topDef = [...plrs].filter(p => p.pos === "Defender").sort((a,b) => (b.appearances||0) - (a.appearances||0))[0] || { name: "Gopal", appearances: 0 };
+                        const combApps = (topGk.appearances || 0) + (topDef.appearances || 0);
+                        return (
+                          <div style={{ background: themeMode==="dark" ? "linear-gradient(145deg, rgba(37,99,235,0.08) 0%, rgba(24,24,27,0.9) 100%)" : T.cardBg, border:"1px solid rgba(37,99,235,0.3)", borderRadius:14, padding:"18px 20px", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                            <div>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2, color:"#60a5fa" }}>🛡️ DEFENSIVE FOUNDATION</span>
+                                <span style={{ fontSize:10.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, color:T.textDim }}>SAVES & TACKLES</span>
+                              </div>
+                              <div className="bebas" style={{ fontSize:26, color:T.text, lineHeight:1, marginBottom:4 }}>{topGk.name} (GK) & {topDef.name} (CB)</div>
+                              <div style={{ fontSize:13, color:T.textDim }}>{topGk.name} has {topGk.appearances||0} apps in goal with a POTM award; {topDef.name} anchors the backline with {topDef.appearances||0} appearances.</div>
+                            </div>
+                            <div style={{ fontSize:12, color:"#60a5fa", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:12 }}>
+                              {combApps} COMBINED DEFENSIVE APPEARANCES
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
                   {/* Season All-Time Summary cards */}
                   <div className="stat-grid-4" style={{ display:"grid", gap:isMobile?10:14, marginBottom:24 }}>
                     {[["TOTAL GOALS",plrs.reduce((a,p)=>a+(p.goals||0),0),T_RED],["TOTAL ASSISTS",plrs.reduce((a,p)=>a+(p.assists||0),0),T_GOLD],["MATCH POTMS",plrs.reduce((a,p)=>a+(p.potmCount||0),0),"#d97706"],["MATCHES PLAYED",played.length,"#16a34a"]].map(([l,v,c]) => (
@@ -1806,7 +2168,7 @@ function AppShell() {
                               {board.emptyMsg}
                             </div>
                           ) : board.sorted.map((p,i) => (
-                            <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)}>
+                            <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)} style={{ position:"relative", overflow:"hidden", borderLeft: i===0 ? `3px solid ${board.color}` : i===1 ? "3px solid #94a3b8" : i===2 ? "3px solid #b45309" : "3px solid transparent", background: i < 3 ? `linear-gradient(90deg, ${board.color}0d 0%, transparent 100%)` : "transparent" }}>
                               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                                 <div style={{ width:24, textAlign:"center" }}>
                                   <div className="bebas" style={{ fontSize:i===0?20:16, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
