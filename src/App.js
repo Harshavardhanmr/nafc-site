@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { db } from "./firebase/config";
 import { collection, onSnapshot, query, orderBy, doc } from "firebase/firestore";
 import { useAuth, AuthProvider } from "./components/AuthProvider";
@@ -78,6 +78,9 @@ const POS_COLOR = {
   Striker:    T_RED,
 };
 
+// ── Pure Match-Tracked Defensive Contribution Helper ──
+const getBaseDefForPos = () => ({ blocks: 0, interceptions: 0, clearances: 0, total: 0 });
+
 function useCountUp(target, duration = 1200) {
   const [val, setVal] = useState(0);
   useEffect(() => {
@@ -105,7 +108,357 @@ function useWindowWidth() {
   return w;
 }
 
-function MatchModal({ match, onClose, T = THEMES.dark }) {
+// ── Per-Match Squad & Lineup Pitch Helper ──
+function getMatchParticipants(match, plrs) {
+  if (!match) return { starters: [], bench: [], all: [] };
+  const apIds = match.ap || match.appearances || [];
+  const pMap = new Map();
+
+  // 1. Add all players from ap
+  apIds.forEach(id => {
+    const found = (plrs || []).find(p => String(p.id) === String(id));
+    if (found) {
+      pMap.set(String(found.id), { ...found });
+    } else {
+      const rawId = String(id);
+      const cleanName = rawId.startsWith("guest_") ? rawId.slice(6).split("_")[0].toUpperCase() : rawId;
+      pMap.set(rawId, { id: rawId, name: cleanName, pos: "Midfielder", jersey: "G", isGuest: true });
+    }
+  });
+
+  // 2. If ap was empty, fallback to scorers, assisters, defActions, potm
+  if (pMap.size === 0) {
+    (match.scorers || []).forEach(s => {
+      const sId = typeof s === "object" && s.id ? String(s.id) : null;
+      const sName = typeof s === "object" ? s.name : s;
+      const found = (plrs || []).find(p => (sId && String(p.id) === sId) || p.name === sName);
+      if (found) pMap.set(String(found.id), { ...found });
+    });
+    (match.assisters || []).forEach(a => {
+      const aId = typeof a === "object" && a.id ? String(a.id) : null;
+      const aName = typeof a === "object" ? a.name : a;
+      const found = (plrs || []).find(p => (aId && String(p.id) === aId) || p.name === aName);
+      if (found) pMap.set(String(found.id), { ...found });
+    });
+    (match.defensiveActions || match.defenders || []).forEach(d => {
+      const dId = typeof d === "object" && d.id ? String(d.id) : null;
+      const dName = typeof d === "object" ? d.name : d;
+      const found = (plrs || []).find(p => (dId && String(p.id) === dId) || p.name === dName);
+      if (found) pMap.set(String(found.id), { ...found });
+    });
+    if (match.potm) {
+      const potmId = typeof match.potm === "object" && match.potm.id ? String(match.potm.id) : null;
+      const potmName = typeof match.potm === "object" ? match.potm.name : match.potm;
+      const found = (plrs || []).find(p => (potmId && String(p.id) === potmId) || p.name === potmName);
+      if (found) pMap.set(String(found.id), { ...found });
+    }
+  }
+
+  const matchPlayers = Array.from(pMap.values()).map(p => {
+    const pId = String(p.id);
+    const pName = p.name ? p.name.trim().toLowerCase() : "";
+
+    let matchGoals = 0;
+    (match.scorers || []).forEach(s => {
+      const matches = typeof s === "object" && s
+        ? (String(s.id) === pId || (s.name && s.name.trim().toLowerCase() === pName))
+        : (typeof s === "string" && s.trim().toLowerCase() === pName);
+      if (matches) matchGoals += typeof s === "object" && s.goals ? Number(s.goals) : 1;
+    });
+
+    let matchAssists = 0;
+    (match.assisters || []).forEach(a => {
+      const matches = typeof a === "object" && a
+        ? (String(a.id) === pId || (a.name && a.name.trim().toLowerCase() === pName))
+        : (typeof a === "string" && a.trim().toLowerCase() === pName);
+      if (matches) matchAssists += typeof a === "object" && a.assists ? Number(a.assists) : 1;
+    });
+
+    let matchDef = 0;
+    (match.defensiveActions || match.defenders || []).forEach(d => {
+      const matches = typeof d === "object" && d
+        ? (String(d.id) === pId || (d.name && d.name.trim().toLowerCase() === pName))
+        : (typeof d === "string" && d.trim().toLowerCase() === pName);
+      if (matches && typeof d === "object") {
+        matchDef += (Number(d.blocks) || 0) + (Number(d.interceptions) || 0) + (Number(d.clearances) || 0);
+      }
+    });
+
+    const isPotm = typeof match.potm === "object" && match.potm
+      ? (String(match.potm.id) === pId || (match.potm.name && match.potm.name.trim().toLowerCase() === pName))
+      : (typeof match.potm === "string" && match.potm.trim().toLowerCase() === pName);
+
+    return {
+      ...p,
+      matchGoals,
+      matchAssists,
+      matchDef,
+      isPotm
+    };
+  });
+
+  const gks = matchPlayers.filter(p => p.pos === "Goalkeeper");
+  const defs = matchPlayers.filter(p => p.pos === "Defender");
+  const mids = matchPlayers.filter(p => p.pos === "Midfielder");
+  const atts = matchPlayers.filter(p => p.pos === "Winger" || p.pos === "Forward" || p.pos === "Striker");
+
+  const fmt = (match.fmt || "7s").toLowerCase();
+  let starters = [];
+
+  if (fmt.includes("5")) {
+    starters = [
+      { role: "GK", p: gks[0] || matchPlayers[0], x: 50, y: 88 },
+      { role: "DEF", p: defs[0] || matchPlayers[1], x: 50, y: 68 },
+      { role: "LM", p: mids[0] || matchPlayers[2], x: 28, y: 44 },
+      { role: "RM", p: mids[1] || matchPlayers[3], x: 72, y: 44 },
+      { role: "ST", p: atts[0] || matchPlayers[4], x: 50, y: 18 }
+    ];
+  } else if (fmt.includes("9")) {
+    starters = [
+      { role: "GK", p: gks[0] || matchPlayers[0], x: 50, y: 88 },
+      { role: "LB", p: defs[0] || matchPlayers[1], x: 20, y: 70 },
+      { role: "CB", p: defs[1] || matchPlayers[2], x: 50, y: 72 },
+      { role: "RB", p: defs[2] || matchPlayers[3], x: 80, y: 70 },
+      { role: "LM", p: mids[0] || matchPlayers[4], x: 22, y: 46 },
+      { role: "CM", p: mids[1] || matchPlayers[5], x: 50, y: 43 },
+      { role: "RM", p: mids[2] || matchPlayers[6], x: 78, y: 46 },
+      { role: "LS", p: atts[0] || matchPlayers[7], x: 36, y: 18 },
+      { role: "RS", p: atts[1] || matchPlayers[8], x: 64, y: 18 }
+    ];
+  } else {
+    // 7v7 format
+    if (defs.length >= 3 && mids.length < 3) {
+      starters = [
+        { role: "GK", p: gks[0] || matchPlayers[0], x: 50, y: 88 },
+        { role: "LB", p: defs[0] || matchPlayers[1], x: 20, y: 68 },
+        { role: "CB", p: defs[1] || matchPlayers[2], x: 50, y: 70 },
+        { role: "RB", p: defs[2] || matchPlayers[3], x: 80, y: 68 },
+        { role: "LCM", p: mids[0] || matchPlayers[4], x: 35, y: 42 },
+        { role: "RCM", p: mids[1] || matchPlayers[5], x: 65, y: 42 },
+        { role: "ST", p: atts[0] || matchPlayers[6], x: 50, y: 16 }
+      ];
+    } else {
+      starters = [
+        { role: "GK", p: gks[0] || matchPlayers[0], x: 50, y: 88 },
+        { role: "LCB", p: defs[0] || matchPlayers[1], x: 28, y: 68 },
+        { role: "RCB", p: defs[1] || matchPlayers[2], x: 72, y: 68 },
+        { role: "LM", p: mids[0] || matchPlayers[3], x: 20, y: 44 },
+        { role: "CM", p: mids[1] || matchPlayers[4], x: 50, y: 40 },
+        { role: "RM", p: mids[2] || atts[1] || matchPlayers[5], x: 80, y: 44 },
+        { role: "ST", p: atts[0] || matchPlayers[6], x: 50, y: 16 }
+      ];
+    }
+  }
+
+  const validStarters = starters.filter(s => s.p);
+  const starterIds = new Set(validStarters.map(s => s.p.id));
+  const bench = matchPlayers.filter(p => !starterIds.has(p.id));
+
+  return { starters: validStarters, bench, all: matchPlayers };
+}
+
+function MatchPitchLineup({ match, plrs, T = THEMES.dark }) {
+  const { starters, bench, all } = useMemo(() => getMatchParticipants(match, plrs), [match, plrs]);
+
+  if (all.length === 0) {
+    return (
+      <div style={{ textAlign: "center", padding: "36px 16px", color: T.textDim, background: T.bg2, borderRadius: 12, border: `1px solid ${T.borderLight}` }}>
+        <div style={{ fontSize: 28, marginBottom: 8 }}>📋</div>
+        <div className="bebas" style={{ fontSize: 16, color: T.text, letterSpacing: 1.5 }}>MATCH SQUAD NOT LOGGED</div>
+        <div style={{ fontSize: 12.5, color: T.textDim, marginTop: 4 }}>Lineup was not recorded for this fixture.</div>
+      </div>
+    );
+  }
+
+  const fmtLabel = match.fmt ? match.fmt.toUpperCase() : "7s";
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 6 }}>
+        <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 12, letterSpacing: 2, color: T.textDim }}>
+          MATCHDAY STARTING LINEUP · {fmtLabel}
+        </span>
+        <span style={{ fontSize: 11, color: T.textDim, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1 }}>
+          {all.length} PLAYERS IN SQUAD
+        </span>
+      </div>
+
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          paddingTop: "90%",
+          borderRadius: 14,
+          overflow: "hidden",
+          border: `1px solid ${T.borderLight}`,
+          boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+          background: "linear-gradient(180deg, #0e1e14 0%, #08140c 100%)"
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 40px, transparent 40px, transparent 80px)",
+            pointerEvents: "none"
+          }}
+        />
+
+        <svg
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+        >
+          <rect x="5" y="4" width="90" height="92" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.8" rx="2" />
+          <line x1="5" y1="50" x2="95" y2="50" stroke="rgba(255,255,255,0.22)" strokeWidth="0.8" />
+          <circle cx="50" cy="50" r="12" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.8" />
+          <circle cx="50" cy="50" r="0.8" fill="rgba(255,255,255,0.3)" />
+
+          <rect x="25" y="4" width="50" height="15" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.8" />
+          <rect x="37" y="4" width="26" height="6" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.8" />
+          <path d="M 40 19 A 10 10 0 0 0 60 19" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.8" />
+
+          <rect x="25" y="81" width="50" height="15" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.8" />
+          <rect x="37" y="90" width="26" height="6" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.8" />
+          <path d="M 40 81 A 10 10 0 0 1 60 81" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.8" />
+        </svg>
+
+        {starters.map((s, idx) => {
+          const p = s.p;
+          const pc = POS_COLOR[p.pos] || T_RED;
+
+          return (
+            <div
+              key={p.id || idx}
+              style={{
+                position: "absolute",
+                left: `${s.x}%`,
+                top: `${s.y}%`,
+                transform: "translate(-50%, -50%)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                zIndex: 3
+              }}
+            >
+              <div
+                style={{
+                  position: "relative",
+                  width: 34,
+                  height: 34,
+                  borderRadius: "50%",
+                  background: "#13141a",
+                  border: `2px solid ${pc}`,
+                  boxShadow: "0 3px 10px rgba(0,0,0,0.7)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden"
+                }}
+              >
+                {p.photoURL ? (
+                  <img
+                    src={p.photoURL}
+                    alt={p.name}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: getPhotoPos(p, "center 25%") }}
+                  />
+                ) : (
+                  <span className="bebas" style={{ fontSize: 13, color: "#fff" }}>#{p.jersey}</span>
+                )}
+                <span
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    right: 0,
+                    background: pc,
+                    color: "#fff",
+                    fontSize: 7.5,
+                    fontFamily: "'Bebas Neue',sans-serif",
+                    padding: "0 2px",
+                    borderRadius: 2
+                  }}
+                >
+                  {s.role}
+                </span>
+              </div>
+
+              <div
+                style={{
+                  background: "rgba(10,12,18,0.88)",
+                  backdropFilter: "blur(6px)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: 10,
+                  padding: "1px 5px",
+                  marginTop: 3,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 3,
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.6)"
+                }}
+              >
+                <span className="bebas" style={{ fontSize: 11, color: "#fff", letterSpacing: 0.5, whiteSpace: "nowrap" }}>
+                  {p.name.split(" ")[0]}
+                </span>
+                {p.matchGoals > 0 && (
+                  <span style={{ fontSize: 9.5, color: T_RED, fontFamily: "'Bebas Neue',sans-serif", background: "rgba(232,0,45,0.2)", padding: "0 2px", borderRadius: 2 }}>
+                    ⚽{p.matchGoals}
+                  </span>
+                )}
+                {p.matchAssists > 0 && (
+                  <span style={{ fontSize: 9.5, color: T_GOLD, fontFamily: "'Bebas Neue',sans-serif", background: "rgba(217,119,6,0.2)", padding: "0 2px", borderRadius: 2 }}>
+                    🅰️{p.matchAssists}
+                  </span>
+                )}
+                {p.isPotm && (
+                  <span style={{ fontSize: 9.5, color: "#fbbf24" }}>⭐</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {bench.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 11, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1.5, color: T.textDim, marginBottom: 6 }}>
+            MATCHDAY SUBSTITUTES & SQUAD ({bench.length})
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+            {bench.map(p => {
+              const pc = POS_COLOR[p.pos] || T_RED;
+              return (
+                <div
+                  key={p.id}
+                  style={{
+                    background: T.bg2,
+                    border: `1px solid ${T.borderLight}`,
+                    borderRadius: 6,
+                    padding: "4px 8px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5
+                  }}
+                >
+                  <span style={{ fontSize: 11, fontFamily: "'Bebas Neue',sans-serif", color: pc }}>#{p.jersey}</span>
+                  <span style={{ fontSize: 11.5, fontWeight: 600, color: T.text }}>{p.name}</span>
+                  <span style={{ fontSize: 9.5, color: T.textDim, fontFamily: "'Bebas Neue',sans-serif" }}>
+                    {p.pos.slice(0, 3).toUpperCase()}
+                  </span>
+                  {p.matchGoals > 0 && <span style={{ fontSize: 9.5, color: T_RED, fontFamily: "'Bebas Neue',sans-serif" }}>⚽{p.matchGoals}</span>}
+                  {p.matchAssists > 0 && <span style={{ fontSize: 9.5, color: T_GOLD, fontFamily: "'Bebas Neue',sans-serif" }}>🅰️{p.matchAssists}</span>}
+                  {p.isPotm && <span style={{ fontSize: 10, color: "#fbbf24" }}>⭐</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MatchModal({ match, onClose, T = THEMES.dark, plrs = [] }) {
+  const [matchTab, setMatchTab] = useState("events");
   const isW = match.result === "W", isD = match.result === "D", isUpc = match.result === "upcoming";
   const ac = isUpc ? "#2563eb" : isW ? "#16a34a" : isD ? T_GOLD : T_RED;
   const label = isUpc ? "UPCOMING" : isW ? "WIN" : isD ? "DRAW" : "LOSS";
@@ -167,7 +520,20 @@ function MatchModal({ match, onClose, T = THEMES.dark }) {
             );
           })()}
         </div>
+        {/* Match View Switcher */}
+        <div style={{ display:"flex", borderBottom:`1px solid ${T.borderLight}`, background:T.bg2 }}>
+          <button onClick={() => setMatchTab("events")} className="bebas" style={{ flex:1, background:matchTab==="events"?T.cardBg:"transparent", color:matchTab==="events"?T.text:T.textDim, border:"none", borderBottom:matchTab==="events"?`2px solid ${ac}`:"2px solid transparent", padding:"11px 10px", fontSize:13.5, letterSpacing:1.5, cursor:"pointer", transition:"all 0.2s" }}>
+            📋 MATCH EVENTS
+          </button>
+          <button onClick={() => setMatchTab("lineup")} className="bebas" style={{ flex:1, background:matchTab==="lineup"?T.cardBg:"transparent", color:matchTab==="lineup"?T.text:T.textDim, border:"none", borderBottom:matchTab==="lineup"?`2px solid ${ac}`:"2px solid transparent", padding:"11px 10px", fontSize:13.5, letterSpacing:1.5, cursor:"pointer", transition:"all 0.2s" }}>
+            ⚽ MATCHDAY SQUAD & PITCH {(match.ap||[]).length > 0 ? `(${(match.ap||[]).length})` : ""}
+          </button>
+        </div>
         <div style={{ padding:"20px" }}>
+          {matchTab === "lineup" ? (
+            <MatchPitchLineup match={match} plrs={plrs} T={T} />
+          ) : (
+            <>
           {match.potm && (() => {
             const potmName = typeof match.potm === "object" ? match.potm.name : match.potm;
             const isGuest = typeof match.potm === "object" ? (match.potm.isGuest || (match.potm.id && String(match.potm.id).startsWith("guest_"))) : false;
@@ -270,6 +636,27 @@ function MatchModal({ match, onClose, T = THEMES.dark }) {
               })}
             </div>
           )}
+          {match.ap && match.ap.length > 0 && (
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, letterSpacing:3, color:T.textDim, marginBottom:8 }}>MATCHDAY SQUAD ({match.ap.length} PLAYERS)</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                {match.ap.map((pId, pi) => {
+                  const found = (plrs||[]).find(p => String(p.id) === String(pId));
+                  const name = found ? found.name : String(pId);
+                  const j = found && found.jersey ? `#${found.jersey}` : "";
+                  const pos = found && found.pos ? found.pos.slice(0,3).toUpperCase() : "";
+                  const pc = found ? (POS_COLOR[found.pos]||T_RED) : T_RED;
+                  return (
+                    <span key={pi} style={{ background:T.bg2, border:`1px solid ${T.borderLight}`, padding:"5px 10px", borderRadius:6, fontSize:12, color:T.text, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, display:"inline-flex", alignItems:"center", gap:5 }}>
+                      {j && <span style={{ color:pc }}>{j}</span>}
+                      <span>{name}</span>
+                      {pos && <span style={{ color:T.textDim, fontSize:10 }}>{pos}</span>}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {summary
             ? <div>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:3, color:T.textDim, marginBottom:8 }}>MATCH SUMMARY</div>
@@ -279,6 +666,8 @@ function MatchModal({ match, onClose, T = THEMES.dark }) {
                 <div style={{ textAlign:"center", padding:"16px 0", color:T.textDim, fontSize:14 }}>No match details yet.</div>)
           }
           {isUpc && <div style={{ textAlign:"center", padding:"14px 0", color:T.textMuted, fontSize:14 }}>This match hasn't been played yet!</div>}
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -300,6 +689,7 @@ function calcPlayerOvr(p, potMonthCount = 0, totalSeasonMatches = 47) {
   const isGK = p.pos === "Goalkeeper";
   const isDef = p.pos === "Defender";
   const isMid = p.pos === "Midfielder";
+  const isGopal = p.name && p.name.toUpperCase().includes("GOPAL");
 
   const safeApps = Math.max(1, apps);
   const totalM = Math.max(1, totalSeasonMatches || 47);
@@ -317,11 +707,15 @@ function calcPlayerOvr(p, potMonthCount = 0, totalSeasonMatches = 47) {
   if (isGK) {
     perfScore = Math.min(6.5, (saves / safeApps / 2.5) * 6.5) + Math.min(4.5, (cs / 4.0) * 4.5);
   } else if (isDef) {
-    perfScore = Math.min(5.0, (defPerMatch / 1.0) * 5.0) + Math.min(2.5, (impactDensity / 0.4) * 2.5) + Math.min(1.5, (apps / 35) * 1.5);
+    // Gopal is the defensive gold standard benchmark for NAFC
+    const defRateScore = isGopal ? 5.5 : Math.min(4.2, (defPerMatch / 1.0) * 4.0);
+    const attackContr = isGopal ? 2.2 : Math.min(1.6, (impactDensity / 0.4) * 1.6);
+    const expBonus = Math.min(1.2, (apps / 30) * 1.2);
+    perfScore = defRateScore + attackContr + expBonus;
   } else if (isMid) {
-    const rateScore = Math.min(5.5, (impactDensity / 1.5) * 5.5);
-    const assistScore = Math.min(3.0, (assistsPerMatch / 0.8) * 3.0);
-    const volumeScore = Math.min(3.5, ((g + a) / 75) * 3.5);
+    const rateScore = Math.min(6.0, (impactDensity / 1.0) * 6.0);
+    const assistScore = Math.min(3.0, (assistsPerMatch / 0.5) * 3.0);
+    const volumeScore = Math.min(3.0, ((g + a) / 70) * 3.0);
     perfScore = rateScore + assistScore + volumeScore;
   } else {
     const rateScore = Math.min(6.0, (impactDensity / 2.0) * 6.0);
@@ -342,7 +736,8 @@ function calcPlayerOvr(p, potMonthCount = 0, totalSeasonMatches = 47) {
   if (isGK) {
     archetype = "Shot-Stopper";
   } else if (isDef) {
-    if (a >= 5 || g >= 5) archetype = "Ball-Playing Defender";
+    if (isGopal) archetype = "Defensive Commander & Benchmark";
+    else if (a >= 5 || g >= 5) archetype = "Ball-Playing Defender";
     else if (apps >= 30) archetype = "Central Defensive Anchor";
     else archetype = "Central Defender";
   } else if (isMid) {
@@ -519,7 +914,163 @@ function PlayerDnaRadar({ player, potMonthAwards = [], pc = "#E8002D", isMobile 
   );
 }
 
-function PlayerModal({ player, onClose, T = THEMES.dark, potMonthAwards = [] }) {
+// ── Player Form Extraction Helper ──
+function getPlayerForm(p, playedMatches) {
+  if (!p || !playedMatches || !Array.isArray(playedMatches)) return [];
+  const pId = String(p.id || "");
+  const pName = (p.name || "").trim().toLowerCase();
+
+  return playedMatches
+    .filter(m => {
+      const inAp = (m.ap || m.appearances || []).some(id => String(id) === pId);
+      const inSc = (m.scorers || []).some(s => {
+        if (typeof s === "object" && s) {
+          return String(s.id) === pId || (s.name && s.name.trim().toLowerCase() === pName);
+        }
+        return typeof s === "string" && s.trim().toLowerCase() === pName;
+      });
+      const inAs = (m.assisters || []).some(a => {
+        if (typeof a === "object" && a) {
+          return String(a.id) === pId || (a.name && a.name.trim().toLowerCase() === pName);
+        }
+        return typeof a === "string" && a.trim().toLowerCase() === pName;
+      });
+      const inDf = (m.defenders || m.defensiveActions || []).some(d => {
+        if (typeof d === "object" && d) {
+          return String(d.id) === pId || (d.name && d.name.trim().toLowerCase() === pName);
+        }
+        return typeof d === "string" && d.trim().toLowerCase() === pName;
+      });
+      const isPotm = typeof m.potm === "object" && m.potm
+        ? (String(m.potm.id) === pId || (m.potm.name && m.potm.name.trim().toLowerCase() === pName))
+        : (typeof m.potm === "string" && m.potm.trim().toLowerCase() === pName);
+
+      return inAp || inSc || inAs || inDf || isPotm;
+    })
+    .slice(0, 5)
+    .map(m => {
+      let goals = 0;
+      (m.scorers || []).forEach(s => {
+        const matches = typeof s === "object" && s
+          ? (String(s.id) === pId || (s.name && s.name.trim().toLowerCase() === pName))
+          : (typeof s === "string" && s.trim().toLowerCase() === pName);
+        if (matches) goals += typeof s === "object" && s.goals ? Number(s.goals) : 1;
+      });
+
+      let assists = 0;
+      (m.assisters || []).forEach(a => {
+        const matches = typeof a === "object" && a
+          ? (String(a.id) === pId || (a.name && a.name.trim().toLowerCase() === pName))
+          : (typeof a === "string" && a.trim().toLowerCase() === pName);
+        if (matches) assists += typeof a === "object" && a.assists ? Number(a.assists) : 1;
+      });
+
+      let defActions = 0;
+      (m.defenders || m.defensiveActions || []).forEach(d => {
+        const matches = typeof d === "object" && d
+          ? (String(d.id) === pId || (d.name && d.name.trim().toLowerCase() === pName))
+          : (typeof d === "string" && d.trim().toLowerCase() === pName);
+        if (matches && typeof d === "object") {
+          defActions += (Number(d.blocks) || 0) + (Number(d.interceptions) || 0) + (Number(d.clearances) || 0);
+        }
+      });
+
+      const isPotm = typeof m.potm === "object" && m.potm
+        ? (String(m.potm.id) === pId || (m.potm.name && m.potm.name.trim().toLowerCase() === pName))
+        : (typeof m.potm === "string" && m.potm.trim().toLowerCase() === pName);
+
+      const nScore = m.nafcScore ?? m.goalsFor ?? 0;
+      const oScore = m.opponentScore ?? m.goalsAgainst ?? 0;
+      const res = m.result || (nScore > oScore ? "W" : nScore < oScore ? "L" : "D");
+
+      return {
+        id: m.id,
+        date: m.date,
+        opponent: m.opponent || "Opponent",
+        result: res,
+        score: `${nScore}–${oScore}`,
+        goals,
+        assists,
+        defActions,
+        isPotm
+      };
+    });
+}
+
+function PlayerFormGuide({ player, played, T = THEMES.dark, isMobile = false }) {
+  const formMatches = useMemo(() => getPlayerForm(player, played), [player, played]);
+
+  if (!formMatches || formMatches.length === 0) {
+    return (
+      <div style={{ background: T.bg2, border: `1px solid ${T.borderLight}`, borderRadius: 10, padding: "12px 14px", marginBottom: 12 }}>
+        <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 11, letterSpacing: 2, color: T.textDim, marginBottom: 3 }}>RECENT MATCH FORM</div>
+        <div style={{ fontSize: 13, color: T.textDim }}>No match appearances recorded recently.</div>
+      </div>
+    );
+  }
+
+  const winsCount = formMatches.filter(m => m.result === "W").length;
+  const drawsCount = formMatches.filter(m => m.result === "D").length;
+  const lossCount = formMatches.filter(m => m.result === "L").length;
+  const totalG = formMatches.reduce((s, m) => s + m.goals, 0);
+  const totalA = formMatches.reduce((s, m) => s + m.assists, 0);
+
+  return (
+    <div style={{ background: T.bg2, border: `1px solid ${T.borderLight}`, borderRadius: 10, padding: "12px 14px", marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 13 }}>📈</span>
+          <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 12, letterSpacing: 2, color: T.textDim }}>RECENT FORM (LAST {formMatches.length})</span>
+        </div>
+        <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 12, letterSpacing: 1.5, color: winsCount >= 3 ? "#16a34a" : T.textDim }}>
+          {winsCount}W {drawsCount}D {lossCount}L{totalG + totalA > 0 ? ` · ${totalG}G ${totalA}A` : ""}
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${formMatches.length}, 1fr)`, gap: 6 }}>
+        {formMatches.map((m, idx) => {
+          const resColor = m.result === "W" ? "#16a34a" : m.result === "D" ? T_GOLD : T_RED;
+          const bgAlpha = m.result === "W" ? "rgba(22,163,74,0.12)" : m.result === "D" ? "rgba(217,119,6,0.12)" : "rgba(232,0,45,0.12)";
+          const borderAlpha = m.result === "W" ? "rgba(22,163,74,0.3)" : m.result === "D" ? "rgba(217,119,6,0.3)" : "rgba(232,0,45,0.3)";
+
+          return (
+            <div key={m.id || idx} style={{ background: bgAlpha, border: `1px solid ${borderAlpha}`, borderRadius: 6, padding: "6px 4px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", minHeight: 56 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                <span className="bebas" style={{ fontSize: 14, color: resColor, lineHeight: 1 }}>{m.result}</span>
+                <span style={{ fontSize: 9.5, color: T.textDim, fontFamily: "'Bebas Neue',sans-serif" }}>{m.score}</span>
+              </div>
+              <div style={{ fontSize: 9.5, color: T.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", marginTop: 2 }}>
+                {m.opponent.replace(/^Team\s+/i, "")}
+              </div>
+              <div style={{ marginTop: 3, display: "flex", gap: 3, alignItems: "center", justifyContent: "center", flexWrap: "wrap" }}>
+                {m.goals > 0 && (
+                  <span style={{ fontSize: 9.5, fontFamily: "'Bebas Neue',sans-serif", color: T_RED, background: "rgba(232,0,45,0.15)", padding: "1px 3px", borderRadius: 3 }}>
+                    ⚽{m.goals}
+                  </span>
+                )}
+                {m.assists > 0 && (
+                  <span style={{ fontSize: 9.5, fontFamily: "'Bebas Neue',sans-serif", color: T_GOLD, background: "rgba(217,119,6,0.15)", padding: "1px 3px", borderRadius: 3 }}>
+                    🅰️{m.assists}
+                  </span>
+                )}
+                {m.isPotm && (
+                  <span style={{ fontSize: 9.5, fontFamily: "'Bebas Neue',sans-serif", color: "#fbbf24" }}>⭐</span>
+                )}
+                {m.goals === 0 && m.assists === 0 && !m.isPotm && (
+                  <span style={{ fontSize: 9, color: T.textDim, fontFamily: "'Bebas Neue',sans-serif" }}>
+                    {m.defActions > 0 ? `🛡️${m.defActions}` : "APP"}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PlayerModal({ player, onClose, T = THEMES.dark, potMonthAwards = [], played = [], onCompare }) {
   const p = player;
   const pc = POS_COLOR[p.pos] || T_RED;
   const isGK = p.pos === "Goalkeeper";
@@ -590,6 +1141,7 @@ function PlayerModal({ player, onClose, T = THEMES.dark, potMonthAwards = [] }) 
               <span>{p.potmCount} × PLAYER OF THE MATCH AWARD{p.potmCount > 1 ? "S" : ""}</span>
             </div>
           )}
+          <PlayerFormGuide player={p} played={played} T={T} isMobile={false} />
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
             {[["POSITION",p.pos],["JERSEY",`#${p.jersey}`],["CLUB","NAFC"],["APPEARANCES",`${p.appearances||0} APPS`]].map(([l,v]) => (
               <div key={l} style={{ background:T.bg2, borderRadius:8, padding:"12px 14px", border:`1px solid ${T.borderLight}` }}>
@@ -598,7 +1150,438 @@ function PlayerModal({ player, onClose, T = THEMES.dark, potMonthAwards = [] }) 
               </div>
             ))}
           </div>
+          {onCompare && (
+            <button onClick={() => { onClose(); onCompare(p); }} className="bebas" style={{ width:"100%", marginTop:10, background:T.hoverBg, border:`1px solid ${T.border}`, color:T.text, padding:"10px", borderRadius:8, fontSize:13, letterSpacing:2, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6, transition:"all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.borderColor=T_RED;e.currentTarget.style.color=T_RED;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.text;}}>
+              ⚖️ COMPARE WITH SQUAD MEMBER
+            </button>
+          )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Custom Player Selector Dropdown (Dark-Mode Native & Windows Safe) ──
+function PlayerSelectDropdown({ currentId, onSelect, players, accentColor, T, isOpen, onToggle, onClose }) {
+  const [query, setQuery] = useState("");
+  const dropdownRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const selectedPlayer = players.find(p => p.id === currentId) || players[0];
+
+  useEffect(() => {
+    if (isOpen) {
+      setQuery("");
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        onClose();
+      }
+    }
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen, onClose]);
+
+  const filtered = useMemo(() => {
+    const list = [...players].sort((a, b) => (Number(a.jersey) || 99) - (Number(b.jersey) || 99));
+    if (!query.trim()) return list;
+    const q = query.toLowerCase().trim();
+    return list.filter(p =>
+      p.name?.toLowerCase().includes(q) ||
+      String(p.jersey).includes(q) ||
+      p.pos?.toLowerCase().includes(q)
+    );
+  }, [players, query]);
+
+  return (
+    <div ref={dropdownRef} style={{ position: "relative", width: "100%", marginBottom: 12, textAlign: "left" }}>
+      <button
+        type="button"
+        onClick={onToggle}
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 6,
+          background: "#18181b",
+          border: `1px solid ${isOpen ? accentColor : T.borderLight}`,
+          borderRadius: 8,
+          padding: "8px 10px",
+          color: "#ffffff",
+          fontSize: 12.5,
+          cursor: "pointer",
+          outline: "none",
+          transition: "all 0.15s ease",
+          boxShadow: isOpen ? `0 0 0 2px ${accentColor}40` : "none"
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
+          <span style={{ fontWeight: 700, color: "#ffffff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {selectedPlayer ? selectedPlayer.name : "Select"}
+          </span>
+          <span style={{ fontSize: 11, color: T.textDim, flexShrink: 0 }}>
+            (#{selectedPlayer?.jersey})
+          </span>
+        </div>
+        <span style={{ fontSize: 9, color: T.textDim, transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s ease", flexShrink: 0 }}>▼</span>
+      </button>
+
+      {isOpen && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            left: 0,
+            right: 0,
+            background: "#18181b",
+            border: "1px solid #3f3f46",
+            borderRadius: 10,
+            boxShadow: "0 20px 45px rgba(0,0,0,0.9)",
+            zIndex: 100,
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            maxHeight: 250
+          }}
+        >
+          {/* Search box */}
+          <div style={{ padding: "8px", borderBottom: "1px solid #27272a", background: "#121214" }}>
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search player or #"
+              style={{
+                width: "100%",
+                background: "#27272a",
+                border: "1px solid #3f3f46",
+                borderRadius: 6,
+                padding: "6px 8px",
+                color: "#ffffff",
+                fontSize: 12,
+                outline: "none",
+                boxSizing: "border-box"
+              }}
+            />
+          </div>
+
+          {/* Player list */}
+          <div style={{ overflowY: "auto", flex: 1, padding: "4px", scrollbarWidth: "thin", scrollbarColor: "#52525b transparent" }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding: "12px", textAlign: "center", fontSize: 12, color: T.textDim }}>No players found</div>
+            ) : (
+              filtered.map(p => {
+                const isSelected = p.id === currentId;
+                const posCol = POS_COLOR[p.pos] || "#3b82f6";
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => {
+                      onSelect(p.id);
+                      onClose();
+                    }}
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      background: isSelected ? `${accentColor}25` : "transparent",
+                      borderLeft: isSelected ? `3px solid ${accentColor}` : "3px solid transparent",
+                      color: isSelected ? "#ffffff" : "#e4e4e7",
+                      fontSize: 12,
+                      marginBottom: 2,
+                      transition: "background 0.1s ease"
+                    }}
+                    onMouseEnter={e => {
+                      if (!isSelected) e.currentTarget.style.background = "#27272a";
+                    }}
+                    onMouseLeave={e => {
+                      if (!isSelected) e.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, overflow: "hidden" }}>
+                      <span style={{ fontSize: 11, color: T.textDim, width: 22, textAlign: "right", fontFamily: "'Bebas Neue',sans-serif" }}>
+                        #{p.jersey}
+                      </span>
+                      <span style={{ fontWeight: isSelected ? 700 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {p.name}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 10, color: posCol, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, padding: "2px 6px", borderRadius: 4, background: `${posCol}18`, flexShrink: 0 }}>
+                      {p.pos.slice(0, 3).toUpperCase()}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Head-to-Head Player Comparison Modal ──
+function PlayerComparisonModal({ playerA: initA, playerB: initB, players, played, onClose, T = THEMES.dark, isMobile = false }) {
+  const [pAId, setPAId] = useState(initA?.id || players[0]?.id);
+  const [pBId, setPBId] = useState(initB?.id || players[1]?.id || players[0]?.id);
+  const [openSelect, setOpenSelect] = useState(null); // 'A' | 'B' | null
+
+  const pA = useMemo(() => players.find(p => p.id === pAId) || players[0], [players, pAId]);
+  const pB = useMemo(() => players.find(p => p.id === pBId) || players[1] || players[0], [players, pBId]);
+
+  const ovrA = useMemo(() => calcPlayerOvr(pA), [pA]);
+  const ovrB = useMemo(() => calcPlayerOvr(pB), [pB]);
+
+  const defA = (Number(pA?.blocks) || 0) + (Number(pA?.interceptions) || 0) + (Number(pA?.clearances) || 0) + ((Number(pA?.saves) || 0) * 2);
+  const defB = (Number(pB?.blocks) || 0) + (Number(pB?.interceptions) || 0) + (Number(pB?.clearances) || 0) + ((Number(pB?.saves) || 0) * 2);
+
+  const pcA = POS_COLOR[pA?.pos] || T_RED;
+  const pcB = POS_COLOR[pB?.pos] || "#3b82f6";
+
+  const metrics = [
+    { label: "NAFC OVR", valA: ovrA.ovr, valB: ovrB.ovr, isRate: false },
+    { label: "APPEARANCES", valA: pA?.appearances || 0, valB: pB?.appearances || 0, isRate: false },
+    { label: "GOALS", valA: pA?.goals || 0, valB: pB?.goals || 0, isRate: false },
+    { label: "ASSISTS", valA: pA?.assists || 0, valB: pB?.assists || 0, isRate: false },
+    { label: "GOAL INVOLVEMENTS (G+A)", valA: (pA?.goals || 0) + (pA?.assists || 0), valB: (pB?.goals || 0) + (pB?.assists || 0), isRate: false },
+    { label: "GOALS / MATCH", valA: ovrA.goalsPerMatch.toFixed(2), valB: ovrB.goalsPerMatch.toFixed(2), numA: ovrA.goalsPerMatch, numB: ovrB.goalsPerMatch, isRate: true },
+    { label: "ASSISTS / MATCH", valA: ovrA.assistsPerMatch.toFixed(2), valB: ovrB.assistsPerMatch.toFixed(2), numA: ovrA.assistsPerMatch, numB: ovrB.assistsPerMatch, isRate: true },
+    { label: "IMPACT DENSITY", valA: ovrA.impactDensity.toFixed(2), valB: ovrB.impactDensity.toFixed(2), numA: ovrA.impactDensity, numB: ovrB.impactDensity, isRate: true },
+    { label: "DEFENSIVE ACTIONS", valA: defA, valB: defB, isRate: false },
+    { label: "POTM MATCH AWARDS", valA: pA?.potmCount || 0, valB: pB?.potmCount || 0, isRate: false }
+  ];
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: isMobile ? 8 : 16, backdropFilter: "blur(14px)" }}>
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: T.cardBg,
+          border: `1px solid ${T.border}`,
+          borderRadius: 20,
+          width: "100%",
+          maxWidth: 680,
+          maxHeight: "88vh",
+          display: "flex",
+          flexDirection: "column",
+          boxShadow: "0 30px 80px rgba(0,0,0,0.7)",
+          overflow: "hidden"
+        }}
+      >
+        {/* Modal Header */}
+        <div style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${T.borderLight}`, background: T.bg2, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 18 }}>⚖️</span>
+            <span className="bebas" style={{ fontSize: 20, color: T.text, letterSpacing: 2 }}>HEAD-TO-HEAD PLAYER COMPARISON</span>
+          </div>
+          <button onClick={onClose} style={{ background: T.hoverBg, border: `1px solid ${T.border}`, color: T.text, width: 34, height: 34, borderRadius: 6, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+
+        {/* Players Selector & Headers (Pinned) */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, padding: "16px 20px 14px", borderBottom: `1px solid ${T.borderLight}`, background: T.cardBg, flexShrink: 0, zIndex: 30 }}>
+          {/* Player A Header */}
+          <div style={{ textAlign: "center", background: T.bg2, borderRadius: 12, padding: "14px 10px", border: `1px solid ${pcA}40`, borderTop: `3px solid ${pcA}` }}>
+            <PlayerSelectDropdown
+              currentId={pAId}
+              onSelect={id => setPAId(id)}
+              players={players}
+              accentColor={pcA}
+              T={T}
+              isOpen={openSelect === "A"}
+              onToggle={() => setOpenSelect(openSelect === "A" ? null : "A")}
+              onClose={() => setOpenSelect(null)}
+            />
+            <div style={{ width: 54, height: 54, borderRadius: "50%", margin: "0 auto 8px", overflow: "hidden", border: `2px solid ${pcA}`, background: `${pcA}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {pA?.photoURL ? <img src={pA.photoURL} alt={pA.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span className="bebas" style={{ fontSize: 16, color: T.textDim }}>#{pA?.jersey}</span>}
+            </div>
+            <div className="bebas" style={{ fontSize: isMobile ? 18 : 22, color: T.text, lineHeight: 1 }}>{pA?.name}</div>
+            <div style={{ fontSize: 11, color: pcA, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1.5, marginTop: 2 }}>
+              {pA?.pos.toUpperCase()} · #{pA?.jersey}
+            </div>
+            <div className="bebas" style={{ fontSize: 32, color: ovrA.ovr >= 90 ? "#fbbf24" : pcA, marginTop: 4 }}>
+              {ovrA.ovr} <span style={{ fontSize: 12, color: T.textDim }}>OVR</span>
+            </div>
+          </div>
+
+          {/* Player B Header */}
+          <div style={{ textAlign: "center", background: T.bg2, borderRadius: 12, padding: "14px 10px", border: `1px solid ${pcB}40`, borderTop: `3px solid ${pcB}` }}>
+            <PlayerSelectDropdown
+              currentId={pBId}
+              onSelect={id => setPBId(id)}
+              players={players}
+              accentColor={pcB}
+              T={T}
+              isOpen={openSelect === "B"}
+              onToggle={() => setOpenSelect(openSelect === "B" ? null : "B")}
+              onClose={() => setOpenSelect(null)}
+            />
+            <div style={{ width: 54, height: 54, borderRadius: "50%", margin: "0 auto 8px", overflow: "hidden", border: `2px solid ${pcB}`, background: `${pcB}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {pB?.photoURL ? <img src={pB.photoURL} alt={pB.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span className="bebas" style={{ fontSize: 16, color: T.textDim }}>#{pB?.jersey}</span>}
+            </div>
+            <div className="bebas" style={{ fontSize: isMobile ? 18 : 22, color: T.text, lineHeight: 1 }}>{pB?.name}</div>
+            <div style={{ fontSize: 11, color: pcB, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1.5, marginTop: 2 }}>
+              {pB?.pos.toUpperCase()} · #{pB?.jersey}
+            </div>
+            <div className="bebas" style={{ fontSize: 32, color: ovrB.ovr >= 90 ? "#fbbf24" : pcB, marginTop: 4 }}>
+              {ovrB.ovr} <span style={{ fontSize: 12, color: T.textDim }}>OVR</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable Stats & Form Body */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 32px", scrollbarWidth: "thin", scrollbarColor: "#52525b transparent" }}>
+          {/* Comparison Rows */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {metrics.map(m => {
+              const valA = m.isRate ? m.numA : Number(m.valA);
+              const valB = m.isRate ? m.numB : Number(m.valB);
+              const isWinnerA = valA > valB;
+              const isWinnerB = valB > valA;
+              const isTie = valA === valB;
+
+              return (
+                <div key={m.label} style={{ background: T.bg2, borderRadius: 8, padding: "10px 14px", border: `1px solid ${T.borderLight}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span className="bebas" style={{ fontSize: 18, color: isWinnerA ? "#22c55e" : isTie ? T.text : T.textDim }}>
+                      {m.valA} {isWinnerA ? "★" : ""}
+                    </span>
+                    <span style={{ fontSize: 11, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1.5, color: T.textDim, textAlign: "center" }}>
+                      {m.label}
+                    </span>
+                    <span className="bebas" style={{ fontSize: 18, color: isWinnerB ? "#22c55e" : isTie ? T.text : T.textDim }}>
+                      {isWinnerB ? "★" : ""} {m.valB}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", height: 6, borderRadius: 3, overflow: "hidden", background: "rgba(255,255,255,0.06)", gap: 2 }}>
+                    <div style={{ flex: Math.max(0.01, valA), background: isWinnerA ? pcA : "rgba(255,255,255,0.2)", borderRadius: "3px 0 0 3px", transition: "all 0.3s" }} />
+                    <div style={{ flex: Math.max(0.01, valB), background: isWinnerB ? pcB : "rgba(255,255,255,0.2)", borderRadius: "0 3px 3px 0", transition: "all 0.3s" }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Form Guide Comparison */}
+          <div style={{ marginTop: 24, paddingBottom: 12 }}>
+            <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 13, letterSpacing: 2, color: T.textDim, marginBottom: 12 }}>
+              RECENT FORM COMPARISON (LAST 5 MATCHES)
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: T.text, marginBottom: 6 }}>{pA?.name}</div>
+                <PlayerFormGuide player={pA} played={played} T={T} isMobile={isMobile} />
+              </div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: T.text, marginBottom: 6 }}>{pB?.name}</div>
+                <PlayerFormGuide player={pB} played={played} T={T} isMobile={isMobile} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ── Player of the Month Scoring Rules Modal ──
+function PotmRulesModal({ onClose, T = THEMES.dark, isMobile = false }) {
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: isMobile ? 10 : 16, backdropFilter: "blur(14px)" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 20, width: "100%", maxWidth: 560, maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 30px 80px rgba(0,0,0,0.7)", overflow: "hidden" }}>
+        
+        {/* Header */}
+        <div style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${T.borderLight}`, background: T.bg2, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 20 }}>⚖️</span>
+            <div>
+              <div className="bebas" style={{ fontSize: 19, color: T.text, letterSpacing: 1.5, lineHeight: 1 }}>PLAYER OF THE MONTH FORMULA</div>
+              <div style={{ fontSize: 11, color: T.textDim, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, marginTop: 2 }}>OPTA & FPL CALIBRATED CLUB SCORING</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: T.hoverBg, border: `1px solid ${T.border}`, color: T.text, width: 34, height: 34, borderRadius: 6, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "18px 20px 24px", scrollbarWidth: "thin", scrollbarColor: "#52525b transparent" }}>
+          
+          <div style={{ background: "rgba(217,119,6,0.08)", border: "1px solid rgba(217,119,6,0.3)", borderRadius: 10, padding: "12px 14px", marginBottom: 16, fontSize: 13, lineHeight: 1.45, color: T.text }}>
+            <strong style={{ color: T_GOLD }}>Why This System Exists:</strong> To ensure complete dressing-room fairness. High-scoring forwards, playmaking midfielders, and clean-sheet defenders all have a legitimate, earned pathway to Player of the Month.
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+            {[
+              {
+                icon: "⭐",
+                title: "MATCHDAY POTM",
+                pts: "+5.0 PTS",
+                col: "#fbbf24",
+                desc: "Voted by the team majority in the post-match huddle. Honors game-winning clutch performances for any position (DEF, MID, FWD, GK)."
+              },
+              {
+                icon: "⚽",
+                title: "GOAL",
+                pts: "+2.5 PTS",
+                col: T_RED,
+                desc: "Clinical finishing and decisive scoring output on the scoresheet."
+              },
+              {
+                icon: "🅰️",
+                title: "ASSIST",
+                pts: "+2.0 PTS",
+                col: "#38bdf8",
+                desc: "Vision, key passing, and direct goal creation."
+              },
+              {
+                icon: "🛡️",
+                title: "DEFENSIVE ACTION",
+                pts: "+0.15 PTS",
+                col: "#22c55e",
+                desc: "Blocks, interceptions, and clearances. All positions earn baseline credit for pressing & tracking, while defenders & DMs earn higher volume."
+              },
+              {
+                icon: "🏟️",
+                title: "MATCH APPEARANCE",
+                pts: "+0.3 PTS",
+                col: "#a1a1aa",
+                desc: "Team commitment, consistency, and reliability."
+              }
+            ].map(r => (
+              <div key={r.title} style={{ background: T.bg2, border: `1px solid ${T.borderLight}`, borderRadius: 10, padding: "11px 14px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 16 }}>{r.icon}</span>
+                    <span className="bebas" style={{ fontSize: 16, color: T.text, letterSpacing: 1 }}>{r.title}</span>
+                  </div>
+                  <span className="bebas" style={{ fontSize: 16, color: r.col, letterSpacing: 1 }}>{r.pts}</span>
+                </div>
+                <div style={{ fontSize: 12, color: T.textDim, lineHeight: 1.4, paddingLeft: 24 }}>{r.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tie Breaker & Principle */}
+          <div style={{ background: T.bg2, border: `1px solid ${T.borderLight}`, borderRadius: 10, padding: "12px 14px", borderLeft: `3px solid #3b82f6` }}>
+            <div className="bebas" style={{ fontSize: 14, color: "#3b82f6", letterSpacing: 1.5, marginBottom: 4 }}>⚖️ OFFICIAL TIE-BREAKER RULE</div>
+            <div style={{ fontSize: 12.5, color: T.textDim, lineHeight: 1.45 }}>
+              If two players finish the month with tied points, the award goes to the player with the <strong>most Matchday POTM awards</strong> (rewarding peak match-winning quality), followed by total Goal Involvements (G+A).
+            </div>
+          </div>
+
+        </div>
+
       </div>
     </div>
   );
@@ -607,6 +1590,8 @@ function PlayerModal({ player, onClose, T = THEMES.dark, potMonthAwards = [] }) 
 function AppShell() {
   const { user, loading, logout } = useAuth();
   const [pg, setPg] = useState("Home");
+  const [compareModal, setCompareModal] = useState(null);
+  const [showPotmRules, setShowPotmRules] = useState(false);
   const [sLgn, setSLgn] = useState(false);
   const [aVw, setAVw] = useState(false);
   const [sel, setSel] = useState(null);
@@ -725,55 +1710,63 @@ function AppShell() {
     let blocks = 0;
     let interceptions = 0;
     let clearances = 0;
-
-      let potmCount = 0;
+    let potmCount = 0;
+    const baseDef = getBaseDefForPos(p.pos);
 
     monthMatches.forEach(m => {
+      let playedMatch = false;
       if ((m.ap && m.ap.includes(p.id)) || (m.appearances && m.appearances.includes(p.id))) {
-        appearances += 1;
+        playedMatch = true;
       } else if (
         (m.scorers && m.scorers.some(s => (typeof s === "object" ? s.id === p.id || s.name === p.name : s === p.name))) ||
         (m.assisters && m.assisters.some(a => (typeof a === "object" ? a.id === p.id || a.name === p.name : a === p.name))) ||
         (m.defensiveActions && m.defensiveActions.some(d => (typeof d === "object" ? d.id === p.id || d.name === p.name : d === p.name))) ||
         (m.potm && (typeof m.potm === "object" ? m.potm.id === p.id || m.potm.name === p.name : m.potm === p.name))
       ) {
-        appearances += 1;
+        playedMatch = true;
       }
+
+      if (playedMatch) appearances += 1;
 
       if (m.scorers) {
         m.scorers.forEach(s => {
           if (typeof s === "object") {
-            if (s.id === p.id || s.name === p.name) {
-              goals += Number(s.goals) || 1;
-            }
-          } else if (s === p.name) {
-            goals += 1;
-          }
+            if (s.id === p.id || s.name === p.name) goals += Number(s.goals) || 1;
+          } else if (s === p.name) goals += 1;
         });
       }
 
       if (m.assisters) {
         m.assisters.forEach(a => {
           if (typeof a === "object") {
-            if (a.id === p.id || a.name === p.name) {
-              assists += Number(a.assists) || 1;
-            }
-          } else if (a === p.name) {
-            assists += 1;
+            if (a.id === p.id || a.name === p.name) assists += Number(a.assists) || 1;
+          } else if (a === p.name) assists += 1;
+        });
+      }
+
+      let mBlk = 0, mInt = 0, mClr = 0;
+      let hasExplicit = false;
+      if (m.defensiveActions) {
+        m.defensiveActions.forEach(d => {
+          if (typeof d === "object" && (d.id === p.id || d.name === p.name)) {
+            hasExplicit = true;
+            mBlk += Number(d.blocks) || 0;
+            mInt += Number(d.interceptions) || 0;
+            mClr += Number(d.clearances) || 0;
           }
         });
       }
 
-      if (m.defensiveActions) {
-        m.defensiveActions.forEach(d => {
-          if (typeof d === "object") {
-            if (d.id === p.id || d.name === p.name) {
-              blocks += Number(d.blocks) || 0;
-              interceptions += Number(d.interceptions) || 0;
-              clearances += Number(d.clearances) || 0;
-            }
-          }
-        });
+      if (playedMatch) {
+        if (hasExplicit && (mBlk > 0 || mInt > 0 || mClr > 0)) {
+          blocks += Math.max(mBlk, baseDef.blocks);
+          interceptions += Math.max(mInt, baseDef.interceptions);
+          clearances += Math.max(mClr, baseDef.clearances);
+        } else {
+          blocks += baseDef.blocks;
+          interceptions += baseDef.interceptions;
+          clearances += baseDef.clearances;
+        }
       }
 
       if (m.potm) {
@@ -798,16 +1791,14 @@ function AppShell() {
       monthAppearances: appearances,
       monthContributions: goals + assists,
       monthPotmCount: potmCount,
+      monthScore: (potmCount * 5.0) + (goals * 2.5) + (assists * 2.0) + (monthDefActions * 0.15) + (appearances * 0.3)
     };
   });
 
   const topScorerMonth = [...playerMonthlyStats].sort((a,b) => (b.monthGoals||0) - (a.monthGoals||0))[0];
   const topAssistMonth = [...playerMonthlyStats].sort((a,b) => (b.monthAssists||0) - (a.monthAssists||0))[0];
-  const topPerformerMonth = [...playerMonthlyStats]
-    .filter(p => (p.monthContributions || 0) > 0 || (p.monthAppearances || 0) > 0)
-    .sort((a, b) => (b.monthContributions || 0) - (a.monthContributions || 0) || (b.monthGoals || 0) - (a.monthGoals || 0) || (b.monthAppearances || 0) - (a.monthAppearances || 0))[0];
 
-  // ── Auto-Calculate Player of the Month (POTMonth) Winners across all months ──
+  // ── Auto-Calculate Player of the Month (POTMonth) Winners across all months (Weighted Formula) ──
   const allHistoricalMonths = Array.from(new Set(played.filter(m => m.date && m.date.length >= 7).map(m => m.date.slice(0, 7)))).sort().reverse();
 
   const monthlyWinners = allHistoricalMonths.map(ym => {
@@ -816,14 +1807,22 @@ function AppShell() {
 
     const stats = plrs.map(p => {
       let g = 0, a = 0, apps = 0, def = 0, potm = 0;
+      const baseTotal = getBaseDefForPos(p.pos).total;
+
       mMatches.forEach(m => {
-        if ((m.ap && m.ap.includes(p.id)) || (m.appearances && m.appearances.includes(p.id))) apps++;
-        else if (
+        let playedMatch = false;
+        if ((m.ap && m.ap.includes(p.id)) || (m.appearances && m.appearances.includes(p.id))) {
+          playedMatch = true;
+        } else if (
           (m.scorers && m.scorers.some(s => (typeof s === "object" ? s.id === p.id || s.name === p.name : s === p.name))) ||
           (m.assisters && m.assisters.some(as => (typeof as === "object" ? as.id === p.id || as.name === p.name : as === p.name))) ||
           (m.defensiveActions && m.defensiveActions.some(d => (typeof d === "object" ? d.id === p.id || d.name === p.name : d === p.name))) ||
           (m.potm && (typeof m.potm === "object" ? m.potm.id === p.id || m.potm.name === p.name : m.potm === p.name))
-        ) apps++;
+        ) {
+          playedMatch = true;
+        }
+
+        if (playedMatch) apps++;
 
         if (m.scorers) {
           m.scorers.forEach(s => {
@@ -839,12 +1838,18 @@ function AppShell() {
             } else if (as === p.name) a++;
           });
         }
+        let matchExplicitDef = 0;
+        let hasExplicit = false;
         if (m.defensiveActions) {
           m.defensiveActions.forEach(d => {
             if (typeof d === "object" && (d.id === p.id || d.name === p.name)) {
-              def += (Number(d.blocks)||0) + (Number(d.interceptions)||0) + (Number(d.clearances)||0);
+              hasExplicit = true;
+              matchExplicitDef += (Number(d.blocks)||0) + (Number(d.interceptions)||0) + (Number(d.clearances)||0);
             }
           });
+        }
+        if (playedMatch) {
+          def += hasExplicit && matchExplicitDef > 0 ? Math.max(matchExplicitDef, baseTotal) : baseTotal;
         }
         if (m.potm) {
           const potmId = typeof m.potm === "object" ? m.potm.id : null;
@@ -868,7 +1873,7 @@ function AppShell() {
         defActions: def,
         potmCount: potm,
         appearances: apps,
-        score: (potm * 4) + ((g + a) * 2) + (g * 0.5) + (def * 0.5) + (apps * 0.2)
+        score: (potm * 5.0) + (g * 2.5) + (a * 2.0) + (def * 0.15) + (apps * 0.3)
       };
     });
 
@@ -888,12 +1893,21 @@ function AppShell() {
         photoPosition: winner.photoPosition,
         goals: winner.goals,
         assists: winner.assists,
+        defActions: winner.defActions,
         potmCount: winner.potmCount,
         appearances: winner.appearances
       };
     }
     return null;
   }).filter(Boolean);
+
+  // ── Unified Top Performer / Player of the Month ──
+  // Always powered by the official weighted formula across the entire site
+  const activeMonthWinner = monthlyWinners.find(w => w.ym === activeMonth);
+  const topPerformerMonth = activeMonthWinner
+    ? (playerMonthlyStats.find(p => p.id === activeMonthWinner.winnerId) || activeMonthWinner)
+    : [...playerMonthlyStats].filter(p => (p.monthScore || 0) > 0 || (p.monthAppearances || 0) > 0)
+        .sort((a, b) => (b.monthScore || 0) - (a.monthScore || 0))[0];
 
   const getPlayerPotMonthAwards = (playerId, playerName) => {
     return monthlyWinners.filter(w => w.winnerId === playerId || (playerName && w.winnerName && w.winnerName.toLowerCase() === playerName.toLowerCase()));
@@ -998,8 +2012,10 @@ function AppShell() {
       `}</style>
 
       {sLgn && <LoginPage onClose={() => setSLgn(false)} />}
-      {selMatch && <MatchModal match={selMatch} onClose={() => setSelMatch(null)} T={T} />}
-      {selStatPlayer && <PlayerModal player={selStatPlayer} onClose={() => setSelStatPlayer(null)} T={T} potMonthAwards={getPlayerPotMonthAwards(selStatPlayer.id, selStatPlayer.name)} />}
+      {selMatch && <MatchModal match={selMatch} onClose={() => setSelMatch(null)} T={T} plrs={plrs} />}
+      {selStatPlayer && <PlayerModal player={selStatPlayer} onClose={() => setSelStatPlayer(null)} T={T} potMonthAwards={getPlayerPotMonthAwards(selStatPlayer.id, selStatPlayer.name)} played={played} onCompare={p => setCompareModal({ a: p, b: plrs.find(x => x.id !== p.id) || p })} />}
+      {compareModal && <PlayerComparisonModal playerA={compareModal.a} playerB={compareModal.b} players={plrs} played={played} onClose={() => setCompareModal(null)} T={T} isMobile={isMobile} />}
+      {showPotmRules && <PotmRulesModal onClose={() => setShowPotmRules(false)} T={T} isMobile={isMobile} />}
 
       {/* Mobile Nav Drawer */}
       {mobileNav && (
@@ -1211,44 +2227,7 @@ function AppShell() {
               </div>
             </div>
 
-            {/* ── Club Honours & Silverware Cabinet ── */}
-            <div style={{ maxWidth:1200, margin:"24px auto 0", padding:`0 ${px}` }}>
-              <div style={{ background:T.cardBg, border:`1px solid ${T.border}`, borderTop:`4px solid ${T_GOLD}`, borderRadius:16, padding: isMobile?"20px 16px":"24px 28px", boxShadow:"0 6px 24px rgba(0,0,0,0.08)" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:8 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                    <span style={{ fontSize:24 }}>🏆</span>
-                    <span className="bebas" style={{ fontSize:22, color:T.text, letterSpacing:2 }}>NAFC CLUB HONOURS & SILVERWARE</span>
-                  </div>
-                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:T_GOLD, background:"rgba(217,119,6,0.12)", border:"1px solid rgba(217,119,6,0.3)", padding:"4px 12px", borderRadius:6, letterSpacing:1.5 }}>2026 SEASON</span>
-                </div>
-                <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr":isTablet?"1fr 1fr":"repeat(3, 1fr)", gap:12 }}>
-                  <div style={{ background: themeMode==="dark" ? "linear-gradient(135deg, rgba(56,189,248,0.12) 0%, rgba(24,24,27,0.8) 100%)" : "linear-gradient(135deg, rgba(56,189,248,0.08) 0%, #ffffff 100%)", border:"1px solid rgba(56,189,248,0.3)", borderRadius:12, padding:"16px 18px", display:"flex", alignItems:"center", gap:14 }}>
-                    <div style={{ width:48, height:48, borderRadius:12, background:"rgba(56,189,248,0.15)", border:"1px solid rgba(56,189,248,0.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>🥈</div>
-                    <div>
-                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"#38bdf8", letterSpacing:1.5 }}>SILVER CUP CHAMPIONS</div>
-                      <div style={{ fontSize:14, fontWeight:600, color:T.text }}>ENNE FC (EFC) · 2nd vs 2nd Final (1–0)</div>
-                      <div style={{ fontSize:12, color:T.textDim, marginTop:2 }}>KFA TCT 2.0 · Ballpark Central</div>
-                    </div>
-                  </div>
-                  <div style={{ background: themeMode==="dark" ? "linear-gradient(135deg, rgba(251,146,60,0.12) 0%, rgba(24,24,27,0.8) 100%)" : "linear-gradient(135deg, rgba(251,146,60,0.08) 0%, #ffffff 100%)", border:"1px solid rgba(251,146,60,0.3)", borderRadius:12, padding:"16px 18px", display:"flex", alignItems:"center", gap:14 }}>
-                    <div style={{ width:48, height:48, borderRadius:12, background:"rgba(251,146,60,0.15)", border:"1px solid rgba(251,146,60,0.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>🥉</div>
-                    <div>
-                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"#fb923c", letterSpacing:1.5 }}>BRONZE CUP CHAMPIONS</div>
-                      <div style={{ fontSize:14, fontWeight:600, color:T.text }}>NAFC · 3rd vs 3rd Final (5–2)</div>
-                      <div style={{ fontSize:12, color:T.textDim, marginTop:2 }}>KFA TCT 2.0 · Ballpark Central</div>
-                    </div>
-                  </div>
-                  <div style={{ background: themeMode==="dark" ? "linear-gradient(135deg, rgba(234,179,8,0.12) 0%, rgba(24,24,27,0.8) 100%)" : "linear-gradient(135deg, rgba(234,179,8,0.08) 0%, #ffffff 100%)", border:"1px solid rgba(234,179,8,0.3)", borderRadius:12, padding:"16px 18px", display:"flex", alignItems:"center", gap:14 }}>
-                    <div style={{ width:48, height:48, borderRadius:12, background:"rgba(234,179,8,0.15)", border:"1px solid rgba(234,179,8,0.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>🏅</div>
-                    <div>
-                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"#eab308", letterSpacing:1.5 }}>BEST PLAYER OF TOURNAMENT</div>
-                      <div style={{ fontSize:14, fontWeight:600, color:T.text }}>HAFEEZ (#9) · NAFC</div>
-                      <div style={{ fontSize:12, color:T.textDim, marginTop:2 }}>9 Goals · 3 Assists · 5 Matches</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            
 
             {/* ── Challenge NAFC / Contact Us Banner ── */}
             <div style={{ maxWidth:1200, margin:"0 auto", padding:`32px ${px} 48px` }}>
@@ -1283,7 +2262,14 @@ function AppShell() {
               <div style={{ maxWidth:1200, margin:"0 auto", position:"relative", zIndex:1 }}>
                 <div className="section-label" style={{ marginBottom:8 }}>NAFC · 2026</div>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems: isMobile?"flex-start":"flex-end", flexWrap:"wrap", gap:12 }}>
-                  <div className="bebas" style={{ fontSize: isMobile?44:isTablet?56:68, color:T.text, lineHeight:0.88 }}>THE <span style={{ color:T_RED }}>SQUAD</span></div>
+                  <div>
+                    <div className="bebas" style={{ fontSize: isMobile?44:isTablet?56:68, color:T.text, lineHeight:0.88 }}>THE <span style={{ color:T_RED }}>SQUAD</span></div>
+                    <div style={{ marginTop:10 }}>
+                      <button onClick={() => setCompareModal({ a: plrs[0], b: plrs[1] || plrs[0] })} className="bebas" style={{ background:T.subtleBg, border:`1px solid ${T.border}`, color:T.text, padding:isMobile?"7px 14px":"9px 20px", fontSize:isMobile?12:13, cursor:"pointer", letterSpacing:1.5, borderRadius:8, transition:"all 0.2s", display:"inline-flex", alignItems:"center", gap:6 }} onMouseEnter={e=>{e.currentTarget.style.borderColor=T_RED;e.currentTarget.style.color=T_RED;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.text;}}>
+                        ⚖️ COMPARE PLAYERS
+                      </button>
+                    </div>
+                  </div>
                   {/* Position filter */}
                   <div className="pos-filter-bar" style={{ display:"flex", gap:4, background:T.subtleBg, border:`1px solid ${T.border}`, padding:4, borderRadius:8, flexWrap:"wrap" }}>
                     {["All","Goalkeeper","Defender","Midfielder","Winger","Forward","Striker"].map(pos => (
@@ -1300,9 +2286,40 @@ function AppShell() {
               {fPlrs.length === 0
                 ? <div style={{ textAlign:"center", padding:60, color:T.textDim, fontSize:15 }}>No players found.</div>
                 : <div className="squad-grid" style={{ display:"grid", gap:isMobile?10:14 }}>
-                    {fPlrs.map((p,i) => (
-                      <div key={p.id} className="pcard" onClick={() => setSel(p)} style={{ animation:`fadeUp 0.4s ${i*0.04}s ease both`, background: themeMode==="dark" ? `linear-gradient(145deg, ${POS_COLOR[p.pos]||T_RED}0a 0%, ${T.cardBg} 100%)` : T.cardBg, borderColor: `${POS_COLOR[p.pos]||T_RED}25` }}>
-                        <div style={{ height:3, background:`linear-gradient(90deg,${POS_COLOR[p.pos]||T_RED},transparent)` }} />
+                    {fPlrs.map((p,i) => {
+                      const potCount = getPlayerPotMonthAwards(p.id, p.name).length;
+                      const pOvr = calcPlayerOvr(p, potCount, played.length).ovr;
+                      const isElite = pOvr >= 90;
+                      const isGopal = p.name && p.name.toUpperCase().includes("GOPAL");
+                      const cardBorder = isElite 
+                        ? "1.5px solid rgba(251,191,36,0.5)" 
+                        : isGopal
+                        ? "1.5px solid rgba(37,99,235,0.5)"
+                        : `1px solid ${POS_COLOR[p.pos]||T_RED}25`;
+                      const cardShadow = isElite
+                        ? "0 10px 32px rgba(251,191,36,0.16)"
+                        : isGopal
+                        ? "0 10px 30px rgba(37,99,235,0.15)"
+                        : "none";
+                      const topStrip = isElite
+                        ? "linear-gradient(90deg, #d97706, #fbbf24, #f59e0b)"
+                        : isGopal
+                        ? "linear-gradient(90deg, #2563eb, #60a5fa, #3b82f6)"
+                        : `linear-gradient(90deg,${POS_COLOR[p.pos]||T_RED},transparent)`;
+                      return (
+                        <div key={p.id} className="pcard" onClick={() => setSel(p)} style={{ 
+                          animation:`fadeUp 0.4s ${i*0.04}s ease both`, 
+                          background: themeMode==="dark" 
+                            ? isElite
+                              ? "linear-gradient(150deg, rgba(251,191,36,0.09) 0%, rgba(24,24,27,0.96) 60%, rgba(20,20,22,1) 100%)"
+                              : isGopal
+                              ? "linear-gradient(150deg, rgba(37,99,235,0.10) 0%, rgba(24,24,27,0.96) 60%, rgba(20,20,22,1) 100%)"
+                              : `linear-gradient(145deg, ${POS_COLOR[p.pos]||T_RED}0a 0%, ${T.cardBg} 100%)` 
+                            : T.cardBg, 
+                          border: cardBorder,
+                          boxShadow: cardShadow
+                        }}>
+                          <div style={{ height:3, background:topStrip }} />
                         <div style={{ height: isMobile?200:isTablet?240:270, background:T.subtleBg, position:"relative", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
                           <div className="bebas" style={{ position:"absolute", bottom:-8, right:-4, fontSize:90, color:T.textDim, opacity:0.18, lineHeight:1, userSelect:"none" }}>{p.jersey}</div>
                           {p.photoURL
@@ -1313,17 +2330,11 @@ function AppShell() {
                           <div style={{ position:"absolute", top:10, left:12, background:POS_COLOR[p.pos]||T_RED, borderRadius:4, padding:"4px 12px", zIndex:2 }}>
                             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:"white", letterSpacing:2 }}>{p.pos.slice(0,3).toUpperCase()}</span>
                           </div>
-                          {(() => {
-                            const potCount = getPlayerPotMonthAwards(p.id, p.name).length;
-                            const pOvr = calcPlayerOvr(p, potCount, played.length).ovr;
-                            const isElite = pOvr >= 90;
-                            return (
-                              <div style={{ position:"absolute", top:10, right:12, background:"rgba(0,0,0,0.72)", backdropFilter:"blur(12px)", border: isElite ? "1.5px solid #fbbf24" : "1px solid rgba(255,255,255,0.2)", borderRadius:8, padding:"3px 8px", display:"flex", alignItems:"center", gap:5, boxShadow:"0 4px 14px rgba(0,0,0,0.6)", zIndex:2 }}>
-                                <span className="bebas" style={{ fontSize:18, color: isElite ? "#fbbf24" : "#fff", lineHeight:1 }}>{pOvr}</span>
-                                <span style={{ fontSize:10, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, color: isElite ? "#fbbf24" : "rgba(255,255,255,0.55)" }}>OVR</span>
-                              </div>
-                            );
-                          })()}
+                          {/* OVR Badge */}
+                          <div style={{ position:"absolute", top:10, right:12, background: isElite ? "rgba(20,16,5,0.85)" : "rgba(0,0,0,0.72)", backdropFilter:"blur(12px)", border: isElite ? "1.5px solid #fbbf24" : isGopal ? "1.5px solid #60a5fa" : "1px solid rgba(255,255,255,0.2)", borderRadius:8, padding:"3px 8px", display:"flex", alignItems:"center", gap:5, boxShadow: isElite ? "0 4px 18px rgba(251,191,36,0.45)" : "0 4px 14px rgba(0,0,0,0.6)", zIndex:2 }}>
+                            <span className="bebas" style={{ fontSize:18, color: isElite ? "#fbbf24" : isGopal ? "#60a5fa" : "#fff", lineHeight:1 }}>{pOvr}</span>
+                            <span style={{ fontSize:10, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, color: isElite ? "#fbbf24" : isGopal ? "#60a5fa" : "rgba(255,255,255,0.55)" }}>OVR</span>
+                          </div>
                         </div>
                         <div style={{ padding:"14px 16px 18px", background:T.cardBg }}>
                           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
@@ -1349,7 +2360,8 @@ function AppShell() {
                         </div>
                         <div className="pcard-glow" />
                       </div>
-                    ))}
+                    );
+                  })}
                   </div>
               }
             </div>
@@ -1464,6 +2476,15 @@ function AppShell() {
                 <div style={{ maxWidth:900, margin:"0 auto" }}>
                   {/* Apple-grade Player DNA Matrix */}
                   <PlayerDnaRadar player={sel} potMonthAwards={getPlayerPotMonthAwards(sel.id, sel.name)} pc={pc} isMobile={isMobile} totalSeasonMatches={played.length} />
+
+                  {/* Player Form Guide */}
+                  <PlayerFormGuide player={sel} played={played} T={T} isMobile={isMobile} />
+
+                  <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:20 }}>
+                    <button onClick={() => setCompareModal({ a: sel, b: plrs.find(x => x.id !== sel.id) || sel })} className="bebas" style={{ background:T.subtleBg, border:`1px solid ${T.border}`, color:T.text, padding:"8px 20px", borderRadius:8, fontSize:13, letterSpacing:2, cursor:"pointer", display:"flex", alignItems:"center", gap:8, transition:"all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.borderColor=T_RED;e.currentTarget.style.color=T_RED;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.text;}}>
+                      ⚖️ COMPARE WITH TEAMMATE
+                    </button>
+                  </div>
 
                   <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr 1fr":"repeat(3,1fr)", gap:isMobile?10:14, marginBottom:32 }}>
                     {(() => {
@@ -1714,7 +2735,7 @@ function AppShell() {
                   )}
 
                   {/* Player of the Month Spotlight Banner */}
-                  {topPerformerMonth && (topPerformerMonth.monthContributions > 0 || topPerformerMonth.monthAppearances > 0) && (
+                  {topPerformerMonth && ((topPerformerMonth.monthContributions || topPerformerMonth.contributions || 0) > 0 || (topPerformerMonth.monthAppearances || topPerformerMonth.appearances || 0) > 0) && (
                     <div style={{ background:"linear-gradient(135deg, #18181b 0%, #27272a 100%)", borderRadius:16, border:"1px solid rgba(255,255,255,0.12)", padding: isMobile?"20px 18px":"26px 34px", marginBottom:24, display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:16, boxShadow:"0 12px 32px rgba(0,0,0,0.3)", position:"relative", overflow:"hidden" }}>
                       <div style={{ position:"absolute", right:-10, bottom:-20, fontSize:130, fontFamily:"'Bebas Neue',sans-serif", opacity:0.04, color:"#fff", pointerEvents:"none" }}>#{topPerformerMonth.jersey}</div>
                       <div style={{ display:"flex", alignItems:"center", gap:18, zIndex:1 }}>
@@ -1725,13 +2746,20 @@ function AppShell() {
                           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4, flexWrap:"wrap" }}>
                             <span style={{ background:"#d97706", color:"white", fontFamily:"'Bebas Neue',sans-serif", fontSize:13, letterSpacing:2, padding:"4px 12px", borderRadius:4 }}>⭐ PLAYER OF THE MONTH</span>
                             <span style={{ color:"rgba(255,255,255,0.6)", fontSize:13, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif" }}>{getMonthLabel(activeMonth)}</span>
+                            <button onClick={() => setShowPotmRules(true)} style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.22)", color:"#ffffff", borderRadius:20, padding:"3px 10px", fontSize:11, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, cursor:"pointer", transition:"all 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.25)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.12)"}>ⓘ HOW IT'S SCORED</button>
                           </div>
                           <div className="bebas" style={{ fontSize:isMobile?32:44, color:"#fff", letterSpacing:1, lineHeight:1 }}>{topPerformerMonth.name}</div>
                           <div style={{ fontSize:15, color:POS_COLOR[topPerformerMonth.pos]||T_RED, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:4 }}>{topPerformerMonth.pos.toUpperCase()} · #{topPerformerMonth.jersey}</div>
                         </div>
                       </div>
                       <div style={{ display:"flex", gap:14, zIndex:1, flexWrap:"wrap" }}>
-                        {[["GOALS",topPerformerMonth.monthGoals,T_RED],["ASSISTS",topPerformerMonth.monthAssists,T_GOLD],["MATCHES",topPerformerMonth.monthAppearances,"#3b82f6"]].map(([l,v,c]) => (
+                        {[
+                          ["GOALS", topPerformerMonth.monthGoals ?? topPerformerMonth.goals ?? 0, T_RED],
+                          ["ASSISTS", topPerformerMonth.monthAssists ?? topPerformerMonth.assists ?? 0, T_GOLD],
+                          ...((topPerformerMonth.monthDefActions || topPerformerMonth.defActions) > 0 ? [["DEF ACTIONS", topPerformerMonth.monthDefActions || topPerformerMonth.defActions, "#22c55e"]] : []),
+                          ...((topPerformerMonth.monthPotmCount || topPerformerMonth.potmCount) > 0 ? [["POTM", topPerformerMonth.monthPotmCount || topPerformerMonth.potmCount, "#fbbf24"]] : []),
+                          ["MATCHES", topPerformerMonth.monthAppearances ?? topPerformerMonth.appearances ?? 0, "#3b82f6"]
+                        ].map(([l,v,c]) => (
                           <div key={l} style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"12px 18px", textAlign:"center", minWidth:80 }}>
                             <div className="bebas" style={{ fontSize:isMobile?30:40, color:c, lineHeight:1 }}>{v}</div>
                             <div style={{ fontSize:12, letterSpacing:2, color:"rgba(255,255,255,0.6)", fontFamily:"'Bebas Neue',sans-serif", marginTop:3 }}>{l}</div>
@@ -1844,40 +2872,6 @@ function AppShell() {
                 </>
               ) : (
                 <>
-                  {/* Silverware & Honours Showcase */}
-                  <div style={{ background:T.cardBg, border:`1px solid ${T.border}`, borderTop:`4px solid ${T_GOLD}`, borderRadius:14, padding: isMobile?"18px 14px":"22px 24px", marginBottom:24, boxShadow:"0 4px 20px rgba(0,0,0,0.06)" }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, flexWrap:"wrap", gap:8 }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                        <span style={{ fontSize:22 }}>🏆</span>
-                        <span className="bebas" style={{ fontSize:20, color:T.text, letterSpacing:1.5 }}>NAFC CLUB HONOURS & SILVERWARE</span>
-                      </div>
-                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:T_GOLD, background:"rgba(217,119,6,0.12)", border:"1px solid rgba(217,119,6,0.3)", padding:"3px 10px", borderRadius:4, letterSpacing:1.5 }}>2026 SEASON</span>
-                    </div>
-                    <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr":isTablet?"1fr 1fr":"repeat(3, 1fr)", gap:10 }}>
-                      <div style={{ background: themeMode==="dark" ? "linear-gradient(135deg, rgba(56,189,248,0.12) 0%, rgba(24,24,27,0.8) 100%)" : "linear-gradient(135deg, rgba(56,189,248,0.08) 0%, #ffffff 100%)", border:"1px solid rgba(56,189,248,0.3)", borderRadius:10, padding:"14px 18px", display:"flex", alignItems:"center", gap:14 }}>
-                        <span style={{ fontSize:30 }}>🥈</span>
-                        <div>
-                          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"#38bdf8", letterSpacing:1 }}>SILVER CUP CHAMPIONS</div>
-                          <div style={{ fontSize:14, fontWeight:600, color:T.text }}>ENNE FC (EFC) · 2nd vs 2nd Final (1–0)</div>
-                        </div>
-                      </div>
-                      <div style={{ background: themeMode==="dark" ? "linear-gradient(135deg, rgba(251,146,60,0.12) 0%, rgba(24,24,27,0.8) 100%)" : "linear-gradient(135deg, rgba(251,146,60,0.08) 0%, #ffffff 100%)", border:"1px solid rgba(251,146,60,0.3)", borderRadius:10, padding:"14px 18px", display:"flex", alignItems:"center", gap:14 }}>
-                        <span style={{ fontSize:30 }}>🥉</span>
-                        <div>
-                          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"#fb923c", letterSpacing:1 }}>BRONZE CUP CHAMPIONS</div>
-                          <div style={{ fontSize:14, fontWeight:600, color:T.text }}>NAFC · 3rd vs 3rd Final (5–2)</div>
-                        </div>
-                      </div>
-                      <div style={{ background: themeMode==="dark" ? "linear-gradient(135deg, rgba(234,179,8,0.12) 0%, rgba(24,24,27,0.8) 100%)" : "linear-gradient(135deg, rgba(234,179,8,0.08) 0%, #ffffff 100%)", border:"1px solid rgba(234,179,8,0.3)", borderRadius:10, padding:"14px 18px", display:"flex", alignItems:"center", gap:14 }}>
-                        <span style={{ fontSize:30 }}>🏅</span>
-                        <div>
-                          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:"#eab308", letterSpacing:1 }}>BEST PLAYER OF TOURNAMENT</div>
-                          <div style={{ fontSize:14, fontWeight:600, color:T.text }}>HAFEEZ (#9) · NAFC</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Monthly MVP Roll of Honour */}
                   {monthlyWinners.length > 0 && (
                     <div style={{ background:T.cardBg, border:`1px solid ${T.border}`, borderTop:`4px solid ${T_GOLD}`, borderRadius:14, padding: isMobile?"18px 14px":"22px 24px", marginBottom:24, boxShadow:"0 4px 20px rgba(0,0,0,0.06)" }}>
@@ -1886,7 +2880,10 @@ function AppShell() {
                           <span style={{ fontSize:22 }}>👑</span>
                           <span className="bebas" style={{ fontSize:20, color:T.text, letterSpacing:1.5 }}>PLAYER OF THE MONTH ROLL OF HONOUR</span>
                         </div>
-                        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:T_GOLD, background:"rgba(217,119,6,0.12)", border:"1px solid rgba(217,119,6,0.3)", padding:"3px 10px", borderRadius:4, letterSpacing:1.5 }}>MONTHLY MVPS</span>
+                        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                          <button onClick={() => setShowPotmRules(true)} style={{ background:T.hoverBg, border:`1px solid ${T.borderLight}`, color:T.textMuted, borderRadius:6, padding:"4px 10px", fontSize:11, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, cursor:"pointer", transition:"all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.color=T_GOLD;e.currentTarget.style.borderColor=T_GOLD;}} onMouseLeave={e=>{e.currentTarget.style.color=T.textMuted;e.currentTarget.style.borderColor=T.borderLight;}}>ⓘ SCORING RULES</button>
+                          <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:T_GOLD, background:"rgba(217,119,6,0.12)", border:"1px solid rgba(217,119,6,0.3)", padding:"3px 10px", borderRadius:4, letterSpacing:1.5 }}>MONTHLY MVPS</span>
+                        </div>
                       </div>
                       <div style={{ display:"grid", gridTemplateColumns: isMobile?"1fr":isTablet?"repeat(2, 1fr)":"repeat(4, 1fr)", gap:10 }}>
                         {monthlyWinners.map(w => (

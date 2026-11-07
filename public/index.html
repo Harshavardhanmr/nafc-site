@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#CC0000" />
     <meta name="google-site-verification" content="WZfpQOu6LLr4NsXLYYkCyIebXWUYwd8kkIerRm6lmis" />
 
@@ -32,6 +33,9 @@
 
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
+      :root {
+        color-scheme: dark;
+      }
       body {
         background: #060606;
         color: #E0E0E0;
@@ -40,6 +44,21 @@
         overscroll-behavior-y: contain;
       }
       #root { min-height: 100vh; }
+      /* Sleek dark scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #3f3f46;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #71717a;
+      }
       /* iOS safe area padding */
       @supports (padding-top: env(safe-area-inset-top)) {
         body { padding-top: env(safe-area-inset-top); }
