@@ -1526,7 +1526,7 @@ function PotmRulesModal({ onClose, T = THEMES.dark, isMobile = false }) {
               {
                 icon: "⭐",
                 title: "MATCHDAY POTM",
-                pts: "+6.0 PTS",
+                pts: "+5.0 PTS",
                 col: "#fbbf24",
                 desc: "Voted by the team majority in the post-match huddle. Honors game-winning clutch performances for any position (DEF, MID, FWD, GK)."
               },
@@ -1791,7 +1791,7 @@ function AppShell() {
       monthAppearances: appearances,
       monthContributions: goals + assists,
       monthPotmCount: potmCount,
-      monthScore: (potmCount * 6.0) + (goals * 2.5) + (assists * 2.0) + (monthDefActions * 0.15) + (appearances * 0.3)
+      monthScore: (potmCount * 5.0) + (goals * 2.5) + (assists * 2.0) + (monthDefActions * 0.15) + (appearances * 0.3)
     };
   });
 
@@ -1873,7 +1873,7 @@ function AppShell() {
         defActions: def,
         potmCount: potm,
         appearances: apps,
-        score: (potm * 6.0) + (g * 2.5) + (a * 2.0) + (def * 0.15) + (apps * 0.3)
+        score: (potm * 5.0) + (g * 2.5) + (a * 2.0) + (def * 0.15) + (apps * 0.3)
       };
     });
 
