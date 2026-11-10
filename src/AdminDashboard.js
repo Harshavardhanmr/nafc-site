@@ -60,7 +60,7 @@ export default function AdminDashboard({ onBack }) {
   });
 
   useEffect(() => {
-    const uP = onSnapshot(collection(db,"players"), s => setPlrs(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.jersey-b.jersey)));
+    const uP = onSnapshot(collection(db,"players"), s => setPlrs(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(Number(a.jersey)||99)-(Number(b.jersey)||99))));
     const uM = onSnapshot(query(collection(db,"matches"),orderBy("date","desc")), s => setMtchs(s.docs.map(d=>({id:d.id,...d.data()}))));
     const uG = onSnapshot(query(collection(db,"gallery"),orderBy("createdAt","desc")), s => setGal(s.docs.map(d=>({id:d.id,...d.data()}))));
     const uA = onSnapshot(query(collection(db,"announcements"),orderBy("date","desc")), s => setAnns(s.docs.map(d=>({id:d.id,...d.data()}))));
@@ -158,7 +158,7 @@ export default function AdminDashboard({ onBack }) {
       const cleanPlayer = {
         name: edP.name ? edP.name.trim() : "",
         pos: edP.pos || "Midfielder",
-        jersey: Number(edP.jersey) || 0,
+        jersey: edP.jersey ? (Number(edP.jersey) || 0) : null,
         goals: Number(edP.goals) || 0,
         assists: Number(edP.assists) || 0,
         appearances: Number(edP.appearances) || 0,
@@ -196,7 +196,8 @@ export default function AdminDashboard({ onBack }) {
     "p12": { apps: 30, goals: 36, assists: 31, potmCount: 0, b: 0,  i: 0,  c: 0  },
     "p11": { apps: 24, goals: 15, assists: 17, potmCount: 0, b: 0,  i: 0,  c: 0  },
     "p5":  { apps: 11, goals: 11, assists: 10, potmCount: 0, b: 0,  i: 0,  c: 0  },
-    "p4":  { apps: 34, goals: 0,  assists: 0,  potmCount: 0, b: 0,  i: 0,  c: 0  }
+    "p4":  { apps: 34, goals: 0,  assists: 0,  potmCount: 0, b: 0,  i: 0,  c: 0  },
+    "p16": { apps: 0,  goals: 0,  assists: 0,  potmCount: 0, b: 0,  i: 0,  c: 0  }
   };
 
   // ── Sync All Player Career Stats from Match History ──
@@ -765,7 +766,7 @@ export default function AdminDashboard({ onBack }) {
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:14, fontWeight:800, color:"#0f172a", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
-                        <div style={{ fontSize:10, color:"#CC0000", fontWeight:700, marginTop:2 }}>{p.pos.toUpperCase()} · #{p.jersey}</div>
+                        <div style={{ fontSize:10, color:"#CC0000", fontWeight:700, marginTop:2 }}>{p.pos.toUpperCase()} · {p.jersey ? `#${p.jersey}` : "NO JERSEY"}</div>
                         {pct !== undefined && (
                           <div style={{ marginTop:6, background:"#e2e8f0", borderRadius:4, height:4 }}>
                             <div style={{ width:`${pct}%`, height:"100%", background:"#0033a0", borderRadius:4, transition:"width .1s" }}/>
@@ -852,7 +853,7 @@ export default function AdminDashboard({ onBack }) {
                           return (
                             <div key={p.id} onClick={()=>tggA(p.id)} style={{ background:s?"#0033a0":"#fff", color:s?"#fff":"#475569", border:`1px solid ${s?"#0033a0":"#cbd5e1"}`, padding:"7px 10px", borderRadius:5, cursor:"pointer", display:"flex", justifyContent:"space-between", fontSize:12, fontWeight:600, transition:"all 0.15s" }}>
                               <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</span>
-                              <span style={{ opacity:s?1:0.4, flexShrink:0, marginLeft:4 }}>#{p.jersey}</span>
+                              <span style={{ opacity:s?1:0.4, flexShrink:0, marginLeft:4 }}>{p.jersey ? `#${p.jersey}` : "—"}</span>
                             </div>
                           );
                         })}
@@ -1108,15 +1109,13 @@ export default function AdminDashboard({ onBack }) {
               <select value={edP.pos} onChange={e=>setEdP({...edP,pos:e.target.value})} style={selectStyle}>
                 {["Goalkeeper","Defender","Midfielder","Winger","Forward","Striker"].map(p=><option key={p} value={p}>{p}</option>)}
               </select>
-              <input type="number" value={edP.jersey} onChange={e=>setEdP({...edP,jersey:parseInt(e.target.value)})} placeholder="Jersey #" required style={inp}/>
-              <input type="number" value={edP.jersey ?? 0} onChange={e=>setEdP({...edP,jersey:e.target.value===""?"":parseInt(e.target.value)||0})} placeholder="Jersey #" required style={inp}/>
+              <input type="number" value={edP.jersey ?? ""} onChange={e=>setEdP({...edP,jersey:e.target.value===""?"":parseInt(e.target.value)||0})} placeholder="Jersey # (Optional)" style={inp}/>
               <div style={{ borderTop:"1px solid #e2e8f0", paddingTop:14 }}>
                 <div style={{ fontWeight:700, fontSize:11, color:"#0033a0", marginBottom:10, letterSpacing:1 }}>STAT OVERRIDE</div>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                   {[["GOALS","goals"],["ASSISTS","assists"],["APPEARANCES","appearances"],["CLEAN SHEETS","cleanSheets"],["SAVES","saves"],["BLOCKS","blocks"],["INTERCEPTIONS","interceptions"],["CLEARANCES","clearances"]].map(([l,k]) => (
                     <label key={k} style={{ color:"#64748b", fontSize:11, fontWeight:700 }}>{l}
-                      <input type="number" min="0" value={edP[k]||0} onChange={e=>setEdP({...edP,[k]:parseInt(e.target.value)})} style={{ ...inp, marginTop:4 }}/>
-                      <input type="number" min="0" value={edP[k] ?? 0} onChange={e=>setEdP({...edP,[k]:e.target.value===""?"":parseInt(e.target.value)||0})} style={{ ...inp, marginTop:4 }}/>
+                      <input type="number" min="0" value={edP[k] ?? 0} onChange={e=>setEdP({...edP,[k]:e.target.value===""?0:parseInt(e.target.value)||0})} style={{ ...inp, marginTop:4 }}/>
                     </label>
                   ))}
                 </div>
@@ -1264,7 +1263,7 @@ export default function AdminDashboard({ onBack }) {
                     return (
                       <div key={p.id} onClick={()=>tggEdA(p.id)} style={{ background:sel?"#0033a0":"#fff", color:sel?"#fff":"#475569", border:`1px solid ${sel?"#0033a0":"#cbd5e1"}`, padding:"6px 8px", borderRadius:5, cursor:"pointer", display:"flex", justifyContent:"space-between", fontSize:11, fontWeight:600 }}>
                         <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</span>
-                        <span style={{ opacity:sel?1:0.4, marginLeft:4 }}>#{p.jersey}</span>
+                        <span style={{ opacity:sel?1:0.4, marginLeft:4 }}>{p.jersey ? `#${p.jersey}` : "—"}</span>
                       </div>
                     );
                   })}

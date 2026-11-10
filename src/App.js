@@ -363,7 +363,7 @@ function MatchPitchLineup({ match, plrs, T = THEMES.dark }) {
                     style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: getPhotoPos(p, "center 25%") }}
                   />
                 ) : (
-                  <span className="bebas" style={{ fontSize: 13, color: "#fff" }}>#{p.jersey}</span>
+                  <span className="bebas" style={{ fontSize: 13, color: "#fff" }}>{p.jersey ? `#${p.jersey}` : "—"}</span>
                 )}
                 <span
                   style={{
@@ -439,7 +439,7 @@ function MatchPitchLineup({ match, plrs, T = THEMES.dark }) {
                     gap: 5
                   }}
                 >
-                  <span style={{ fontSize: 11, fontFamily: "'Bebas Neue',sans-serif", color: pc }}>#{p.jersey}</span>
+                  <span style={{ fontSize: 11, fontFamily: "'Bebas Neue',sans-serif", color: pc }}>{p.jersey ? `#${p.jersey}` : "—"}</span>
                   <span style={{ fontSize: 11.5, fontWeight: 600, color: T.text }}>{p.name}</span>
                   <span style={{ fontSize: 9.5, color: T.textDim, fontFamily: "'Bebas Neue',sans-serif" }}>
                     {p.pos.slice(0, 3).toUpperCase()}
@@ -1095,7 +1095,7 @@ function PlayerModal({ player, onClose, T = THEMES.dark, potMonthAwards = [], pl
             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:"white", letterSpacing:2.5 }}>{p.pos.toUpperCase()}</span>
           </div>
           <div style={{ position:"absolute", bottom:14, left:16 }}>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:T.textDim, letterSpacing:3, marginBottom:2 }}>#{p.jersey}</div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:T.textDim, letterSpacing:3, marginBottom:2 }}>{p.jersey ? `#${p.jersey}` : "—"}</div>
             <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:44, color:T.text, lineHeight:0.9 }}>{p.name}</div>
           </div>
         </div>
@@ -1143,7 +1143,7 @@ function PlayerModal({ player, onClose, T = THEMES.dark, potMonthAwards = [], pl
           )}
           <PlayerFormGuide player={p} played={played} T={T} isMobile={false} />
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-            {[["POSITION",p.pos],["JERSEY",`#${p.jersey}`],["CLUB","NAFC"],["APPEARANCES",`${p.appearances||0} APPS`]].map(([l,v]) => (
+            {[["POSITION",p.pos],["JERSEY",p.jersey ? `#${p.jersey}` : "TBD"],["CLUB","NAFC"],["APPEARANCES",`${p.appearances||0} APPS`]].map(([l,v]) => (
               <div key={l} style={{ background:T.bg2, borderRadius:8, padding:"12px 14px", border:`1px solid ${T.borderLight}` }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:2.5, color:T.textDim, marginBottom:3 }}>{l}</div>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:15, color:T.textMuted, letterSpacing:1 }}>{v}</div>
@@ -1311,7 +1311,7 @@ function PlayerSelectDropdown({ currentId, onSelect, players, accentColor, T, is
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8, overflow: "hidden" }}>
                       <span style={{ fontSize: 11, color: T.textDim, width: 22, textAlign: "right", fontFamily: "'Bebas Neue',sans-serif" }}>
-                        #{p.jersey}
+                        {p.jersey ? `#${p.jersey}` : "—"}
                       </span>
                       <span style={{ fontWeight: isSelected ? 700 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {p.name}
@@ -1636,7 +1636,7 @@ function AppShell() {
   const isTablet = w >= 768 && w < 1024;
 
   useEffect(() => {
-    const uP = onSnapshot(collection(db,"players"), s => setPlrs(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.jersey-b.jersey)));
+    const uP = onSnapshot(collection(db,"players"), s => setPlrs(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(Number(a.jersey)||99)-(Number(b.jersey)||99))));
     const uM = onSnapshot(query(collection(db,"matches"),orderBy("date","desc")), s => setMtchs(s.docs.map(d=>({id:d.id,...d.data()}))));
     const uG = onSnapshot(query(collection(db,"gallery"),orderBy("createdAt","desc")), s => setGal(s.docs.map(d=>({id:d.id,...d.data()}))));
     const uS = onSnapshot(doc(db,"siteSettings","heroImage"), snap => {
@@ -2342,7 +2342,7 @@ function AppShell() {
                               <div className="bebas" style={{ fontSize:isMobile?20:isTablet?22:25, color:T.text, letterSpacing:1, lineHeight:1.1 }}>{p.name}</div>
                               <div style={{ fontSize:11, color:T.textDim, letterSpacing:2, marginTop:3, fontFamily:"'Bebas Neue',sans-serif" }}>{p.pos.toUpperCase()}</div>
                             </div>
-                            <div className="bebas" style={{ fontSize:24, color:T.textDim }}>#{p.jersey}</div>
+                            <div className="bebas" style={{ fontSize:24, color:T.textDim }}>{p.jersey ? `#${p.jersey}` : "—"}</div>
                           </div>
                           <div style={{ display:"flex", gap:0, borderTop:`1px solid ${T.borderLight}`, paddingTop:10 }}>
                             {(p.pos==="Goalkeeper"
@@ -2550,11 +2550,11 @@ function AppShell() {
                     {plrs.filter(p=>p.id!==sel.id).map(p => (
                       <div key={p.id} onClick={() => { setSel(p); window.scrollTo(0,0); }} style={{ background:T.cardBg, border:`1px solid ${T.border}`, borderRadius:10, padding:"10px 12px", cursor:"pointer", transition:"all 0.2s", display:"flex", alignItems:"center", gap:8 }} onMouseEnter={e=>{e.currentTarget.style.borderColor=`${T_RED}60`;e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.transform="none";}}>
                         <div style={{ width:34, height:34, borderRadius:"50%", background:`${POS_COLOR[p.pos]||T_RED}20`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", flexShrink:0, border:`2px solid ${POS_COLOR[p.pos]||T_RED}30` }}>
-                          {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition: getPhotoPos(p, "center 25%") }} />:<span className="bebas" style={{ fontSize:12, color:T.textDim }}>#{p.jersey}</span>}
+                          {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition: getPhotoPos(p, "center 25%") }} />:<span className="bebas" style={{ fontSize:12, color:T.textDim }}>{p.jersey ? `#${p.jersey}` : "—"}</span>}
                         </div>
                         <div style={{ minWidth:0 }}>
                           <div style={{ fontWeight:600, fontSize:14, color:T.text, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{p.name}</div>
-                          <div style={{ fontSize:10, color:POS_COLOR[p.pos]||T_RED, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:1 }}>{p.pos.slice(0,3).toUpperCase()} · #{p.jersey}</div>
+                          <div style={{ fontSize:10, color:POS_COLOR[p.pos]||T_RED, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:1 }}>{p.pos.slice(0,3).toUpperCase()}{p.jersey ? ` · #${p.jersey}` : ""}</div>
                         </div>
                       </div>
                     ))}
@@ -2850,7 +2850,7 @@ function AppShell() {
                                   <div className="bebas" style={{ fontSize:i===0?20:16, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
                                 </div>
                                 <div style={{ width:38, height:38, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
-                                  {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition: getPhotoPos(p, "center 35%") }} />:<span className="bebas" style={{ fontSize:12, color:T.textDim }}>#{p.jersey}</span>}
+                                  {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition: getPhotoPos(p, "center 35%") }} />:<span className="bebas" style={{ fontSize:12, color:T.textDim }}>{p.jersey ? `#${p.jersey}` : "—"}</span>}
                                 </div>
                                 <div>
                                   <div style={{ fontWeight:600, fontSize:16, color:T.text, lineHeight:1.2 }}>{p.name}</div>
@@ -3171,7 +3171,7 @@ function AppShell() {
                                   <div className="bebas" style={{ fontSize:i===0?20:16, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
                                 </div>
                                 <div style={{ width:38, height:38, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
-                                  {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition: getPhotoPos(p, "center 35%") }} />:<span className="bebas" style={{ fontSize:12, color:T.textDim }}>#{p.jersey}</span>}
+                                  {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition: getPhotoPos(p, "center 35%") }} />:<span className="bebas" style={{ fontSize:12, color:T.textDim }}>{p.jersey ? `#${p.jersey}` : "—"}</span>}
                                 </div>
                                 <div>
                                   <div style={{ fontWeight:600, fontSize:16, color:T.text, lineHeight:1.2 }}>{p.name}</div>
