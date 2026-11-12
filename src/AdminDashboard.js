@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase/config";
-import { collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, getDocs, query, orderBy, setDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, getDoc, getDocs, query, orderBy, setDoc } from "firebase/firestore";
 import LOGO from "./logo";
 
 const CLOUDINARY_CLOUD_NAME = "dzpti3993";
@@ -56,12 +56,11 @@ export default function AdminDashboard({ onBack }) {
 
   const [mF, setMF] = useState({
     op:"", dt:"", vn:"", cp:"Friendly", rs:"W",
-    nS:0, oS:0, ap:[], sc:[], as:[], df:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, dI:"", dGuest:"", dB:0, dInt:0, dC:0, fmt:"7s",
-    potmId:"", potmGuest:""
+    nS:0, oS:0, ap:[], sc:[], as:[], df:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, dI:"", dGuest:"", dB:0, dInt:0, dC:0, fmt:"7s"
   });
 
   useEffect(() => {
-    const uP = onSnapshot(collection(db,"players"), s => setPlrs(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.jersey-b.jersey)));
+    const uP = onSnapshot(collection(db,"players"), s => setPlrs(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(Number(a.jersey)||99)-(Number(b.jersey)||99))));
     const uM = onSnapshot(query(collection(db,"matches"),orderBy("date","desc")), s => setMtchs(s.docs.map(d=>({id:d.id,...d.data()}))));
     const uG = onSnapshot(query(collection(db,"gallery"),orderBy("createdAt","desc")), s => setGal(s.docs.map(d=>({id:d.id,...d.data()}))));
     const uA = onSnapshot(query(collection(db,"announcements"),orderBy("date","desc")), s => setAnns(s.docs.map(d=>({id:d.id,...d.data()}))));
@@ -159,7 +158,7 @@ export default function AdminDashboard({ onBack }) {
       const cleanPlayer = {
         name: edP.name ? edP.name.trim() : "",
         pos: edP.pos || "Midfielder",
-        jersey: Number(edP.jersey) || 0,
+        jersey: edP.jersey ? (Number(edP.jersey) || 0) : null,
         goals: Number(edP.goals) || 0,
         assists: Number(edP.assists) || 0,
         appearances: Number(edP.appearances) || 0,
@@ -181,6 +180,26 @@ export default function AdminDashboard({ onBack }) {
 
   const oNP = () => setEdP({ name:"", pos:"Midfielder", jersey:0, goals:0, assists:0, appearances:0, cleanSheets:0, saves:0, blocks:0, interceptions:0, clearances:0 });
 
+  // Verified historical career baseline prior to Oct 1, 2026 (protects against early matches without full lineup arrays)
+  const HISTORICAL_CAREER_BASE = {
+    "p9":  { apps: 31, goals: 4,  assists: 7,  potmCount: 1, b: 19, i: 25, c: 24 },
+    "p1":  { apps: 25, goals: 0,  assists: 3,  potmCount: 0, b: 14, i: 18, c: 15 },
+    "p3":  { apps: 31, goals: 0,  assists: 5,  potmCount: 0, b: 8,  i: 9,  c: 12 },
+    "p10": { apps: 32, goals: 8,  assists: 6,  potmCount: 0, b: 7,  i: 8,  c: 10 },
+    "p15": { apps: 23, goals: 5,  assists: 3,  potmCount: 0, b: 7,  i: 10, c: 9  },
+    "p14": { apps: 33, goals: 21, assists: 21, potmCount: 1, b: 6,  i: 8,  c: 5  },
+    "p13": { apps: 27, goals: 6,  assists: 8,  potmCount: 1, b: 6,  i: 10, c: 6  },
+    "AUDInIdQSOq1uhWWNwUd": { apps: 21, goals: 10, assists: 11, potmCount: 0, b: 5, i: 7, c: 5 },
+    "p6":  { apps: 41, goals: 36, assists: 35, potmCount: 0, b: 5,  i: 7,  c: 5  },
+    "q39i0KiGo7YVRe4JMmA6": { apps: 5, goals: 2, assists: 4, potmCount: 0, b: 5, i: 7, c: 5 },
+    "p8":  { apps: 36, goals: 55, assists: 21, potmCount: 0, b: 0,  i: 0,  c: 0  },
+    "p12": { apps: 30, goals: 36, assists: 31, potmCount: 0, b: 0,  i: 0,  c: 0  },
+    "p11": { apps: 24, goals: 15, assists: 17, potmCount: 0, b: 0,  i: 0,  c: 0  },
+    "p5":  { apps: 11, goals: 11, assists: 10, potmCount: 0, b: 0,  i: 0,  c: 0  },
+    "p4":  { apps: 34, goals: 0,  assists: 0,  potmCount: 0, b: 0,  i: 0,  c: 0  },
+    "p16": { apps: 0,  goals: 0,  assists: 0,  potmCount: 0, b: 0,  i: 0,  c: 0  }
+  };
+
   // ── Sync All Player Career Stats from Match History ──
   const recalculateAllStatsSilent = async () => {
     try {
@@ -194,14 +213,23 @@ export default function AdminDashboard({ onBack }) {
 
       const allMatches = [];
       matchesSnap.forEach(d => allMatches.push({ id: d.id, ...d.data() }));
-      const playedMatches = allMatches.filter(m => m.result !== "upcoming");
+      const recentMatches = allMatches.filter(m => m.date && m.date >= "2026-10-01" && m.result !== "upcoming");
 
       const statsMap = {};
       allPlayers.forEach(p => {
-        statsMap[p.id] = { goals: 0, assists: 0, appearances: 0, blocks: 0, interceptions: 0, clearances: 0, potmCount: 0 };
+        const hBase = HISTORICAL_CAREER_BASE[p.id] || { apps: 0, goals: 0, assists: 0, potmCount: 0, b: 0, i: 0, c: 0 };
+        statsMap[p.id] = {
+          goals: hBase.goals,
+          assists: hBase.assists,
+          appearances: hBase.apps,
+          blocks: hBase.b || 0,
+          interceptions: hBase.i || 0,
+          clearances: hBase.c || 0,
+          potmCount: hBase.potmCount
+        };
       });
 
-      playedMatches.forEach(m => {
+      recentMatches.forEach(m => {
         const apList = m.ap || m.appearances || [];
         const matchParticipants = new Set();
 
@@ -235,20 +263,6 @@ export default function AdminDashboard({ onBack }) {
           });
         }
 
-        if (m.defensiveActions && Array.isArray(m.defensiveActions)) {
-          m.defensiveActions.forEach(d => {
-            const dId = typeof d === "object" ? d.id : null;
-            const dName = typeof d === "object" ? d.name : d;
-            const p = allPlayers.find(x => x.id === dId || (dName && x.name && x.name.toLowerCase() === dName.toLowerCase()));
-            if (p && statsMap[p.id]) {
-              statsMap[p.id].blocks += Number(d.blocks) || 0;
-              statsMap[p.id].interceptions += Number(d.interceptions) || 0;
-              statsMap[p.id].clearances += Number(d.clearances) || 0;
-              matchParticipants.add(p.id);
-            }
-          });
-        }
-
         if (m.potm) {
           const potmId = typeof m.potm === "object" ? m.potm.id : null;
           const potmName = typeof m.potm === "object" ? m.potm.name : m.potm;
@@ -259,6 +273,20 @@ export default function AdminDashboard({ onBack }) {
           }
         }
 
+        if (m.defensiveActions && Array.isArray(m.defensiveActions)) {
+          m.defensiveActions.forEach(d => {
+            const dId = typeof d === "object" ? d.id : null;
+            const dName = typeof d === "object" ? d.name : d;
+            const p = allPlayers.find(x => x.id === dId || (dName && x.name && x.name.toLowerCase() === dName.toLowerCase()));
+            if (p && statsMap[p.id]) {
+              matchParticipants.add(p.id);
+              statsMap[p.id].blocks += Number(d.blocks) || 0;
+              statsMap[p.id].interceptions += Number(d.interceptions) || 0;
+              statsMap[p.id].clearances += Number(d.clearances) || 0;
+            }
+          });
+        }
+
         matchParticipants.forEach(pId => {
           if (statsMap[pId]) statsMap[pId].appearances += 1;
         });
@@ -267,6 +295,12 @@ export default function AdminDashboard({ onBack }) {
       for (const p of allPlayers) {
         if (statsMap[p.id]) {
           await updateDoc(doc(db, "players", p.id), {
+            goals: statsMap[p.id].goals,
+            assists: statsMap[p.id].assists,
+            appearances: statsMap[p.id].appearances,
+            blocks: statsMap[p.id].blocks,
+            interceptions: statsMap[p.id].interceptions,
+            clearances: statsMap[p.id].clearances,
             potmCount: statsMap[p.id].potmCount
           });
         }
@@ -318,26 +352,6 @@ export default function AdminDashboard({ onBack }) {
         clearances: Number(d.clearances) || 0
       }));
 
-      let potm = null;
-      if (mF.potmGuest && mF.potmGuest.trim()) {
-        potm = {
-          id: `guest_${Date.now()}_${Math.random().toString(36).slice(2,5)}`,
-          name: mF.potmGuest.trim(),
-          isGuest: true
-        };
-      } else if (mF.potmId) {
-        const p = plrs.find(x => x.id === mF.potmId);
-        if (p) {
-          potm = {
-            id: p.id,
-            name: p.name,
-            jersey: p.jersey,
-            pos: p.pos,
-            isGuest: false
-          };
-        }
-      }
-
       await addDoc(collection(db,"matches"), {
         opponent: mF.op ? mF.op.trim() : "",
         date: mF.dt || new Date().toISOString().slice(0, 10),
@@ -349,57 +363,51 @@ export default function AdminDashboard({ onBack }) {
         scorers: cleanScorers,
         assisters: cleanAssisters,
         defensiveActions: cleanDefActions,
-        potm: potm,
         fmt: mF.fmt || "7s",
         ap: mF.ap || []
       });
 
-      // Incrementally update participating players
-      for (const s of cleanScorers) {
-        if (!s.isGuest && s.id) {
-          const pDoc = plrs.find(x => x.id === s.id);
-          if (pDoc) {
-            await updateDoc(doc(db, "players", s.id), {
-              goals: (Number(pDoc.goals) || 0) + (Number(s.goals) || 1)
-            });
+      if (mF.rs !== "upcoming") {
+        for (let id of (mF.ap || [])) {
+          if (!String(id).startsWith("guest_")) {
+            const r = doc(db,"players",id);
+            const s = await getDoc(r);
+            if (s.exists()) await updateDoc(r,{ appearances:(Number(s.data().appearances)||0)+1 });
+          }
+        }
+        for (let s of cleanScorers) {
+          if (!s.isGuest && !String(s.id).startsWith("guest_")) {
+            const r = doc(db,"players",s.id);
+            const p = await getDoc(r);
+            if (p.exists()) await updateDoc(r,{ goals:(Number(p.data().goals)||0) + (Number(s.goals)||1) });
+          }
+        }
+        for (let a of cleanAssisters) {
+          if (!a.isGuest && !String(a.id).startsWith("guest_")) {
+            const r = doc(db,"players",a.id);
+            const p = await getDoc(r);
+            if (p.exists()) await updateDoc(r,{ assists:(Number(p.data().assists)||0) + (Number(a.assists)||1) });
+          }
+        }
+        for (let d of cleanDefActions) {
+          if (!d.isGuest && !String(d.id).startsWith("guest_")) {
+            const r = doc(db,"players",d.id);
+            const p = await getDoc(r);
+            if (p.exists()) {
+              const data = p.data();
+              await updateDoc(r, {
+                blocks: (Number(data.blocks)||0) + (Number(d.blocks)||0),
+                interceptions: (Number(data.interceptions)||0) + (Number(d.interceptions)||0),
+                clearances: (Number(data.clearances)||0) + (Number(d.clearances)||0)
+              });
+            }
           }
         }
       }
-      for (const a of cleanAssisters) {
-        if (!a.isGuest && a.id) {
-          const pDoc = plrs.find(x => x.id === a.id);
-          if (pDoc) {
-            await updateDoc(doc(db, "players", a.id), {
-              assists: (Number(pDoc.assists) || 0) + (Number(a.assists) || 1)
-            });
-          }
-        }
-      }
-      for (const d of cleanDefActions) {
-        if (!d.isGuest && d.id) {
-          const pDoc = plrs.find(x => x.id === d.id);
-          if (pDoc) {
-            await updateDoc(doc(db, "players", d.id), {
-              blocks: (Number(pDoc.blocks) || 0) + (Number(d.blocks) || 0),
-              interceptions: (Number(pDoc.interceptions) || 0) + (Number(d.interceptions) || 0),
-              clearances: (Number(pDoc.clearances) || 0) + (Number(d.clearances) || 0)
-            });
-          }
-        }
-      }
-      for (const pId of (mF.ap || [])) {
-        const pDoc = plrs.find(x => x.id === pId);
-        if (pDoc) {
-          await updateDoc(doc(db, "players", pId), {
-            appearances: (Number(pDoc.appearances) || 0) + 1
-          });
-        }
-      }
-
-      // Synchronize POTM count safely
+      // Synchronize career stats from match history
       await recalculateAllStatsSilent();
 
-      setMF({ op:"", dt:"", vn:"", cp:"Friendly", rs:"W", nS:0, oS:0, ap:[], sc:[], as:[], df:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, dI:"", dGuest:"", dB:0, dInt:0, dC:0, fmt:"7s", potmId:"", potmGuest:"" });
+      setMF({ op:"", dt:"", vn:"", cp:"Friendly", rs:"W", nS:0, oS:0, ap:[], sc:[], as:[], df:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, dI:"", dGuest:"", dB:0, dInt:0, dC:0, fmt:"7s" });
       showToast("✅ Match logged and stats updated!");
     } catch (err) { showToast(`❌ Error: ${err.message}`, "error"); }
     setLd(false);
@@ -454,7 +462,6 @@ export default function AdminDashboard({ onBack }) {
 
   // ── Match Edit Handlers ──
   const oEM = (m) => {
-    const isGuestPotm = m.potm && (m.potm.isGuest || (m.potm.id && String(m.potm.id).startsWith("guest_")));
     setEdM({
       id: m.id,
       opponent: m.opponent || "",
@@ -469,8 +476,6 @@ export default function AdminDashboard({ onBack }) {
       defensiveActions: m.defensiveActions || [],
       ap: m.ap || m.appearances || [],
       fmt: m.fmt || "7s",
-      potmId: m.potm ? (!isGuestPotm ? m.potm.id : "") : "",
-      potmGuest: m.potm ? (isGuestPotm ? m.potm.name : "") : "",
       sI: "",
       sGuest: "",
       sG: 1,
@@ -512,26 +517,6 @@ export default function AdminDashboard({ onBack }) {
         clearances: Number(d.clearances) || 0
       }));
 
-      let potm = null;
-      if (edM.potmGuest && edM.potmGuest.trim()) {
-        potm = {
-          id: `guest_${Date.now()}_${Math.random().toString(36).slice(2,5)}`,
-          name: edM.potmGuest.trim(),
-          isGuest: true
-        };
-      } else if (edM.potmId) {
-        const p = plrs.find(x => x.id === edM.potmId);
-        if (p) {
-          potm = {
-            id: p.id,
-            name: p.name,
-            jersey: p.jersey,
-            pos: p.pos,
-            isGuest: false
-          };
-        }
-      }
-
       await updateDoc(doc(db, "matches", edM.id), {
         opponent: edM.opponent ? edM.opponent.trim() : "",
         date: edM.date || new Date().toISOString().slice(0, 10),
@@ -543,7 +528,6 @@ export default function AdminDashboard({ onBack }) {
         scorers: cleanScorers,
         assisters: cleanAssisters,
         defensiveActions: cleanDefActions,
-        potm: potm,
         ap: edM.ap || [],
         fmt: edM.fmt || "7s"
       });
@@ -640,7 +624,7 @@ export default function AdminDashboard({ onBack }) {
         updatedAt: new Date().toISOString()
       };
       if (edAnn.teams && edAnn.teams.length > 0) {
-          data.teams = edAnn.badge === "OFFICIAL STATEMENT" ? [] : edAnn.teams;
+        data.teams = edAnn.badge === "OFFICIAL STATEMENT" ? [] : edAnn.teams;
       }
       if (edAnn.id) {
         await updateDoc(doc(db, "announcements", edAnn.id), data);
@@ -759,6 +743,7 @@ export default function AdminDashboard({ onBack }) {
             <div>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:"1px solid #e2e8f0", paddingBottom:12, marginBottom:18, gap:10, flexWrap:"wrap" }}>
                 <div style={{ fontSize:isMobile?18:22, fontWeight:800, color:"#0033a0" }}>FIRST TEAM ROSTER</div>
+                <button onClick={oNP} style={{ background:"#0033a0", color:"#fff", border:"none", padding:"8px 14px", borderRadius:6, fontWeight:700, cursor:"pointer", fontSize:12, whiteSpace:"nowrap" }}>+ ADD PLAYER</button>
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                   <button onClick={recalculateAllStats} disabled={ld} style={{ background:"#f1f5f9", color:"#0033a0", border:"1px solid #cbd5e1", padding:"8px 14px", borderRadius:6, fontWeight:700, cursor:ld?"wait":"pointer", fontSize:12, whiteSpace:"nowrap" }}>
                     🔄 SYNC ALL STATS
@@ -781,7 +766,7 @@ export default function AdminDashboard({ onBack }) {
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:14, fontWeight:800, color:"#0f172a", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
-                        <div style={{ fontSize:10, color:"#CC0000", fontWeight:700, marginTop:2 }}>{p.pos.toUpperCase()} · #{p.jersey}</div>
+                        <div style={{ fontSize:10, color:"#CC0000", fontWeight:700, marginTop:2 }}>{p.pos.toUpperCase()} · {p.jersey ? `#${p.jersey}` : "NO JERSEY"}</div>
                         {pct !== undefined && (
                           <div style={{ marginTop:6, background:"#e2e8f0", borderRadius:4, height:4 }}>
                             <div style={{ width:`${pct}%`, height:"100%", background:"#0033a0", borderRadius:4, transition:"width .1s" }}/>
@@ -843,11 +828,13 @@ export default function AdminDashboard({ onBack }) {
                     <div style={{ display:"flex", gap:12, alignItems:"center" }}>
                       <div style={{ flex:1, textAlign:"center" }}>
                         <div style={{ fontSize:11, fontWeight:700, color:"#64748b", marginBottom:6 }}>NAFC SCORE</div>
+                        <input type="number" min="0" required value={mF.nS} onChange={e=>setMF({...mF,nS:parseInt(e.target.value)})} style={{ ...inp, fontSize:22, fontWeight:800, textAlign:"center", border:"1px solid #0033a0" }}/>
                         <input type="number" min="0" required value={mF.nS} onChange={e=>setMF({...mF,nS:e.target.value===""?"":Math.max(0,parseInt(e.target.value)||0)})} style={{ ...inp, fontSize:22, fontWeight:800, textAlign:"center", border:"1px solid #0033a0" }}/>
                       </div>
                       <div style={{ fontSize:22, fontWeight:800, color:"#94a3b8", marginTop:18 }}>–</div>
                       <div style={{ flex:1, textAlign:"center" }}>
                         <div style={{ fontSize:11, fontWeight:700, color:"#64748b", marginBottom:6 }}>OPP SCORE</div>
+                        <input type="number" min="0" required value={mF.oS} onChange={e=>setMF({...mF,oS:parseInt(e.target.value)})} style={{ ...inp, fontSize:22, fontWeight:800, textAlign:"center" }}/>
                         <input type="number" min="0" required value={mF.oS} onChange={e=>setMF({...mF,oS:e.target.value===""?"":Math.max(0,parseInt(e.target.value)||0)})} style={{ ...inp, fontSize:22, fontWeight:800, textAlign:"center" }}/>
                       </div>
                     </div>
@@ -866,7 +853,7 @@ export default function AdminDashboard({ onBack }) {
                           return (
                             <div key={p.id} onClick={()=>tggA(p.id)} style={{ background:s?"#0033a0":"#fff", color:s?"#fff":"#475569", border:`1px solid ${s?"#0033a0":"#cbd5e1"}`, padding:"7px 10px", borderRadius:5, cursor:"pointer", display:"flex", justifyContent:"space-between", fontSize:12, fontWeight:600, transition:"all 0.15s" }}>
                               <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</span>
-                              <span style={{ opacity:s?1:0.4, flexShrink:0, marginLeft:4 }}>#{p.jersey}</span>
+                              <span style={{ opacity:s?1:0.4, flexShrink:0, marginLeft:4 }}>{p.jersey ? `#${p.jersey}` : "—"}</span>
                             </div>
                           );
                         })}
@@ -950,21 +937,6 @@ export default function AdminDashboard({ onBack }) {
                         </div>
                       ))}
                     </div>
-                    {/* Player of the Match (POTM) */}
-                    <div style={{ background:"#f8fafc", padding:14, borderRadius:8, border:"1px solid #e2e8f0" }}>
-                      <div style={{ fontSize:14, fontWeight:700, color:"#0f172a", marginBottom:4 }}>⭐ PLAYER OF THE MATCH (POTM)</div>
-                      <div style={{ color:"#64748b", marginBottom:10, fontSize:11 }}>Select the best performer of this fixture.</div>
-                      <div style={{ display:"flex", gap:8, flexWrap:isMobile?"wrap":"nowrap" }}>
-                        <select value={mF.potmId} onChange={e=>setMF({...mF, potmId:e.target.value, potmGuest:""})} style={{ ...selectStyle, flex:2, minWidth:0 }}>
-                          <option value="">No POTM Selected...</option>
-                          {plrs.map(p=><option key={p.id} value={p.id}>#{p.jersey} {p.name} ({p.pos.slice(0,3)})</option>)}
-                        </select>
-                        <input type="text" placeholder="Or Guest Name" value={mF.potmGuest} onChange={e=>setMF({...mF, potmGuest:e.target.value, potmId:""})} style={{ ...inp, flex:1.5, minWidth:120 }}/>
-                        {(mF.potmId || mF.potmGuest) && (
-                          <button type="button" onClick={()=>setMF({...mF, potmId:"", potmGuest:""})} style={{ background:"#fee2e2", color:"#ef4444", border:"1px solid #fca5a5", padding:"0 12px", borderRadius:6, cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>CLEAR</button>
-                        )}
-                      </div>
-                    </div>
                   </>
                 )}
 
@@ -978,6 +950,7 @@ export default function AdminDashboard({ onBack }) {
           {/* MATCH HISTORY */}
           {tb === "mtch" && (
             <div>
+              <div style={{ fontSize:isMobile?18:22, fontWeight:800, color:"#0033a0", borderBottom:"1px solid #e2e8f0", paddingBottom:12, marginBottom:18 }}>MATCH HISTORY</div>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:"1px solid #e2e8f0", paddingBottom:12, marginBottom:18, gap:10, flexWrap:"wrap" }}>
                 <div style={{ fontSize:isMobile?18:22, fontWeight:800, color:"#0033a0" }}>MATCH HISTORY</div>
                 <button onClick={recalculateAllStats} disabled={ld} style={{ background:"#f1f5f9", color:"#0033a0", border:"1px solid #cbd5e1", padding:"8px 14px", borderRadius:6, fontWeight:700, cursor:ld?"wait":"pointer", fontSize:12, whiteSpace:"nowrap" }}>
@@ -994,11 +967,6 @@ export default function AdminDashboard({ onBack }) {
                         <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
                           <div style={{ fontSize:isMobile?13:14, fontWeight:700, color:"#0f172a" }}>NAFC vs {m.opponent}</div>
                           {m.fmt && <span style={{ background:"#0033a0", color:"white", fontSize:9, fontWeight:700, padding:"2px 8px", borderRadius:4, letterSpacing:1 }}>{m.fmt}</span>}
-                          {m.potm && (
-                            <span style={{ background:"#fef3c7", color:"#92400e", border:"1px solid #fde68a", fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4 }}>
-                              ⭐ POTM: {typeof m.potm === "object" ? m.potm.name : m.potm}
-                            </span>
-                          )}
                         </div>
                         <div style={{ fontSize:11, color:"#64748b", fontWeight:600, marginTop:2 }}>{m.date} · {m.competition} · {m.result !== "upcoming" ? `${m.nafcScore}–${m.opponentScore} (${m.result})` : "Upcoming"}</div>
                       </div>
@@ -1141,13 +1109,13 @@ export default function AdminDashboard({ onBack }) {
               <select value={edP.pos} onChange={e=>setEdP({...edP,pos:e.target.value})} style={selectStyle}>
                 {["Goalkeeper","Defender","Midfielder","Winger","Forward","Striker"].map(p=><option key={p} value={p}>{p}</option>)}
               </select>
-              <input type="number" value={edP.jersey ?? 0} onChange={e=>setEdP({...edP,jersey:e.target.value===""?"":parseInt(e.target.value)||0})} placeholder="Jersey #" required style={inp}/>
+              <input type="number" value={edP.jersey ?? ""} onChange={e=>setEdP({...edP,jersey:e.target.value===""?"":parseInt(e.target.value)||0})} placeholder="Jersey # (Optional)" style={inp}/>
               <div style={{ borderTop:"1px solid #e2e8f0", paddingTop:14 }}>
                 <div style={{ fontWeight:700, fontSize:11, color:"#0033a0", marginBottom:10, letterSpacing:1 }}>STAT OVERRIDE</div>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-                  {[["GOALS","goals"],["ASSISTS","assists"],["APPEARANCES","appearances"],["CLEAN SHEETS","cleanSheets"],["SAVES","saves"],["BLOCKS","blocks"],["INTERCEPTIONS","interceptions"],["CLEARANCES","clearances"],["POTM AWARDS","potmCount"]].map(([l,k]) => (
+                  {[["GOALS","goals"],["ASSISTS","assists"],["APPEARANCES","appearances"],["CLEAN SHEETS","cleanSheets"],["SAVES","saves"],["BLOCKS","blocks"],["INTERCEPTIONS","interceptions"],["CLEARANCES","clearances"]].map(([l,k]) => (
                     <label key={k} style={{ color:"#64748b", fontSize:11, fontWeight:700 }}>{l}
-                      <input type="number" min="0" value={edP[k] ?? 0} onChange={e=>setEdP({...edP,[k]:e.target.value===""?"":parseInt(e.target.value)||0})} style={{ ...inp, marginTop:4 }}/>
+                      <input type="number" min="0" value={edP[k] ?? 0} onChange={e=>setEdP({...edP,[k]:e.target.value===""?0:parseInt(e.target.value)||0})} style={{ ...inp, marginTop:4 }}/>
                     </label>
                   ))}
                 </div>
@@ -1199,9 +1167,11 @@ export default function AdminDashboard({ onBack }) {
                   </select>
                 </label>
                 <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>NAFC Score
+                  <input type="number" min="0" value={edM.nafcScore} onChange={e=>setEdM({...edM,nafcScore:e.target.value})} style={{ ...inp, marginTop:4 }}/>
                   <input type="number" min="0" value={edM.nafcScore ?? 0} onChange={e=>setEdM({...edM,nafcScore:e.target.value===""?"":Math.max(0,parseInt(e.target.value)||0)})} style={{ ...inp, marginTop:4 }}/>
                 </label>
                 <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Opponent Score
+                  <input type="number" min="0" value={edM.opponentScore} onChange={e=>setEdM({...edM,opponentScore:e.target.value})} style={{ ...inp, marginTop:4 }}/>
                   <input type="number" min="0" value={edM.opponentScore ?? 0} onChange={e=>setEdM({...edM,opponentScore:e.target.value===""?"":Math.max(0,parseInt(e.target.value)||0)})} style={{ ...inp, marginTop:4 }}/>
                 </label>
               </div>
@@ -1284,21 +1254,6 @@ export default function AdminDashboard({ onBack }) {
                 ))}
               </div>
 
-              {/* Player of the Match (POTM) */}
-              <div style={{ background:"#f8fafc", padding:12, borderRadius:8, border:"1px solid #e2e8f0" }}>
-                <div style={{ fontSize:13, fontWeight:700, color:"#0f172a", marginBottom:6 }}>⭐ PLAYER OF THE MATCH (POTM)</div>
-                <div style={{ display:"flex", gap:8, flexWrap:isMobile?"wrap":"nowrap" }}>
-                  <select value={edM.potmId || ""} onChange={e=>setEdM({...edM, potmId:e.target.value, potmGuest:""})} style={{ ...selectStyle, flex:2, minWidth:0 }}>
-                    <option value="">No POTM Selected...</option>
-                    {plrs.map(p=><option key={p.id} value={p.id}>#{p.jersey} {p.name} ({p.pos.slice(0,3)})</option>)}
-                  </select>
-                  <input type="text" placeholder="Or Guest Name" value={edM.potmGuest || ""} onChange={e=>setEdM({...edM, potmGuest:e.target.value, potmId:""})} style={{ ...inp, flex:1.5, minWidth:110 }}/>
-                  {(edM.potmId || edM.potmGuest) && (
-                    <button type="button" onClick={()=>setEdM({...edM, potmId:"", potmGuest:""})} style={{ background:"#fee2e2", color:"#ef4444", border:"1px solid #fca5a5", padding:"0 10px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:700, whiteSpace:"nowrap" }}>CLEAR</button>
-                  )}
-                </div>
-              </div>
-
               {/* Lineup / Appearances */}
               <div style={{ background:"#f8fafc", padding:12, borderRadius:8, border:"1px solid #e2e8f0" }}>
                 <div style={{ fontSize:13, fontWeight:700, color:"#0f172a", marginBottom:8 }}>SQUAD LINEUP ({edM.ap.length} PLAYERS)</div>
@@ -1308,7 +1263,7 @@ export default function AdminDashboard({ onBack }) {
                     return (
                       <div key={p.id} onClick={()=>tggEdA(p.id)} style={{ background:sel?"#0033a0":"#fff", color:sel?"#fff":"#475569", border:`1px solid ${sel?"#0033a0":"#cbd5e1"}`, padding:"6px 8px", borderRadius:5, cursor:"pointer", display:"flex", justifyContent:"space-between", fontSize:11, fontWeight:600 }}>
                         <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</span>
-                        <span style={{ opacity:sel?1:0.4, marginLeft:4 }}>#{p.jersey}</span>
+                        <span style={{ opacity:sel?1:0.4, marginLeft:4 }}>{p.jersey ? `#${p.jersey}` : "—"}</span>
                       </div>
                     );
                   })}
@@ -1352,7 +1307,6 @@ export default function AdminDashboard({ onBack }) {
                 <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Status Badge
                   <select value={edAnn.badge} onChange={e=>setEdAnn({...edAnn,badge:e.target.value})} style={{ ...selectStyle, marginTop:4 }}>
                     <option value="UPCOMING">UPCOMING</option>
-                    <option value="OFFICIAL STATEMENT">OFFICIAL STATEMENT</option>
                     <option value="LIVE">LIVE 🔴</option>
                     <option value="COMPLETED">COMPLETED</option>
                   </select>
