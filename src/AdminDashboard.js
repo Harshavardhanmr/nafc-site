@@ -56,7 +56,8 @@ export default function AdminDashboard({ onBack }) {
 
   const [mF, setMF] = useState({
     op:"", dt:"", vn:"", cp:"Friendly", rs:"W",
-    nS:0, oS:0, ap:[], sc:[], as:[], df:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, dI:"", dGuest:"", dB:0, dInt:0, dC:0, fmt:"7s"
+    nS:0, oS:0, ap:[], sc:[], as:[], df:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, dI:"", dGuest:"", dB:0, dInt:0, dC:0, fmt:"7s",
+    potm: null, potmPlayerId: "", potmGuestName: ""
   });
 
   useEffect(() => {
@@ -364,7 +365,8 @@ export default function AdminDashboard({ onBack }) {
         assisters: cleanAssisters,
         defensiveActions: cleanDefActions,
         fmt: mF.fmt || "7s",
-        ap: mF.ap || []
+        ap: mF.ap || [],
+        potm: mF.potm || null
       });
 
       if (mF.rs !== "upcoming") {
@@ -407,7 +409,7 @@ export default function AdminDashboard({ onBack }) {
       // Synchronize career stats from match history
       await recalculateAllStatsSilent();
 
-      setMF({ op:"", dt:"", vn:"", cp:"Friendly", rs:"W", nS:0, oS:0, ap:[], sc:[], as:[], df:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, dI:"", dGuest:"", dB:0, dInt:0, dC:0, fmt:"7s" });
+      setMF({ op:"", dt:"", vn:"", cp:"Friendly", rs:"W", nS:0, oS:0, ap:[], sc:[], as:[], df:[], sI:"", sGuest:"", sG:1, aI:"", aGuest:"", aG:1, dI:"", dGuest:"", dB:0, dInt:0, dC:0, fmt:"7s", potm:null, potmPlayerId:"", potmGuestName:"" });
       showToast("✅ Match logged and stats updated!");
     } catch (err) { showToast(`❌ Error: ${err.message}`, "error"); }
     setLd(false);
@@ -462,6 +464,21 @@ export default function AdminDashboard({ onBack }) {
 
   // ── Match Edit Handlers ──
   const oEM = (m) => {
+    let pId = "";
+    let gName = "";
+    if (m.potm) {
+      if (typeof m.potm === "object") {
+        if (m.potm.isGuest || String(m.potm.id || "").startsWith("guest_")) {
+          gName = m.potm.name || "";
+        } else {
+          pId = m.potm.id || "";
+        }
+      } else {
+        const found = plrs.find(x => x.name && x.name.toLowerCase() === String(m.potm).toLowerCase());
+        if (found) pId = found.id;
+        else gName = String(m.potm);
+      }
+    }
     setEdM({
       id: m.id,
       opponent: m.opponent || "",
@@ -476,6 +493,9 @@ export default function AdminDashboard({ onBack }) {
       defensiveActions: m.defensiveActions || [],
       ap: m.ap || m.appearances || [],
       fmt: m.fmt || "7s",
+      potm: m.potm || null,
+      potmPlayerId: pId,
+      potmGuestName: gName,
       sI: "",
       sGuest: "",
       sG: 1,
@@ -529,7 +549,8 @@ export default function AdminDashboard({ onBack }) {
         assisters: cleanAssisters,
         defensiveActions: cleanDefActions,
         ap: edM.ap || [],
-        fmt: edM.fmt || "7s"
+        fmt: edM.fmt || "7s",
+        potm: edM.potm || null
       });
       
       setEdM(null);
@@ -668,16 +689,42 @@ export default function AdminDashboard({ onBack }) {
     { i:"hero", l:"🏠 Hero Photo"},
   ];
 
-  const inp = { padding:"10px 12px", background:"#f8fafc", border:"1px solid #cbd5e1", borderRadius:6, fontSize:14, outline:"none", width:"100%", boxSizing:"border-box" };
-  const selectStyle = { ...inp };
+  const inp = {
+    padding: "10px 12px",
+    background: "#ffffff",
+    border: "1px solid #cbd5e1",
+    borderRadius: 6,
+    fontSize: 14,
+    outline: "none",
+    width: "100%",
+    boxSizing: "border-box",
+    color: "#0f172a",
+    colorScheme: "light"
+  };
+  const selectStyle = { ...inp, cursor: "pointer" };
 
   return (
-    <div style={{ fontFamily:"system-ui,-apple-system,'Segoe UI',sans-serif", fontSize:14, background:"#f1f5f9", minHeight:"100vh", color:"#0f172a" }}>
+    <div id="admin-root" style={{ fontFamily:"system-ui,-apple-system,'Segoe UI',sans-serif", fontSize:14, background:"#f1f5f9", minHeight:"100vh", color:"#0f172a", colorScheme:"light" }}>
       <style>{`
         @keyframes slideIn { from { transform:translateX(40px);opacity:0 } to { transform:translateX(0);opacity:1 } }
         @keyframes slideDown { from { transform:translateY(-10px);opacity:0 } to { transform:translateY(0);opacity:1 } }
-        * { box-sizing: border-box; }
-        input,select,textarea { font-family: inherit; }
+        #admin-root, #admin-root * { box-sizing: border-box; color-scheme: light !important; }
+        #admin-root input, #admin-root select, #admin-root textarea {
+          font-family: inherit;
+          color: #0f172a !important;
+          -webkit-text-fill-color: #0f172a !important;
+          background-color: #ffffff;
+          color-scheme: light !important;
+        }
+        #admin-root input::placeholder, #admin-root textarea::placeholder {
+          color: #94a3b8 !important;
+          -webkit-text-fill-color: #94a3b8 !important;
+          opacity: 1;
+        }
+        #admin-root option {
+          color: #0f172a !important;
+          background-color: #ffffff !important;
+        }
         .adm-tab-btn { transition: all 0.2s; }
         .adm-tab-btn:hover { background: #f1f5f9 !important; }
         .squad-card { transition: box-shadow 0.2s; }
@@ -828,13 +875,11 @@ export default function AdminDashboard({ onBack }) {
                     <div style={{ display:"flex", gap:12, alignItems:"center" }}>
                       <div style={{ flex:1, textAlign:"center" }}>
                         <div style={{ fontSize:11, fontWeight:700, color:"#64748b", marginBottom:6 }}>NAFC SCORE</div>
-                        <input type="number" min="0" required value={mF.nS} onChange={e=>setMF({...mF,nS:parseInt(e.target.value)})} style={{ ...inp, fontSize:22, fontWeight:800, textAlign:"center", border:"1px solid #0033a0" }}/>
                         <input type="number" min="0" required value={mF.nS} onChange={e=>setMF({...mF,nS:e.target.value===""?"":Math.max(0,parseInt(e.target.value)||0)})} style={{ ...inp, fontSize:22, fontWeight:800, textAlign:"center", border:"1px solid #0033a0" }}/>
                       </div>
                       <div style={{ fontSize:22, fontWeight:800, color:"#94a3b8", marginTop:18 }}>–</div>
                       <div style={{ flex:1, textAlign:"center" }}>
                         <div style={{ fontSize:11, fontWeight:700, color:"#64748b", marginBottom:6 }}>OPP SCORE</div>
-                        <input type="number" min="0" required value={mF.oS} onChange={e=>setMF({...mF,oS:parseInt(e.target.value)})} style={{ ...inp, fontSize:22, fontWeight:800, textAlign:"center" }}/>
                         <input type="number" min="0" required value={mF.oS} onChange={e=>setMF({...mF,oS:e.target.value===""?"":Math.max(0,parseInt(e.target.value)||0)})} style={{ ...inp, fontSize:22, fontWeight:800, textAlign:"center" }}/>
                       </div>
                     </div>
@@ -843,6 +888,75 @@ export default function AdminDashboard({ onBack }) {
 
                 {mF.rs !== "upcoming" && (
                   <>
+                    {/* Player of the Match (POTM) */}
+                    <div style={{ background:"#f8fafc", padding:14, borderRadius:8, border:"1px solid #e2e8f0" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+                        <div style={{ fontSize:14, fontWeight:700, color:"#0f172a" }}>⭐ PLAYER OF THE MATCH (POTM)</div>
+                        {mF.potm && (
+                          <span style={{ fontSize:11, fontWeight:700, color:"#d97706", background:"rgba(217,119,6,0.12)", border:"1px solid rgba(217,119,6,0.3)", padding:"2px 8px", borderRadius:4 }}>
+                            SELECTED
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ color:"#64748b", marginBottom:10, fontSize:11 }}>Select the matchday MVP voted in the post-match huddle.</div>
+                      <div style={{ display:"flex", gap:8, flexWrap:isMobile?"wrap":"nowrap" }}>
+                        <select
+                          value={mF.potmPlayerId || ""}
+                          onChange={e => {
+                            const pid = e.target.value;
+                            if (!pid) {
+                              setMF({ ...mF, potmPlayerId:"", potmGuestName:"", potm:null });
+                            } else {
+                              const p = plrs.find(x => x.id === pid);
+                              setMF({
+                                ...mF,
+                                potmPlayerId: pid,
+                                potmGuestName: "",
+                                potm: p ? { id: p.id, name: p.name, jersey: p.jersey || null, pos: p.pos, isGuest: false } : null
+                              });
+                            }
+                          }}
+                          style={{ ...selectStyle, flex:2, minWidth:0 }}
+                        >
+                          <option value="">Select Team Player...</option>
+                          {plrs.map(p => (
+                            <option key={p.id} value={p.id}>{p.name} ({p.jersey ? `#${p.jersey}` : "—"} · {p.pos})</option>
+                          ))}
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Or Guest Name"
+                          value={mF.potmGuestName || ""}
+                          onChange={e => {
+                            const gName = e.target.value;
+                            setMF({
+                              ...mF,
+                              potmGuestName: gName,
+                              potmPlayerId: "",
+                              potm: gName.trim() ? { id: `guest_potm_${Date.now()}`, name: gName.trim(), isGuest: true, pos: "Guest" } : null
+                            });
+                          }}
+                          style={{ ...inp, flex:1.5, minWidth:110 }}
+                        />
+                        {mF.potm && (
+                          <button
+                            type="button"
+                            onClick={() => setMF({ ...mF, potm:null, potmPlayerId:"", potmGuestName:"" })}
+                            style={{ background:"#fee2e2", color:"#ef4444", border:"1px solid #fca5a5", padding:"0 14px", fontSize:12, fontWeight:700, borderRadius:6, cursor:"pointer", height:42, whiteSpace:"nowrap" }}
+                          >
+                            ✕ CLEAR
+                          </button>
+                        )}
+                      </div>
+                      {mF.potm && (
+                        <div style={{ marginTop:8, display:"flex", alignItems:"center", gap:6, fontSize:13, fontWeight:700, color:"#d97706" }}>
+                          <span>⭐ Assigned POTM:</span>
+                          <span style={{ color:"#0f172a" }}>{typeof mF.potm === "object" ? mF.potm.name : mF.potm}</span>
+                          {typeof mF.potm === "object" && mF.potm.jersey && <span style={{ color:"#0033a0" }}>#{mF.potm.jersey}</span>}
+                          {typeof mF.potm === "object" && mF.potm.pos && <span style={{ color:"#64748b", fontSize:11 }}>({mF.potm.pos})</span>}
+                        </div>
+                      )}
+                    </div>
                     {/* Appearances */}
                     <div style={{ background:"#f8fafc", padding:14, borderRadius:8, border:"1px solid #e2e8f0" }}>
                       <div style={{ fontSize:14, fontWeight:700, color:"#0f172a", marginBottom:4 }}>APPEARANCES</div>
@@ -968,7 +1082,14 @@ export default function AdminDashboard({ onBack }) {
                           <div style={{ fontSize:isMobile?13:14, fontWeight:700, color:"#0f172a" }}>NAFC vs {m.opponent}</div>
                           {m.fmt && <span style={{ background:"#0033a0", color:"white", fontSize:9, fontWeight:700, padding:"2px 8px", borderRadius:4, letterSpacing:1 }}>{m.fmt}</span>}
                         </div>
-                        <div style={{ fontSize:11, color:"#64748b", fontWeight:600, marginTop:2 }}>{m.date} · {m.competition} · {m.result !== "upcoming" ? `${m.nafcScore}–${m.opponentScore} (${m.result})` : "Upcoming"}</div>
+                        <div style={{ fontSize:11, color:"#64748b", fontWeight:600, marginTop:2, display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                          <span>{m.date} · {m.competition} · {m.result !== "upcoming" ? `${m.nafcScore}–${m.opponentScore} (${m.result})` : "Upcoming"}</span>
+                          {m.potm && (
+                            <span style={{ color:"#b45309", background:"rgba(217,119,6,0.12)", border:"1px solid rgba(217,119,6,0.3)", padding:"1px 6px", borderRadius:4, fontSize:10, fontWeight:700 }}>
+                              ⭐ POTM: {typeof m.potm === "object" ? m.potm.name : m.potm}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div style={{ display:"flex", gap:6, flexShrink:0 }}>
                         <button onClick={()=>oEM(m)} style={{ background:"#e0e7ff", color:"#3730a3", border:"1px solid #c7d2fe", padding:"5px 12px", borderRadius:5, fontWeight:700, fontSize:11, cursor:"pointer" }}>✏️ EDIT</button>
@@ -1167,13 +1288,80 @@ export default function AdminDashboard({ onBack }) {
                   </select>
                 </label>
                 <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>NAFC Score
-                  <input type="number" min="0" value={edM.nafcScore} onChange={e=>setEdM({...edM,nafcScore:e.target.value})} style={{ ...inp, marginTop:4 }}/>
                   <input type="number" min="0" value={edM.nafcScore ?? 0} onChange={e=>setEdM({...edM,nafcScore:e.target.value===""?"":Math.max(0,parseInt(e.target.value)||0)})} style={{ ...inp, marginTop:4 }}/>
                 </label>
                 <label style={{ fontSize:12, fontWeight:700, color:"#334155" }}>Opponent Score
-                  <input type="number" min="0" value={edM.opponentScore} onChange={e=>setEdM({...edM,opponentScore:e.target.value})} style={{ ...inp, marginTop:4 }}/>
                   <input type="number" min="0" value={edM.opponentScore ?? 0} onChange={e=>setEdM({...edM,opponentScore:e.target.value===""?"":Math.max(0,parseInt(e.target.value)||0)})} style={{ ...inp, marginTop:4 }}/>
                 </label>
+              </div>
+
+              {/* Edit POTM */}
+              <div style={{ background:"#f8fafc", padding:12, borderRadius:8, border:"1px solid #e2e8f0" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>⭐ PLAYER OF THE MATCH (POTM)</div>
+                  {edM.potm && (
+                    <span style={{ fontSize:10, fontWeight:700, color:"#d97706", background:"rgba(217,119,6,0.12)", border:"1px solid rgba(217,119,6,0.3)", padding:"1px 6px", borderRadius:4 }}>
+                      ASSIGNED
+                    </span>
+                  )}
+                </div>
+                <div style={{ display:"flex", gap:8, flexWrap:isMobile?"wrap":"nowrap" }}>
+                  <select
+                    value={edM.potmPlayerId || ""}
+                    onChange={e => {
+                      const pid = e.target.value;
+                      if (!pid) {
+                        setEdM({ ...edM, potmPlayerId:"", potmGuestName:"", potm:null });
+                      } else {
+                        const p = plrs.find(x => x.id === pid);
+                        setEdM({
+                          ...edM,
+                          potmPlayerId: pid,
+                          potmGuestName: "",
+                          potm: p ? { id: p.id, name: p.name, jersey: p.jersey || null, pos: p.pos, isGuest: false } : null
+                        });
+                      }
+                    }}
+                    style={{ ...selectStyle, flex:2, minWidth:0 }}
+                  >
+                    <option value="">None / Not Selected...</option>
+                    {plrs.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} ({p.jersey ? `#${p.jersey}` : "—"} · {p.pos})</option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Or Guest Name"
+                    value={edM.potmGuestName || ""}
+                    onChange={e => {
+                      const gName = e.target.value;
+                      setEdM({
+                        ...edM,
+                        potmGuestName: gName,
+                        potmPlayerId: "",
+                        potm: gName.trim() ? { id: `guest_potm_${Date.now()}`, name: gName.trim(), isGuest: true, pos: "Guest" } : null
+                      });
+                    }}
+                    style={{ ...inp, flex:1.5, minWidth:110 }}
+                  />
+                  {edM.potm && (
+                    <button
+                      type="button"
+                      onClick={() => setEdM({ ...edM, potm:null, potmPlayerId:"", potmGuestName:"" })}
+                      style={{ background:"#fee2e2", color:"#ef4444", border:"1px solid #fca5a5", padding:"0 10px", fontSize:11, fontWeight:700, borderRadius:6, cursor:"pointer", whiteSpace:"nowrap" }}
+                    >
+                      ✕ CLEAR
+                    </button>
+                  )}
+                </div>
+                {edM.potm && (
+                  <div style={{ marginTop:6, display:"flex", alignItems:"center", gap:6, fontSize:12, fontWeight:700, color:"#d97706" }}>
+                    <span>⭐ Assigned POTM:</span>
+                    <span style={{ color:"#0f172a" }}>{typeof edM.potm === "object" ? edM.potm.name : edM.potm}</span>
+                    {typeof edM.potm === "object" && edM.potm.jersey && <span style={{ color:"#0033a0" }}>#{edM.potm.jersey}</span>}
+                    {typeof edM.potm === "object" && edM.potm.pos && <span style={{ color:"#64748b", fontSize:11 }}>({edM.potm.pos})</span>}
+                  </div>
+                )}
               </div>
 
               {/* Goal Scorers */}
