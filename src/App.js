@@ -78,24 +78,27 @@ const POS_COLOR = {
   Striker:    T_RED,
 };
 
-function useCountUp(target, duration = 900) {
-  const [val, setVal] = useState(0);
+function StatNum({ value }) {
+  const target = Number(value) || 0;
+  const spanRef = useRef(null);
   useEffect(() => {
-    if (!target) { setVal(0); return; }
+    const el = spanRef.current;
+    if (!el) return;
+    if (!target) { el.textContent = "0"; return; }
     let start = null;
     let rafId = null;
+    const duration = 600;
     const step = ts => {
       if (!start) start = ts;
       const p = Math.min((ts - start) / duration, 1);
-      setVal(Math.floor(p * target));
+      el.textContent = String(Math.floor(p * target));
       if (p < 1) rafId = requestAnimationFrame(step);
     };
     rafId = requestAnimationFrame(step);
     return () => { if (rafId) cancelAnimationFrame(rafId); };
-  }, [target, duration]);
-  return val;
+  }, [target]);
+  return <span ref={spanRef}>{target}</span>;
 }
-function StatNum({ value }) { const v = useCountUp(value || 0); return <>{v}</>; }
 
 // ── Loading Skeleton Shimmer Components ──
 function SkeletonPulse({ width = "100%", height = 16, radius = 6, style = {}, T = THEMES.dark }) {
@@ -1695,6 +1698,205 @@ function PotmRulesModal({ onClose, T = THEMES.dark, isMobile = false }) {
   );
 }
 
+// ── Out-of-the-Box Clean Leaderboard Showcase (Podium + Category Switcher) ──
+function LeaderboardShowcase({ boards, T, isMobile, onSelectPlayer }) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [expanded, setExpanded] = useState(false);
+
+  const safeIdx = activeIdx < boards.length ? activeIdx : 0;
+  const board = boards[safeIdx] || boards[0];
+  if (!board) return null;
+
+  const list = board.sorted || [];
+  const podium = list.slice(0, 3);
+  const rest = list.slice(3);
+  const visibleRest = expanded ? rest : rest.slice(0, 7);
+
+  const rankMeta = [
+    { label: "1ST", accent: board.color, badgeBg: board.color, bg: `${board.color}12`, border: `${board.color}45`, topBorder: board.color },
+    { label: "2ND", accent: "#71717a", badgeBg: "#52525b", bg: T.cardBg, border: T.border, topBorder: T.border },
+    { label: "3RD", accent: "#71717a", badgeBg: "#3f3f46", bg: T.cardBg, border: T.border, topBorder: T.border }
+  ];
+
+  return (
+    <div>
+      {/* Clean Category Pill Switcher */}
+      <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:20 }}>
+        {boards.map((b, idx) => {
+          const isAct = idx === safeIdx;
+          return (
+            <button
+              key={b.key || b.title}
+              onClick={() => { setActiveIdx(idx); setExpanded(false); }}
+              className="bebas"
+              style={{
+                display:"inline-flex", alignItems:"center", gap:7,
+                background: isAct ? b.color : T.cardBg,
+                color: isAct ? "#fff" : T.textMuted,
+                border: `1px solid ${isAct ? b.color : T.border}`,
+                borderRadius: 30,
+                padding: isMobile ? "8px 14px" : "9px 18px",
+                fontSize: isMobile ? 13 : 14,
+                letterSpacing: 1.5,
+                cursor: "pointer",
+                outline: "none",
+                transition: "all 0.2s ease"
+              }}
+            >
+              <span>{b.icon}</span>
+              <span>{b.shortTitle || b.title}</span>
+              <span style={{ opacity: isAct ? 0.85 : 0.45, fontSize: 11 }}>({b.sorted.length})</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {list.length === 0 ? (
+        <div style={{ background:T.cardBg, border:`1px solid ${T.border}`, borderRadius:16, padding:"48px 20px", textAlign:"center", color:T.textDim, fontSize:15 }}>
+          {board.emptyMsg}
+        </div>
+      ) : (
+        <>
+          {/* Top 3 Podium Cards */}
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : `repeat(${Math.min(3, podium.length)}, 1fr)`, gap: isMobile ? 10 : 14, marginBottom: rest.length > 0 ? 16 : 0 }}>
+            {podium.map((p, idx) => {
+              const rm = rankMeta[idx];
+              const val = board.renderValue(p);
+              const sub = board.subValue ? board.subValue(p) : null;
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => onSelectPlayer(p)}
+                  style={{
+                    background: rm.bg,
+                    border: `1px solid ${rm.border}`,
+                    borderTop: `3px solid ${rm.topBorder}`,
+                    borderRadius: 16,
+                    padding: isMobile ? "16px" : "20px 22px",
+                    cursor: "pointer",
+                    transition: "transform 0.2s ease, border-color 0.2s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 14
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = "none"; }}
+                >
+                  <div style={{ display:"flex", alignItems:"center", gap:14, minWidth:0 }}>
+                    <div style={{ position:"relative", flexShrink:0 }}>
+                      <div style={{ width: isMobile ? 48 : 56, height: isMobile ? 48 : 56, borderRadius:"50%", background:T.bg2, border:`2px solid ${rm.accent}`, overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                        {p.photoURL ? (
+                          <img src={p.photoURL} alt={p.name} loading="lazy" decoding="async" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition: getPhotoPos(p, "center 35%") }} />
+                        ) : (
+                          <span className="bebas" style={{ fontSize:16, color:T.textDim }}>{p.jersey ? `#${p.jersey}` : "—"}</span>
+                        )}
+                      </div>
+                      <span className="bebas" style={{ position:"absolute", bottom:-4, right:-4, background:rm.badgeBg, color:"#fff", fontSize:10, letterSpacing:1, padding:"1px 6px", borderRadius:10, border:`2px solid ${T.cardBg}` }}>
+                        {rm.label}
+                      </span>
+                    </div>
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ fontWeight:700, fontSize: isMobile ? 16 : 18, color:T.text, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                        {p.name}
+                      </div>
+                      <div style={{ fontSize:11, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, marginTop:2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                        {p.pos.toUpperCase()}{p.jersey ? ` · #${p.jersey}` : ""}
+                      </div>
+                      {sub && (
+                        <div style={{ fontSize:11, color:T.textMuted, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:4, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                          {sub}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ textAlign:"right", flexShrink:0 }}>
+                    <div className="bebas" style={{ fontSize: isMobile ? 38 : 44, color: idx === 0 ? board.color : T.text, lineHeight:0.95 }}>
+                      {val}
+                    </div>
+                    <div style={{ fontSize:10, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, marginTop:2 }}>
+                      {board.unitLabel || "TOTAL"}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Remaining Ranks: Clean Apple-Style Hairline List */}
+          {rest.length > 0 && (
+            <div style={{ background:T.cardBg, border:`1px solid ${T.border}`, borderRadius:16, padding:"4px 18px" }}>
+              {visibleRest.map((p, i) => {
+                const rank = i + 4;
+                const val = board.renderValue(p);
+                const sub = board.subValue ? board.subValue(p) : null;
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => onSelectPlayer(p)}
+                    style={{
+                      display:"flex",
+                      alignItems:"center",
+                      justifyContent:"space-between",
+                      gap:12,
+                      padding:"12px 4px",
+                      borderBottom: i < visibleRest.length - 1 ? `1px solid ${T.borderLight}` : "none",
+                      cursor:"pointer",
+                      transition:"opacity 0.15s ease"
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.opacity = "0.75"; }}
+                    onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
+                  >
+                    <div style={{ display:"flex", alignItems:"center", gap:12, minWidth:0 }}>
+                      <span className="bebas" style={{ width:24, textAlign:"center", fontSize:16, color:T.textDim, flexShrink:0 }}>{rank}</span>
+                      <div style={{ width:34, height:34, borderRadius:"50%", background:T.bg2, overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                        {p.photoURL ? (
+                          <img src={p.photoURL} alt={p.name} loading="lazy" decoding="async" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition: getPhotoPos(p, "center 35%") }} />
+                        ) : (
+                          <span className="bebas" style={{ fontSize:11, color:T.textDim }}>{p.jersey ? `#${p.jersey}` : "—"}</span>
+                        )}
+                      </div>
+                      <div style={{ minWidth:0 }}>
+                        <div style={{ fontWeight:600, fontSize:15, color:T.text, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{p.name}</div>
+                        <div style={{ fontSize:11, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                          {p.pos.slice(0,3).toUpperCase()}{sub ? ` · ${sub}` : ""}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bebas" style={{ fontSize:26, color:T.textMuted, lineHeight:1, flexShrink:0 }}>
+                      {val}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {rest.length > 7 && (
+                <button
+                  onClick={() => setExpanded(e => !e)}
+                  className="bebas"
+                  style={{
+                    width:"100%",
+                    background:"transparent",
+                    border:"none",
+                    borderTop:`1px solid ${T.borderLight}`,
+                    color:T.textDim,
+                    padding:"12px 0",
+                    fontSize:13,
+                    letterSpacing:2,
+                    cursor:"pointer"
+                  }}
+                >
+                  {expanded ? "SHOW LESS ↑" : `VIEW ALL ${list.length} PLAYERS ↓`}
+                </button>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function AppShell() {
   const { user, loading, logout } = useAuth();
   const [pg, setPg] = useState("Home");
@@ -2440,7 +2642,7 @@ function AppShell() {
                                   <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:"white", letterSpacing:2 }}>{p.pos.slice(0,3).toUpperCase()}</span>
                                 </div>
                                 {/* OVR Badge */}
-                                <div style={{ position:"absolute", top:10, right:12, background: isElite ? "rgba(20,16,5,0.85)" : "rgba(0,0,0,0.72)", backdropFilter:"blur(12px)", border: isElite ? "1.5px solid #fbbf24" : isGopal ? "1.5px solid #60a5fa" : "1px solid rgba(255,255,255,0.2)", borderRadius:8, padding:"3px 8px", display:"flex", alignItems:"center", gap:5, boxShadow: isElite ? "0 4px 18px rgba(251,191,36,0.45)" : "0 4px 14px rgba(0,0,0,0.6)", zIndex:2 }}>
+                                <div style={{ position:"absolute", top:10, right:12, background: isElite ? "rgba(20,16,5,0.9)" : "rgba(10,10,14,0.85)", border: isElite ? "1.5px solid #fbbf24" : isGopal ? "1.5px solid #60a5fa" : "1px solid rgba(255,255,255,0.2)", borderRadius:8, padding:"3px 8px", display:"flex", alignItems:"center", gap:5, boxShadow: isElite ? "0 4px 18px rgba(251,191,36,0.45)" : "0 4px 14px rgba(0,0,0,0.6)", zIndex:2 }}>
                                   <span className="bebas" style={{ fontSize:18, color: isElite ? "#fbbf24" : isGopal ? "#60a5fa" : "#fff", lineHeight:1 }}>{pOvr}</span>
                                   <span style={{ fontSize:10, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, color: isElite ? "#fbbf24" : isGopal ? "#60a5fa" : "rgba(255,255,255,0.55)" }}>OVR</span>
                                 </div>
@@ -2467,7 +2669,7 @@ function AppShell() {
                                     : [["G",p.goals||0,T_RED],["A",p.assists||0,T_GOLD],["APP",p.appearances||0,T.textMuted]]
                                   ).map(([l,v,c],idx,arr) => (
                                     <div key={l} style={{ flex:1, textAlign:"center", borderRight:idx<arr.length-1?`1px solid ${T.borderLight}`:"none" }}>
-                                      <div className="bebas" style={{ fontSize:20, color:c||T.text }}><StatNum value={v||0} /></div>
+                                      <div className="bebas" style={{ fontSize:20, color:c||T.text }}>{v||0}</div>
                                       <div style={{ fontSize:11, letterSpacing:2, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{l}</div>
                                     </div>
                                   ))}
@@ -2978,11 +3180,17 @@ function AppShell() {
                     ))}
                   </div>
 
-                  {/* Monthly Leaderboards — 4 cols */}
-                  <div className="leaderboard-grid-4">
-                    {[
+                  {/* Monthly Leaderboards (Podium + Category Switcher) */}
+                  <LeaderboardShowcase
+                    T={T}
+                    isMobile={isMobile}
+                    onSelectPlayer={setSelStatPlayer}
+                    boards={[
                       {
+                        key: "m-goals",
+                        shortTitle: "GOALS",
                         title: `TOP SCORERS (${getMonthLabel(activeMonth)})`,
+                        unitLabel: "GOALS",
                         color: T_RED,
                         icon: "⚽",
                         emptyMsg: "No goals recorded for this month.",
@@ -2991,7 +3199,10 @@ function AppShell() {
                         subValue: null
                       },
                       {
+                        key: "m-assists",
+                        shortTitle: "ASSISTS",
                         title: `TOP ASSISTS (${getMonthLabel(activeMonth)})`,
+                        unitLabel: "ASSISTS",
                         color: T_GOLD,
                         icon: "🅰️",
                         emptyMsg: "No assists recorded for this month.",
@@ -3000,7 +3211,10 @@ function AppShell() {
                         subValue: null
                       },
                       {
+                        key: "m-def",
+                        shortTitle: "DEFENSE",
                         title: `DEFENSIVE LEADERS (${getMonthLabel(activeMonth)})`,
+                        unitLabel: "ACTIONS",
                         color: "#2563eb",
                         icon: "🛡️",
                         emptyMsg: "No defensive actions recorded for this month.",
@@ -3009,7 +3223,10 @@ function AppShell() {
                         subValue: p => [p.monthBlocks>0&&`${p.monthBlocks} Blk`, p.monthInterceptions>0&&`${p.monthInterceptions} Int`, p.monthClearances>0&&`${p.monthClearances} Clr`].filter(Boolean).join(" · ") || null
                       },
                       {
+                        key: "m-apps",
+                        shortTitle: "APPEARANCES",
                         title: `APPEARANCES (${getMonthLabel(activeMonth)})`,
+                        unitLabel: "APPS",
                         color: "#16a34a",
                         icon: "🎽",
                         emptyMsg: "No appearances recorded for this month.",
@@ -3018,7 +3235,10 @@ function AppShell() {
                         subValue: null
                       },
                       {
+                        key: "m-potm",
+                        shortTitle: "POTM",
                         title: `POTM AWARDS (${getMonthLabel(activeMonth)})`,
+                        unitLabel: "AWARDS",
                         color: "#d97706",
                         icon: "⭐",
                         emptyMsg: "No POTM awards recorded for this month.",
@@ -3026,46 +3246,8 @@ function AppShell() {
                         renderValue: p => p.monthPotmCount || 0,
                         subValue: null
                       }
-                    ].map(board => (
-                      <div key={board.title} className="stat-card">
-                        <div style={{ padding:"16px 18px 14px", borderBottom:`1px solid ${T.borderLight}`, background:T.bg2, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                          <div>
-                            <div className="bebas" style={{ fontSize:17, color:T.text, letterSpacing:1.5 }}>{board.title}</div>
-                            <div style={{ fontSize:12, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{board.sorted.length} ACTIVE PLAYERS</div>
-                          </div>
-                          <div style={{ fontSize:20 }}>{board.icon}</div>
-                        </div>
-                        <div style={{ padding:"6px 12px 10px", maxHeight:400, overflowY:"auto" }}>
-                          {board.sorted.length === 0 ? (
-                            <div style={{ textAlign:"center", padding:"34px 10px", color:T.textDim, fontSize:14 }}>
-                              {board.emptyMsg}
-                            </div>
-                          ) : board.sorted.map((p,i) => (
-                            <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)} style={{ position:"relative", overflow:"hidden", borderLeft: i===0 ? `3px solid ${board.color}` : i===1 ? "3px solid #94a3b8" : i===2 ? "3px solid #b45309" : "3px solid transparent", background: i < 3 ? `linear-gradient(90deg, ${board.color}0d 0%, transparent 100%)` : "transparent" }}>
-                              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                                <div style={{ width:24, textAlign:"center" }}>
-                                  <div className="bebas" style={{ fontSize:i===0?20:16, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
-                                </div>
-                                <div style={{ width:38, height:38, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
-                                  {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition: getPhotoPos(p, "center 35%") }} />:<span className="bebas" style={{ fontSize:12, color:T.textDim }}>{p.jersey ? `#${p.jersey}` : "—"}</span>}
-                                </div>
-                                <div>
-                                  <div style={{ fontWeight:600, fontSize:16, color:T.text, lineHeight:1.2 }}>{p.name}</div>
-                                  <div style={{ fontSize:12, letterSpacing:2, color:`${POS_COLOR[p.pos]||T_RED}`, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{p.pos.slice(0,3).toUpperCase()}</div>
-                                </div>
-                              </div>
-                              <div style={{ textAlign:"right" }}>
-                                <div className="bebas" style={{ fontSize:30, color:i===0?board.color:T.textMuted, lineHeight:1 }}>{board.renderValue(p)}</div>
-                                {board.subValue && board.subValue(p) && (
-                                  <div style={{ fontSize:11, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:2 }}>{board.subValue(p)}</div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                    ]}
+                  />
                 </>
               ) : (
                 <>
@@ -3347,11 +3529,17 @@ function AppShell() {
                     </div>
                   </div>
 
-                  {/* Season All-Time Leaderboards */}
-                  <div className="leaderboard-grid-4">
-                    {[
+                  {/* Season All-Time Leaderboards (Podium + Category Switcher) */}
+                  <LeaderboardShowcase
+                    T={T}
+                    isMobile={isMobile}
+                    onSelectPlayer={setSelStatPlayer}
+                    boards={[
                       {
+                        key: "s-goals",
+                        shortTitle: "GOALS",
                         title: "TOP SCORERS",
+                        unitLabel: "GOALS",
                         color: T_RED,
                         icon: "⚽",
                         emptyMsg: "No goals recorded yet.",
@@ -3360,7 +3548,10 @@ function AppShell() {
                         subValue: null
                       },
                       {
+                        key: "s-assists",
+                        shortTitle: "ASSISTS",
                         title: "TOP ASSISTS",
+                        unitLabel: "ASSISTS",
                         color: T_GOLD,
                         icon: "🅰️",
                         emptyMsg: "No assists recorded yet.",
@@ -3369,7 +3560,10 @@ function AppShell() {
                         subValue: null
                       },
                       {
+                        key: "s-def",
+                        shortTitle: "DEFENSE",
                         title: "DEFENSIVE LEADERS",
+                        unitLabel: "ACTIONS",
                         color: "#2563eb",
                         icon: "🛡️",
                         emptyMsg: "No defensive actions recorded yet.",
@@ -3378,7 +3572,10 @@ function AppShell() {
                         subValue: p => [p.blocks>0&&`${p.blocks} Blk`, p.interceptions>0&&`${p.interceptions} Int`, p.clearances>0&&`${p.clearances} Clr`].filter(Boolean).join(" · ") || null
                       },
                       {
+                        key: "s-apps",
+                        shortTitle: "APPEARANCES",
                         title: "APPEARANCES",
+                        unitLabel: "APPS",
                         color: "#16a34a",
                         icon: "🎽",
                         emptyMsg: "No appearances recorded yet.",
@@ -3387,7 +3584,10 @@ function AppShell() {
                         subValue: null
                       },
                       {
+                        key: "s-potm",
+                        shortTitle: "MATCH POTM",
                         title: "MATCH POTM AWARDS",
+                        unitLabel: "AWARDS",
                         color: "#d97706",
                         icon: "⭐",
                         emptyMsg: "No Player of the Match awards recorded yet.",
@@ -3396,7 +3596,10 @@ function AppShell() {
                         subValue: null
                       },
                       {
+                        key: "s-potmonth",
+                        shortTitle: "POTMONTH",
                         title: "PLAYER OF THE MONTH",
+                        unitLabel: "MONTHS",
                         color: T_GOLD,
                         icon: "🏆",
                         emptyMsg: "No Player of the Month awards recorded yet.",
@@ -3404,46 +3607,8 @@ function AppShell() {
                         renderValue: p => p.potMonthCount || 0,
                         subValue: p => p.potMonthAwards && p.potMonthAwards.length > 0 ? p.potMonthAwards.map(a => a.monthLabel.split(" ")[0]).join(", ") : null
                       }
-                    ].map(board => (
-                      <div key={board.title} className="stat-card">
-                        <div style={{ padding:"16px 18px 14px", borderBottom:`1px solid ${T.borderLight}`, background:T.bg2, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                          <div>
-                            <div className="bebas" style={{ fontSize:17, color:T.text, letterSpacing:1.5 }}>{board.title}</div>
-                            <div style={{ fontSize:12, color:T.textDim, letterSpacing:2, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{board.sorted.length} PLAYERS</div>
-                          </div>
-                          <div style={{ fontSize:20 }}>{board.icon}</div>
-                        </div>
-                        <div style={{ padding:"6px 12px 10px", maxHeight:400, overflowY:"auto" }}>
-                          {board.sorted.length === 0 ? (
-                            <div style={{ textAlign:"center", padding:"34px 10px", color:T.textDim, fontSize:14 }}>
-                              {board.emptyMsg}
-                            </div>
-                          ) : board.sorted.map((p,i) => (
-                            <div key={p.id} className="lb-row" onClick={() => setSelStatPlayer(p)} style={{ position:"relative", overflow:"hidden", borderLeft: i===0 ? `3px solid ${board.color}` : i===1 ? "3px solid #94a3b8" : i===2 ? "3px solid #b45309" : "3px solid transparent", background: i < 3 ? `linear-gradient(90deg, ${board.color}0d 0%, transparent 100%)` : "transparent" }}>
-                              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                                <div style={{ width:24, textAlign:"center" }}>
-                                  <div className="bebas" style={{ fontSize:i===0?20:16, color:i===0?board.color:i<3?T.textMuted:T.textDim, lineHeight:1 }}>{i+1}</div>
-                                </div>
-                                <div style={{ width:38, height:38, borderRadius:"50%", background:`${board.color}15`, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", border:`1.5px solid ${i===0?board.color+"40":"transparent"}`, flexShrink:0 }}>
-                                  {p.photoURL?<img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition: getPhotoPos(p, "center 35%") }} />:<span className="bebas" style={{ fontSize:12, color:T.textDim }}>{p.jersey ? `#${p.jersey}` : "—"}</span>}
-                                </div>
-                                <div>
-                                  <div style={{ fontWeight:600, fontSize:16, color:T.text, lineHeight:1.2 }}>{p.name}</div>
-                                  <div style={{ fontSize:12, letterSpacing:2, color:`${POS_COLOR[p.pos]||T_RED}`, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{p.pos.slice(0,3).toUpperCase()}</div>
-                                </div>
-                              </div>
-                              <div style={{ textAlign:"right" }}>
-                                <div className="bebas" style={{ fontSize:30, color:i===0?board.color:T.textMuted, lineHeight:1 }}>{board.renderValue(p)}</div>
-                                {board.subValue && board.subValue(p) && (
-                                  <div style={{ fontSize:11, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, marginTop:2 }}>{board.subValue(p)}</div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                    ]}
+                  />
                 </>
               )}
             </div>
