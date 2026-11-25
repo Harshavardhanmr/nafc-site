@@ -78,25 +78,116 @@ const POS_COLOR = {
   Striker:    T_RED,
 };
 
-// ── Pure Match-Tracked Defensive Contribution Helper ──
-const getBaseDefForPos = () => ({ blocks: 0, interceptions: 0, clearances: 0, total: 0 });
-
-function useCountUp(target, duration = 1200) {
+function useCountUp(target, duration = 900) {
   const [val, setVal] = useState(0);
   useEffect(() => {
-    if (!target) return;
+    if (!target) { setVal(0); return; }
     let start = null;
+    let rafId = null;
     const step = ts => {
       if (!start) start = ts;
       const p = Math.min((ts - start) / duration, 1);
       setVal(Math.floor(p * target));
-      if (p < 1) requestAnimationFrame(step);
+      if (p < 1) rafId = requestAnimationFrame(step);
     };
-    requestAnimationFrame(step);
+    rafId = requestAnimationFrame(step);
+    return () => { if (rafId) cancelAnimationFrame(rafId); };
   }, [target, duration]);
   return val;
 }
 function StatNum({ value }) { const v = useCountUp(value || 0); return <>{v}</>; }
+
+// ── Loading Skeleton Shimmer Components ──
+function SkeletonPulse({ width = "100%", height = 16, radius = 6, style = {}, T = THEMES.dark }) {
+  const isDark = T.name !== "light";
+  return (
+    <div style={{
+      width, height, borderRadius: radius,
+      background: isDark
+        ? "linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 75%)"
+        : "linear-gradient(90deg, rgba(0,0,0,0.05) 25%, rgba(0,0,0,0.11) 50%, rgba(0,0,0,0.05) 75%)",
+      backgroundSize: "400% 100%",
+      animation: "shimmer 1.5s ease infinite",
+      ...style
+    }} />
+  );
+}
+
+function SkeletonCard({ T = THEMES.dark }) {
+  return (
+    <div style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
+      <div style={{ height: 3, background: `linear-gradient(90deg, ${T.border}, transparent)` }} />
+      <div style={{ height: 220, background: T.subtleBg, position: "relative", overflow: "hidden" }}>
+        <SkeletonPulse width="100%" height="100%" radius={0} T={T} />
+      </div>
+      <div style={{ padding: "14px 16px 18px" }}>
+        <SkeletonPulse width="70%" height={22} style={{ marginBottom: 8 }} T={T} />
+        <SkeletonPulse width="45%" height={14} style={{ marginBottom: 14 }} T={T} />
+        <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.borderLight}`, paddingTop: 10 }}>
+          <SkeletonPulse width="33%" height={28} T={T} />
+          <SkeletonPulse width="33%" height={28} T={T} />
+          <SkeletonPulse width="33%" height={28} T={T} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SkeletonFixture({ T = THEMES.dark }) {
+  return (
+    <div style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
+      <div style={{ height: 3, background: T.border }} />
+      <div style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ flex: 1 }}>
+          <SkeletonPulse width="40%" height={14} style={{ marginBottom: 8 }} T={T} />
+          <SkeletonPulse width="65%" height={22} T={T} />
+        </div>
+        <SkeletonPulse width={80} height={48} radius={12} T={T} />
+      </div>
+    </div>
+  );
+}
+
+// ── Player Milestone Badges Helper ──
+function getPlayerMilestones(p) {
+  if (!p) return [];
+  const badges = [];
+  const g = Number(p.goals) || 0;
+  const a = Number(p.assists) || 0;
+  const apps = Number(p.appearances) || 0;
+  const def = (Number(p.blocks) || 0) + (Number(p.interceptions) || 0) + (Number(p.clearances) || 0);
+  const saves = Number(p.saves) || 0;
+  const cs = Number(p.cleanSheets) || 0;
+  const potm = Number(p.potmCount) || 0;
+
+  if (g >= 100) badges.push({ icon: "💯", label: "100 GOALS", color: "#fbbf24", tier: "legend" });
+  else if (g >= 50) badges.push({ icon: "🔥", label: "50 GOALS", color: T_RED, tier: "gold" });
+  else if (g >= 25) badges.push({ icon: "⚽", label: "25 GOALS", color: "#f97316", tier: "silver" });
+  else if (g >= 10) badges.push({ icon: "⚽", label: "10 GOALS", color: "#fb7185", tier: "bronze" });
+
+  if (a >= 50) badges.push({ icon: "🎯", label: "50 ASSISTS", color: "#d97706", tier: "gold" });
+  else if (a >= 25) badges.push({ icon: "🅰️", label: "25 ASSISTS", color: "#eab308", tier: "silver" });
+  else if (a >= 10) badges.push({ icon: "🅰️", label: "10 ASSISTS", color: "#fbbf24", tier: "bronze" });
+
+  if (apps >= 100) badges.push({ icon: "🏛️", label: "100 APPS", color: "#38bdf8", tier: "legend" });
+  else if (apps >= 50) badges.push({ icon: "🎖️", label: "50 APPS", color: "#2563eb", tier: "gold" });
+  else if (apps >= 25) badges.push({ icon: "👕", label: "25 APPS", color: "#60a5fa", tier: "silver" });
+
+  if (def >= 100) badges.push({ icon: "🧱", label: "100 DEF", color: "#10b981", tier: "legend" });
+  else if (def >= 50) badges.push({ icon: "🛡️", label: "50 DEF", color: "#22c55e", tier: "gold" });
+  else if (def >= 25) badges.push({ icon: "🛡️", label: "25 DEF", color: "#4ade80", tier: "silver" });
+
+  if (saves >= 50) badges.push({ icon: "🧤", label: "50 SAVES", color: "#3b82f6", tier: "gold" });
+  else if (saves >= 25) badges.push({ icon: "🧤", label: "25 SAVES", color: "#60a5fa", tier: "silver" });
+
+  if (cs >= 10) badges.push({ icon: "🔒", label: "10 CLEAN SHEETS", color: "#16a34a", tier: "gold" });
+  else if (cs >= 5) badges.push({ icon: "🔒", label: "5 CLEAN SHEETS", color: "#4ade80", tier: "silver" });
+
+  if (potm >= 5) badges.push({ icon: "⭐", label: "5+ POTM", color: "#fbbf24", tier: "gold" });
+  else if (potm >= 3) badges.push({ icon: "⭐", label: "3+ POTM", color: "#f59e0b", tier: "silver" });
+
+  return badges;
+}
 
 function useWindowWidth() {
   const [w, setW] = useState(window.innerWidth);
@@ -1141,6 +1232,23 @@ function PlayerModal({ player, onClose, T = THEMES.dark, potMonthAwards = [], pl
               <span>{p.potmCount} × PLAYER OF THE MATCH AWARD{p.potmCount > 1 ? "S" : ""}</span>
             </div>
           )}
+          {(() => {
+            const ms = getPlayerMilestones(p);
+            if (!ms.length) return null;
+            return (
+              <div style={{ marginBottom:12 }}>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:2, color:T.textDim, marginBottom:6 }}>CLUB MILESTONES</div>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                  {ms.map(b => (
+                    <span key={b.label} style={{ display:"inline-flex", alignItems:"center", gap:5, background:`${b.color}16`, border:`1px solid ${b.color}45`, color:b.color, padding:"4px 10px", borderRadius:20, fontSize:11.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5 }}>
+                      <span>{b.icon}</span>
+                      <span>{b.label}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
           <PlayerFormGuide player={p} played={played} T={T} isMobile={false} />
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
             {[["POSITION",p.pos],["JERSEY",p.jersey ? `#${p.jersey}` : "TBD"],["CLUB","NAFC"],["APPEARANCES",`${p.appearances||0} APPS`]].map(([l,v]) => (
@@ -1604,6 +1712,9 @@ function AppShell() {
   const [lightbox, setLightbox] = useState(null);
   const [plrs, setPlrs] = useState([]);
   const [mtchs, setMtchs] = useState([]);
+  const [plrsLoaded, setPlrsLoaded] = useState(false);
+  const [mtchsLoaded, setMtchsLoaded] = useState(false);
+  const [flippedCards, setFlippedCards] = useState({});
   const [gal, setGal] = useState([]);
   const [newsList, setNewsList] = useState(DEFAULT_ANNOUNCEMENTS);
   const [newsFltr, setNewsFltr] = useState("All");
@@ -1636,8 +1747,14 @@ function AppShell() {
   const isTablet = w >= 768 && w < 1024;
 
   useEffect(() => {
-    const uP = onSnapshot(collection(db,"players"), s => setPlrs(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(Number(a.jersey)||99)-(Number(b.jersey)||99))));
-    const uM = onSnapshot(query(collection(db,"matches"),orderBy("date","desc")), s => setMtchs(s.docs.map(d=>({id:d.id,...d.data()}))));
+    const uP = onSnapshot(collection(db,"players"), s => {
+      setPlrs(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(Number(a.jersey)||99)-(Number(b.jersey)||99)));
+      setPlrsLoaded(true);
+    });
+    const uM = onSnapshot(query(collection(db,"matches"),orderBy("date","desc")), s => {
+      setMtchs(s.docs.map(d=>({id:d.id,...d.data()})));
+      setMtchsLoaded(true);
+    });
     const uG = onSnapshot(query(collection(db,"gallery"),orderBy("createdAt","desc")), s => setGal(s.docs.map(d=>({id:d.id,...d.data()}))));
     const uS = onSnapshot(doc(db,"siteSettings","heroImage"), snap => {
       if (snap.exists() && snap.data().url) setHeroURL(snap.data().url);
@@ -1657,33 +1774,30 @@ function AppShell() {
     return () => window.removeEventListener("scroll", onScroll);
   }, [pg, isMobile]);
 
-  if (loading) return (
-    <div style={{ height:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:T.bg }}>
-      <div style={{ textAlign:"center" }}>
-        <img src={LOGO} alt="" style={{ width:60, animation:"spin 1.2s linear infinite" }} />
-        <div style={{ color:T_RED, fontFamily:"'Bebas Neue',sans-serif", fontSize:13, letterSpacing:5, marginTop:16 }}>LOADING</div>
-      </div>
-    </div>
-  );
-  if (aVw) return <AdminDashboard onBack={() => setAVw(false)} />;
+  const { upc, played, lastM, wins, losses, draws } = useMemo(() => {
+    const td = new Date(); td.setHours(0,0,0,0);
+    const _upc = mtchs.filter(m=>m.result==="upcoming"&&new Date(m.date)>=td).sort((a,b)=>a.date>b.date?1:-1);
+    const _played = mtchs.filter(m=>m.result!=="upcoming");
+    return {
+      upc: _upc,
+      played: _played,
+      lastM: _played[0],
+      wins: _played.filter(m=>m.result==="W").length,
+      losses: _played.filter(m=>m.result==="L").length,
+      draws: _played.filter(m=>m.result==="D").length
+    };
+  }, [mtchs]);
 
-  const td = new Date(); td.setHours(0,0,0,0);
-  const upc    = mtchs.filter(m=>m.result==="upcoming"&&new Date(m.date)>=td).sort((a,b)=>a.date>b.date?1:-1);
-  const played = mtchs.filter(m=>m.result!=="upcoming");
-  const lastM  = played[0];
-  const wins   = played.filter(m=>m.result==="W").length;
-  const losses = played.filter(m=>m.result==="L").length;
-  const draws  = played.filter(m=>m.result==="D").length;
-  const fPlrs  = plrs.filter(p=>(pFltr==="All"||p.pos===pFltr)&&p.name.toLowerCase().includes(srch.toLowerCase()));
+  const fPlrs = useMemo(() => plrs.filter(p=>(pFltr==="All"||p.pos===pFltr)&&p.name.toLowerCase().includes(srch.toLowerCase())), [plrs, pFltr, srch]);
 
-  // ── Monthly Stats Aggregation ──
-  const availableMonths = Array.from(
+  // ── Monthly Stats Aggregation (Memoized) ──
+  const availableMonths = useMemo(() => Array.from(
     new Set(
       played
         .map(m => (m.date ? String(m.date).slice(0, 7) : null))
         .filter(Boolean)
     )
-  ).sort((a, b) => b.localeCompare(a));
+  ).sort((a, b) => b.localeCompare(a)), [played]);
 
   const activeMonth = selMonth || (availableMonths[0] || new Date().toISOString().slice(0, 7));
 
@@ -1697,235 +1811,214 @@ function AppShell() {
     return isNaN(d.getTime()) ? ym : d.toLocaleString("en-US", { month: "long", year: "numeric" }).toUpperCase();
   };
 
-  const monthMatches = played.filter(m => m.date && String(m.date).startsWith(activeMonth));
-  const monthWins = monthMatches.filter(m => m.result === "W").length;
-  const monthLosses = monthMatches.filter(m => m.result === "L").length;
-  const monthDraws = monthMatches.filter(m => m.result === "D").length;
-  const monthGoalsCount = monthMatches.reduce((a, m) => a + (Number(m.nafcScore) || 0), 0);
+  const { monthWins, monthLosses, monthDraws, monthGoalsCount, playerMonthlyStats, topScorerMonth, topAssistMonth } = useMemo(() => {
+    const monthMatches = played.filter(m => m.date && String(m.date).startsWith(activeMonth));
+    const mWins = monthMatches.filter(m => m.result === "W").length;
+    const mLosses = monthMatches.filter(m => m.result === "L").length;
+    const mDraws = monthMatches.filter(m => m.result === "D").length;
+    const mGoals = monthMatches.reduce((a, m) => a + (Number(m.nafcScore) || 0), 0);
 
-  const playerMonthlyStats = plrs.map(p => {
-    let goals = 0;
-    let assists = 0;
-    let appearances = 0;
-    let blocks = 0;
-    let interceptions = 0;
-    let clearances = 0;
-    let potmCount = 0;
-    const baseDef = getBaseDefForPos(p.pos);
+    const pStats = plrs.map(p => {
+      let goals = 0, assists = 0, appearances = 0, blocks = 0, interceptions = 0, clearances = 0, potmCount = 0;
+      const pNameLower = p.name ? p.name.toLowerCase() : "";
 
-    monthMatches.forEach(m => {
-      let playedMatch = false;
-      if ((m.ap && m.ap.includes(p.id)) || (m.appearances && m.appearances.includes(p.id))) {
-        playedMatch = true;
-      } else if (
-        (m.scorers && m.scorers.some(s => (typeof s === "object" ? s.id === p.id || s.name === p.name : s === p.name))) ||
-        (m.assisters && m.assisters.some(a => (typeof a === "object" ? a.id === p.id || a.name === p.name : a === p.name))) ||
-        (m.defensiveActions && m.defensiveActions.some(d => (typeof d === "object" ? d.id === p.id || d.name === p.name : d === p.name))) ||
-        (m.potm && (typeof m.potm === "object" ? m.potm.id === p.id || m.potm.name === p.name : m.potm === p.name))
-      ) {
-        playedMatch = true;
-      }
-
-      if (playedMatch) appearances += 1;
-
-      if (m.scorers) {
-        m.scorers.forEach(s => {
-          if (typeof s === "object") {
-            if (s.id === p.id || s.name === p.name) goals += Number(s.goals) || 1;
-          } else if (s === p.name) goals += 1;
-        });
-      }
-
-      if (m.assisters) {
-        m.assisters.forEach(a => {
-          if (typeof a === "object") {
-            if (a.id === p.id || a.name === p.name) assists += Number(a.assists) || 1;
-          } else if (a === p.name) assists += 1;
-        });
-      }
-
-      let mBlk = 0, mInt = 0, mClr = 0;
-      let hasExplicit = false;
-      if (m.defensiveActions) {
-        m.defensiveActions.forEach(d => {
-          if (typeof d === "object" && (d.id === p.id || d.name === p.name)) {
-            hasExplicit = true;
-            mBlk += Number(d.blocks) || 0;
-            mInt += Number(d.interceptions) || 0;
-            mClr += Number(d.clearances) || 0;
-          }
-        });
-      }
-
-      if (playedMatch) {
-        if (hasExplicit && (mBlk > 0 || mInt > 0 || mClr > 0)) {
-          blocks += Math.max(mBlk, baseDef.blocks);
-          interceptions += Math.max(mInt, baseDef.interceptions);
-          clearances += Math.max(mClr, baseDef.clearances);
-        } else {
-          blocks += baseDef.blocks;
-          interceptions += baseDef.interceptions;
-          clearances += baseDef.clearances;
-        }
-      }
-
-      if (m.potm) {
-        const potmId = typeof m.potm === "object" ? m.potm.id : null;
-        const potmName = typeof m.potm === "object" ? m.potm.name : m.potm;
-        if (p.id === potmId || (potmName && p.name && p.name.toLowerCase() === String(potmName).toLowerCase())) {
-          potmCount += 1;
-        }
-      }
-    });
-
-    const monthDefActions = blocks + interceptions + clearances;
-
-    return {
-      ...p,
-      monthGoals: goals,
-      monthAssists: assists,
-      monthBlocks: blocks,
-      monthInterceptions: interceptions,
-      monthClearances: clearances,
-      monthDefActions: monthDefActions,
-      monthAppearances: appearances,
-      monthContributions: goals + assists,
-      monthPotmCount: potmCount,
-      monthScore: (potmCount * 5.0) + (goals * 2.5) + (assists * 2.0) + (monthDefActions * 0.2) + (appearances * 0.3)
-    };
-  });
-
-  const topScorerMonth = [...playerMonthlyStats].sort((a,b) => (b.monthGoals||0) - (a.monthGoals||0))[0];
-  const topAssistMonth = [...playerMonthlyStats].sort((a,b) => (b.monthAssists||0) - (a.monthAssists||0))[0];
-
-  // ── Auto-Calculate Player of the Month (POTMonth) Winners across all months (Weighted Formula) ──
-  const allHistoricalMonths = Array.from(new Set(played.filter(m => m.date && m.date.length >= 7).map(m => m.date.slice(0, 7)))).sort().reverse();
-
-  const monthlyWinners = allHistoricalMonths.map(ym => {
-    const mMatches = played.filter(m => m.date && String(m.date).startsWith(ym));
-    if (mMatches.length === 0) return null;
-
-    const stats = plrs.map(p => {
-      let g = 0, a = 0, apps = 0, def = 0, potm = 0;
-      const baseTotal = getBaseDefForPos(p.pos).total;
-
-      mMatches.forEach(m => {
-        let playedMatch = false;
-        if ((m.ap && m.ap.includes(p.id)) || (m.appearances && m.appearances.includes(p.id))) {
-          playedMatch = true;
-        } else if (
+      monthMatches.forEach(m => {
+        const playedMatch =
+          (m.ap && m.ap.includes(p.id)) ||
+          (m.appearances && m.appearances.includes(p.id)) ||
           (m.scorers && m.scorers.some(s => (typeof s === "object" ? s.id === p.id || s.name === p.name : s === p.name))) ||
-          (m.assisters && m.assisters.some(as => (typeof as === "object" ? as.id === p.id || as.name === p.name : as === p.name))) ||
+          (m.assisters && m.assisters.some(a => (typeof a === "object" ? a.id === p.id || a.name === p.name : a === p.name))) ||
           (m.defensiveActions && m.defensiveActions.some(d => (typeof d === "object" ? d.id === p.id || d.name === p.name : d === p.name))) ||
-          (m.potm && (typeof m.potm === "object" ? m.potm.id === p.id || m.potm.name === p.name : m.potm === p.name))
-        ) {
-          playedMatch = true;
-        }
+          (m.potm && (typeof m.potm === "object" ? m.potm.id === p.id || m.potm.name === p.name : m.potm === p.name));
 
-        if (playedMatch) apps++;
+        if (playedMatch) appearances += 1;
 
         if (m.scorers) {
           m.scorers.forEach(s => {
             if (typeof s === "object") {
-              if (s.id === p.id || s.name === p.name) g += Number(s.goals) || 1;
-            } else if (s === p.name) g++;
+              if (s.id === p.id || s.name === p.name) goals += Number(s.goals) || 1;
+            } else if (s === p.name) goals += 1;
           });
         }
+
         if (m.assisters) {
-          m.assisters.forEach(as => {
-            if (typeof as === "object") {
-              if (as.id === p.id || as.name === p.name) a += Number(as.assists) || 1;
-            } else if (as === p.name) a++;
+          m.assisters.forEach(a => {
+            if (typeof a === "object") {
+              if (a.id === p.id || a.name === p.name) assists += Number(a.assists) || 1;
+            } else if (a === p.name) assists += 1;
           });
         }
-        let matchExplicitDef = 0;
-        let hasExplicit = false;
+
         if (m.defensiveActions) {
           m.defensiveActions.forEach(d => {
             if (typeof d === "object" && (d.id === p.id || d.name === p.name)) {
-              hasExplicit = true;
-              matchExplicitDef += (Number(d.blocks)||0) + (Number(d.interceptions)||0) + (Number(d.clearances)||0);
+              blocks += Number(d.blocks) || 0;
+              interceptions += Number(d.interceptions) || 0;
+              clearances += Number(d.clearances) || 0;
             }
           });
         }
-        if (playedMatch) {
-          def += hasExplicit && matchExplicitDef > 0 ? Math.max(matchExplicitDef, baseTotal) : baseTotal;
-        }
+
         if (m.potm) {
           const potmId = typeof m.potm === "object" ? m.potm.id : null;
           const potmName = typeof m.potm === "object" ? m.potm.name : m.potm;
-          if (p.id === potmId || (potmName && p.name && p.name.toLowerCase() === String(potmName).toLowerCase())) {
-            potm++;
+          if (p.id === potmId || (potmName && pNameLower && pNameLower === String(potmName).toLowerCase())) {
+            potmCount += 1;
           }
         }
       });
 
+      const monthDefActions = blocks + interceptions + clearances;
       return {
-        id: p.id,
-        name: p.name,
-        jersey: p.jersey,
-        pos: p.pos,
-        photoURL: p.photoURL,
-        photoPosition: p.photoPosition,
-        goals: g,
-        assists: a,
-        contributions: g + a,
-        defActions: def,
-        potmCount: potm,
-        appearances: apps,
-        score: (potm * 5.0) + (g * 2.5) + (a * 2.0) + (def * 0.2) + (apps * 0.3)
+        ...p,
+        monthGoals: goals,
+        monthAssists: assists,
+        monthBlocks: blocks,
+        monthInterceptions: interceptions,
+        monthClearances: clearances,
+        monthDefActions,
+        monthAppearances: appearances,
+        monthContributions: goals + assists,
+        monthPotmCount: potmCount,
+        monthScore: (potmCount * 5.0) + (goals * 2.5) + (assists * 2.0) + (monthDefActions * 0.2) + (appearances * 0.3)
       };
     });
 
-    const activePlayers = stats.filter(s => s.contributions > 0 || s.potmCount > 0 || s.defActions > 0 || s.appearances > 0);
-    activePlayers.sort((x, y) => y.score - x.score || y.potmCount - x.potmCount || y.contributions - x.contributions || y.goals - x.goals);
+    const _topScorerMonth = [...pStats].sort((a,b) => (b.monthGoals||0) - (a.monthGoals||0))[0];
+    const _topAssistMonth = [...pStats].sort((a,b) => (b.monthAssists||0) - (a.monthAssists||0))[0];
 
-    const winner = activePlayers[0];
-    if (winner && (winner.contributions > 0 || winner.potmCount > 0 || winner.appearances > 0)) {
-      return {
-        ym,
-        monthLabel: getMonthLabel(ym),
-        winnerId: winner.id,
-        winnerName: winner.name,
-        jersey: winner.jersey,
-        pos: winner.pos,
-        photoURL: winner.photoURL,
-        photoPosition: winner.photoPosition,
-        goals: winner.goals,
-        assists: winner.assists,
-        defActions: winner.defActions,
-        potmCount: winner.potmCount,
-        appearances: winner.appearances
-      };
-    }
-    return null;
-  }).filter(Boolean);
+    return {
+      monthWins: mWins,
+      monthLosses: mLosses,
+      monthDraws: mDraws,
+      monthGoalsCount: mGoals,
+      playerMonthlyStats: pStats,
+      topScorerMonth: _topScorerMonth,
+      topAssistMonth: _topAssistMonth
+    };
+  }, [played, plrs, activeMonth]);
 
-  // ── Unified Top Performer / Player of the Month ──
-  // Always powered by the official weighted formula across the entire site
-  const activeMonthWinner = monthlyWinners.find(w => w.ym === activeMonth);
-  const topPerformerMonth = activeMonthWinner
-    ? (playerMonthlyStats.find(p => p.id === activeMonthWinner.winnerId) || activeMonthWinner)
-    : [...playerMonthlyStats].filter(p => (p.monthScore || 0) > 0 || (p.monthAppearances || 0) > 0)
-        .sort((a, b) => (b.monthScore || 0) - (a.monthScore || 0))[0];
+  // ── Auto-Calculate Player of the Month (POTMonth) Winners across all months (Memoized) ──
+  const monthlyWinners = useMemo(() => {
+    const allHistoricalMonths = Array.from(new Set(played.filter(m => m.date && m.date.length >= 7).map(m => m.date.slice(0, 7)))).sort().reverse();
+    return allHistoricalMonths.map(ym => {
+      const mMatches = played.filter(m => m.date && String(m.date).startsWith(ym));
+      if (mMatches.length === 0) return null;
+
+      const stats = plrs.map(p => {
+        let g = 0, a = 0, apps = 0, def = 0, potm = 0;
+        const pNameLower = p.name ? p.name.toLowerCase() : "";
+
+        mMatches.forEach(m => {
+          const playedMatch =
+            (m.ap && m.ap.includes(p.id)) ||
+            (m.appearances && m.appearances.includes(p.id)) ||
+            (m.scorers && m.scorers.some(s => (typeof s === "object" ? s.id === p.id || s.name === p.name : s === p.name))) ||
+            (m.assisters && m.assisters.some(as => (typeof as === "object" ? as.id === p.id || as.name === p.name : as === p.name))) ||
+            (m.defensiveActions && m.defensiveActions.some(d => (typeof d === "object" ? d.id === p.id || d.name === p.name : d === p.name))) ||
+            (m.potm && (typeof m.potm === "object" ? m.potm.id === p.id || m.potm.name === p.name : m.potm === p.name));
+
+          if (playedMatch) apps++;
+
+          if (m.scorers) {
+            m.scorers.forEach(s => {
+              if (typeof s === "object") {
+                if (s.id === p.id || s.name === p.name) g += Number(s.goals) || 1;
+              } else if (s === p.name) g++;
+            });
+          }
+          if (m.assisters) {
+            m.assisters.forEach(as => {
+              if (typeof as === "object") {
+                if (as.id === p.id || as.name === p.name) a += Number(as.assists) || 1;
+              } else if (as === p.name) a++;
+            });
+          }
+          if (m.defensiveActions) {
+            m.defensiveActions.forEach(d => {
+              if (typeof d === "object" && (d.id === p.id || d.name === p.name)) {
+                def += (Number(d.blocks)||0) + (Number(d.interceptions)||0) + (Number(d.clearances)||0);
+              }
+            });
+          }
+          if (m.potm) {
+            const potmId = typeof m.potm === "object" ? m.potm.id : null;
+            const potmName = typeof m.potm === "object" ? m.potm.name : m.potm;
+            if (p.id === potmId || (potmName && pNameLower && pNameLower === String(potmName).toLowerCase())) {
+              potm++;
+            }
+          }
+        });
+
+        return {
+          id: p.id, name: p.name, jersey: p.jersey, pos: p.pos,
+          photoURL: p.photoURL, photoPosition: p.photoPosition,
+          goals: g, assists: a, contributions: g + a, defActions: def,
+          potmCount: potm, appearances: apps,
+          score: (potm * 5.0) + (g * 2.5) + (a * 2.0) + (def * 0.2) + (apps * 0.3)
+        };
+      });
+
+      const activePlayers = stats.filter(s => s.contributions > 0 || s.potmCount > 0 || s.defActions > 0 || s.appearances > 0);
+      activePlayers.sort((x, y) => y.score - x.score || y.potmCount - x.potmCount || y.contributions - x.contributions || y.goals - x.goals);
+
+      const winner = activePlayers[0];
+      if (winner && (winner.contributions > 0 || winner.potmCount > 0 || winner.appearances > 0)) {
+        return {
+          ym,
+          monthLabel: getMonthLabel(ym),
+          winnerId: winner.id,
+          winnerName: winner.name,
+          jersey: winner.jersey,
+          pos: winner.pos,
+          photoURL: winner.photoURL,
+          photoPosition: winner.photoPosition,
+          goals: winner.goals,
+          assists: winner.assists,
+          defActions: winner.defActions,
+          potmCount: winner.potmCount,
+          appearances: winner.appearances
+        };
+      }
+      return null;
+    }).filter(Boolean);
+  }, [played, plrs]);
+
+  const topPerformerMonth = useMemo(() => {
+    const activeMonthWinner = monthlyWinners.find(w => w.ym === activeMonth);
+    return activeMonthWinner
+      ? (playerMonthlyStats.find(p => p.id === activeMonthWinner.winnerId) || activeMonthWinner)
+      : [...playerMonthlyStats].filter(p => (p.monthScore || 0) > 0 || (p.monthAppearances || 0) > 0)
+          .sort((a, b) => (b.monthScore || 0) - (a.monthScore || 0))[0];
+  }, [monthlyWinners, activeMonth, playerMonthlyStats]);
 
   const getPlayerPotMonthAwards = (playerId, playerName) => {
     return monthlyWinners.filter(w => w.winnerId === playerId || (playerName && w.winnerName && w.winnerName.toLowerCase() === playerName.toLowerCase()));
   };
 
-  const plrsWithPotMonth = plrs.map(p => {
-    const awards = getPlayerPotMonthAwards(p.id, p.name);
+  const plrsWithPotMonth = useMemo(() => plrs.map(p => {
+    const awards = monthlyWinners.filter(w => w.winnerId === p.id || (p.name && w.winnerName && w.winnerName.toLowerCase() === p.name.toLowerCase()));
     return {
       ...p,
       potMonthCount: awards.length,
       potMonthAwards: awards
     };
-  });
+  }), [plrs, monthlyWinners]);
 
   const go = p => { setPg(p); setSel(null); setSrch(""); setMobileNav(false); window.scrollTo(0,0); };
 
   // Responsive padding
   const px = isMobile ? "16px" : isTablet ? "28px" : "56px";
+
+  if (loading) return (
+    <div style={{ height:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:T.bg }}>
+      <div style={{ textAlign:"center" }}>
+        <img src={LOGO} alt="" style={{ width:60, animation:"spin 1.2s linear infinite" }} />
+        <div style={{ color:T_RED, fontFamily:"'Bebas Neue',sans-serif", fontSize:13, letterSpacing:5, marginTop:16 }}>LOADING</div>
+      </div>
+    </div>
+  );
+  if (aVw) return <AdminDashboard onBack={() => setAVw(false)} />;
 
   return (
     <div style={{ fontFamily:"'DM Sans',sans-serif", background:T.bg, minHeight:"100vh", color:T.text, fontSize:"15px", overflowX:"hidden", transition:"background 0.25s ease, color 0.25s ease" }}>
@@ -1941,15 +2034,23 @@ function AppShell() {
         @keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
         @keyframes slideIn{from{opacity:0;transform:translateX(-24px);}to{opacity:1;transform:translateX(0);}}
         @keyframes slideInRight{from{transform:translateX(100%);}to{transform:translateX(0);}}
+        @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+        @keyframes pageEnter{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+        .page-transition{animation:pageEnter 0.4s ease-out both;}
         .nav-link{position:relative;cursor:pointer;font-family:'Bebas Neue',sans-serif;letter-spacing:2.5px;font-size:16px;color:${T.textMuted};transition:color 0.3s;padding:4px 0;}
         .nav-link::after{content:'';position:absolute;bottom:-2px;left:0;width:0;height:2px;background:${T_RED};transition:width 0.3s ease;}
         .nav-link:hover{color:${T.text};}
         .nav-link:hover::after,.nav-link.active::after{width:100%;}
         .nav-link.active{color:${T.text};}
-        .pcard{position:relative;cursor:pointer;overflow:hidden;border-radius:16px;background:${T.cardBg};border:1px solid ${T.border};box-shadow:0 4px 20px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.08);transition:transform 0.4s cubic-bezier(0.16,1,0.3,1),border-color 0.3s,box-shadow 0.4s;transform-style:preserve-3d;}
+        .pcard-wrap{perspective:1000px;cursor:pointer;}
+        .pcard-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform 0.6s cubic-bezier(0.16,1,0.3,1);}
+        .pcard-wrap.flipped .pcard-inner{transform:rotateY(180deg);}
+        @media(hover:hover){.pcard-wrap:hover .pcard-inner{transform:rotateY(180deg);}}
+        .pcard-front,.pcard-back{backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:16px;overflow:hidden;}
+        .pcard-back{position:absolute;inset:0;transform:rotateY(180deg);display:flex;flex-direction:column;justify-content:space-between;}
+        .pcard{position:relative;cursor:pointer;overflow:hidden;border-radius:16px;background:${T.cardBg};border:1px solid ${T.border};box-shadow:0 4px 20px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.08);transition:transform 0.4s cubic-bezier(0.16,1,0.3,1),border-color 0.3s,box-shadow 0.4s;}
         .pcard::before{content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.09),transparent);transform:skewX(-20deg);transition:left 0.75s ease;pointer-events:none;z-index:5;}
-        .pcard:hover::before{left:160%;}
-        .pcard:hover{transform:translateY(-6px);border-color:rgba(232,0,45,0.5);box-shadow:0 16px 48px rgba(232,0,45,0.22);}
+        .pcard-wrap:hover .pcard::before{left:160%;}
         .pcard:hover .pcard-glow{opacity:1;}
         .pcard-glow{position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(to right,${T_RED},#ff6b6b,${T_RED});opacity:0;transition:opacity 0.3s;}
         .stat-card{background:${T.cardBg};border:1px solid ${T.border};border-radius:16px;overflow:hidden;transition:border-color 0.3s,transform 0.3s,box-shadow 0.3s;box-shadow:0 2px 12px rgba(0,0,0,0.2);}
@@ -2111,7 +2212,7 @@ function AppShell() {
 
         {/* ══════════════ HOME ══════════════ */}
         {pg === "Home" && (
-          <div>
+          <div className="page-transition" key="page-Home">
             {/* Hero */}
             <div style={{ position:"relative", height:"100vh", minHeight:500, overflow:"hidden" }}>
               <div ref={heroRef} style={{ position:"absolute", inset:0, willChange:"transform", backgroundImage:`url(${heroURL})`, backgroundSize:"cover", backgroundPosition:"center 60%", backgroundRepeat:"no-repeat" }} />
@@ -2255,7 +2356,7 @@ function AppShell() {
 
         {/* ══════════════ PLAYERS LIST ══════════════ */}
         {pg === "Players" && !sel && (
-          <div style={{ background:T.bg, minHeight:"100vh", paddingBottom:60 }}>
+          <div className="page-transition" key="page-Players" style={{ background:T.bg, minHeight:"100vh", paddingBottom:60 }}>
             {/* Header */}
             <div style={{ background:T.headerGrad, borderBottom:`1px solid ${T.border}`, padding:`${isMobile?"28px":isTablet?"36px":"50px"} ${px} ${isMobile?"20px":"32px"}`, position:"relative", overflow:"hidden" }}>
               <div style={{ position:"absolute", inset:0, backgroundImage:`repeating-linear-gradient(0deg,transparent,transparent 59px,${T.borderLight} 59px,${T.borderLight} 60px),repeating-linear-gradient(90deg,transparent,transparent 59px,${T.borderLight} 59px,${T.borderLight} 60px)` }} />
@@ -2283,7 +2384,11 @@ function AppShell() {
             </div>
 
             <div style={{ maxWidth:1200, margin:"0 auto", padding:`24px ${px} 0` }}>
-              {fPlrs.length === 0
+              {!plrsLoaded
+                ? <div className="squad-grid" style={{ display:"grid", gap:isMobile?10:14 }}>
+                    {[0,1,2,3,4,5,6,7].map(i => <SkeletonCard key={i} T={T} />)}
+                  </div>
+                : fPlrs.length === 0
                 ? <div style={{ textAlign:"center", padding:60, color:T.textDim, fontSize:15 }}>No players found.</div>
                 : <div className="squad-grid" style={{ display:"grid", gap:isMobile?10:14 }}>
                     {fPlrs.map((p,i) => {
@@ -2291,6 +2396,8 @@ function AppShell() {
                       const pOvr = calcPlayerOvr(p, potCount, played.length).ovr;
                       const isElite = pOvr >= 90;
                       const isGopal = p.name && p.name.toUpperCase().includes("GOPAL");
+                      const isFlipped = !!flippedCards[p.id];
+                      const milestones = getPlayerMilestones(p);
                       const cardBorder = isElite 
                         ? "1.5px solid rgba(251,191,36,0.5)" 
                         : isGopal
@@ -2306,62 +2413,129 @@ function AppShell() {
                         : isGopal
                         ? "linear-gradient(90deg, #2563eb, #60a5fa, #3b82f6)"
                         : `linear-gradient(90deg,${POS_COLOR[p.pos]||T_RED},transparent)`;
+                      const cardBg = themeMode==="dark" 
+                        ? isElite
+                          ? "linear-gradient(150deg, rgba(251,191,36,0.09) 0%, rgba(24,24,27,0.96) 60%, rgba(20,20,22,1) 100%)"
+                          : isGopal
+                          ? "linear-gradient(150deg, rgba(37,99,235,0.10) 0%, rgba(24,24,27,0.96) 60%, rgba(20,20,22,1) 100%)"
+                          : `linear-gradient(145deg, ${POS_COLOR[p.pos]||T_RED}0a 0%, ${T.cardBg} 100%)` 
+                        : T.cardBg;
+                      const apps = Math.max(1, Number(p.appearances) || 0);
+                      const gaPerMatch = (((Number(p.goals)||0) + (Number(p.assists)||0)) / apps).toFixed(2);
+                      const totalDef = (Number(p.blocks)||0) + (Number(p.interceptions)||0) + (Number(p.clearances)||0);
                       return (
-                        <div key={p.id} className="pcard" onClick={() => setSel(p)} style={{ 
-                          animation:`fadeUp 0.4s ${i*0.04}s ease both`, 
-                          background: themeMode==="dark" 
-                            ? isElite
-                              ? "linear-gradient(150deg, rgba(251,191,36,0.09) 0%, rgba(24,24,27,0.96) 60%, rgba(20,20,22,1) 100%)"
-                              : isGopal
-                              ? "linear-gradient(150deg, rgba(37,99,235,0.10) 0%, rgba(24,24,27,0.96) 60%, rgba(20,20,22,1) 100%)"
-                              : `linear-gradient(145deg, ${POS_COLOR[p.pos]||T_RED}0a 0%, ${T.cardBg} 100%)` 
-                            : T.cardBg, 
-                          border: cardBorder,
-                          boxShadow: cardShadow
-                        }}>
-                          <div style={{ height:3, background:topStrip }} />
-                        <div style={{ height: isMobile?200:isTablet?240:270, background:T.subtleBg, position:"relative", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                          <div className="bebas" style={{ position:"absolute", bottom:-8, right:-4, fontSize:90, color:T.textDim, opacity:0.18, lineHeight:1, userSelect:"none" }}>{p.jersey}</div>
-                          {p.photoURL
-                            ? <img src={p.photoURL} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition: getPhotoPos(p, "center 25%") }} />
-                            : <svg width="70" height="70" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="28" r="18" fill={T.text} opacity="0.15" /><path d="M6 76c0-18.778 15.222-34 34-34s34 15.222 34 34" fill={T.text} opacity="0.10" /></svg>
-                          }
-                          <div style={{ position:"absolute", inset:0, background:`linear-gradient(to top, ${T.cardBg} 0%, transparent 50%)` }} />
-                          <div style={{ position:"absolute", top:10, left:12, background:POS_COLOR[p.pos]||T_RED, borderRadius:4, padding:"4px 12px", zIndex:2 }}>
-                            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:"white", letterSpacing:2 }}>{p.pos.slice(0,3).toUpperCase()}</span>
-                          </div>
-                          {/* OVR Badge */}
-                          <div style={{ position:"absolute", top:10, right:12, background: isElite ? "rgba(20,16,5,0.85)" : "rgba(0,0,0,0.72)", backdropFilter:"blur(12px)", border: isElite ? "1.5px solid #fbbf24" : isGopal ? "1.5px solid #60a5fa" : "1px solid rgba(255,255,255,0.2)", borderRadius:8, padding:"3px 8px", display:"flex", alignItems:"center", gap:5, boxShadow: isElite ? "0 4px 18px rgba(251,191,36,0.45)" : "0 4px 14px rgba(0,0,0,0.6)", zIndex:2 }}>
-                            <span className="bebas" style={{ fontSize:18, color: isElite ? "#fbbf24" : isGopal ? "#60a5fa" : "#fff", lineHeight:1 }}>{pOvr}</span>
-                            <span style={{ fontSize:10, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, color: isElite ? "#fbbf24" : isGopal ? "#60a5fa" : "rgba(255,255,255,0.55)" }}>OVR</span>
-                          </div>
-                        </div>
-                        <div style={{ padding:"14px 16px 18px", background:T.cardBg }}>
-                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
-                            <div>
-                              <div className="bebas" style={{ fontSize:isMobile?20:isTablet?22:25, color:T.text, letterSpacing:1, lineHeight:1.1 }}>{p.name}</div>
-                              <div style={{ fontSize:11, color:T.textDim, letterSpacing:2, marginTop:3, fontFamily:"'Bebas Neue',sans-serif" }}>{p.pos.toUpperCase()}</div>
-                            </div>
-                            <div className="bebas" style={{ fontSize:24, color:T.textDim }}>{p.jersey ? `#${p.jersey}` : "—"}</div>
-                          </div>
-                          <div style={{ display:"flex", gap:0, borderTop:`1px solid ${T.borderLight}`, paddingTop:10 }}>
-                            {(p.pos==="Goalkeeper"
-                              ? [["SVS",p.saves||0,"#2563eb"],["CS",p.cleanSheets||0,"#16a34a"],["APP",p.appearances||0,T.textMuted]]
-                              : (p.pos==="Defender" && ((p.blocks||0)+(p.interceptions||0)+(p.clearances||0) > 0))
-                              ? [["DEF",(p.blocks||0)+(p.interceptions||0)+(p.clearances||0),"#2563eb"],["G/A",(p.goals||0)+(p.assists||0),T_RED],["APP",p.appearances||0,T.textMuted]]
-                              : [["G",p.goals||0,T_RED],["A",p.assists||0,T_GOLD],["APP",p.appearances||0,T.textMuted]]
-                            ).map(([l,v,c],idx,arr) => (
-                              <div key={l} style={{ flex:1, textAlign:"center", borderRight:idx<arr.length-1?`1px solid ${T.borderLight}`:"none" }}>
-                                <div className="bebas" style={{ fontSize:20, color:c||T.text }}>{v||0}</div>
-                                <div style={{ fontSize:11, letterSpacing:2, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{l}</div>
+                        <div key={p.id} className={`pcard-wrap ${isFlipped ? "flipped" : ""}`} onClick={() => setSel(p)} style={{ animation:`fadeUp 0.4s ${i*0.04}s ease both` }}>
+                          <div className="pcard-inner">
+                            {/* FRONT FACE */}
+                            <div className="pcard pcard-front" style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow }}>
+                              <div style={{ height:3, background:topStrip }} />
+                              <div style={{ height: isMobile?200:isTablet?240:270, background:T.subtleBg, position:"relative", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                                <div className="bebas" style={{ position:"absolute", bottom:-8, right:-4, fontSize:90, color:T.textDim, opacity:0.18, lineHeight:1, userSelect:"none" }}>{p.jersey}</div>
+                                {p.photoURL
+                                  ? <img src={p.photoURL} alt={p.name} loading="lazy" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition: getPhotoPos(p, "center 25%") }} />
+                                  : <svg width="70" height="70" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="28" r="18" fill={T.text} opacity="0.15" /><path d="M6 76c0-18.778 15.222-34 34-34s34 15.222 34 34" fill={T.text} opacity="0.10" /></svg>
+                                }
+                                <div style={{ position:"absolute", inset:0, background:`linear-gradient(to top, ${T.cardBg} 0%, transparent 50%)` }} />
+                                <div style={{ position:"absolute", top:10, left:12, background:POS_COLOR[p.pos]||T_RED, borderRadius:4, padding:"4px 12px", zIndex:2 }}>
+                                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, color:"white", letterSpacing:2 }}>{p.pos.slice(0,3).toUpperCase()}</span>
+                                </div>
+                                {/* OVR Badge */}
+                                <div style={{ position:"absolute", top:10, right:12, background: isElite ? "rgba(20,16,5,0.85)" : "rgba(0,0,0,0.72)", backdropFilter:"blur(12px)", border: isElite ? "1.5px solid #fbbf24" : isGopal ? "1.5px solid #60a5fa" : "1px solid rgba(255,255,255,0.2)", borderRadius:8, padding:"3px 8px", display:"flex", alignItems:"center", gap:5, boxShadow: isElite ? "0 4px 18px rgba(251,191,36,0.45)" : "0 4px 14px rgba(0,0,0,0.6)", zIndex:2 }}>
+                                  <span className="bebas" style={{ fontSize:18, color: isElite ? "#fbbf24" : isGopal ? "#60a5fa" : "#fff", lineHeight:1 }}>{pOvr}</span>
+                                  <span style={{ fontSize:10, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, color: isElite ? "#fbbf24" : isGopal ? "#60a5fa" : "rgba(255,255,255,0.55)" }}>OVR</span>
+                                </div>
+                                {/* Mobile Flip Trigger */}
+                                {isMobile && (
+                                  <button type="button" onClick={e => { e.stopPropagation(); setFlippedCards(prev => ({ ...prev, [p.id]: !prev[p.id] })); }} style={{ position:"absolute", bottom:8, right:8, zIndex:4, background:"rgba(0,0,0,0.65)", border:"1px solid rgba(255,255,255,0.22)", color:"#fff", borderRadius:20, padding:"3px 8px", fontSize:10, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, cursor:"pointer" }}>
+                                    ↻ STATS
+                                  </button>
+                                )}
                               </div>
-                            ))}
+                              <div style={{ padding:"14px 16px 18px", background:T.cardBg }}>
+                                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+                                  <div style={{ minWidth:0 }}>
+                                    <div className="bebas" style={{ fontSize:isMobile?20:isTablet?22:25, color:T.text, letterSpacing:1, lineHeight:1.1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{p.name}</div>
+                                    <div style={{ fontSize:11, color:T.textDim, letterSpacing:2, marginTop:3, fontFamily:"'Bebas Neue',sans-serif" }}>{p.pos.toUpperCase()}</div>
+                                  </div>
+                                  <div className="bebas" style={{ fontSize:24, color:T.textDim, flexShrink:0 }}>{p.jersey ? `#${p.jersey}` : "—"}</div>
+                                </div>
+                                <div style={{ display:"flex", gap:0, borderTop:`1px solid ${T.borderLight}`, paddingTop:10 }}>
+                                  {(p.pos==="Goalkeeper"
+                                    ? [["SVS",p.saves||0,"#2563eb"],["CS",p.cleanSheets||0,"#16a34a"],["APP",p.appearances||0,T.textMuted]]
+                                    : (p.pos==="Defender" && ((p.blocks||0)+(p.interceptions||0)+(p.clearances||0) > 0))
+                                    ? [["DEF",(p.blocks||0)+(p.interceptions||0)+(p.clearances||0),"#2563eb"],["G/A",(p.goals||0)+(p.assists||0),T_RED],["APP",p.appearances||0,T.textMuted]]
+                                    : [["G",p.goals||0,T_RED],["A",p.assists||0,T_GOLD],["APP",p.appearances||0,T.textMuted]]
+                                  ).map(([l,v,c],idx,arr) => (
+                                    <div key={l} style={{ flex:1, textAlign:"center", borderRight:idx<arr.length-1?`1px solid ${T.borderLight}`:"none" }}>
+                                      <div className="bebas" style={{ fontSize:20, color:c||T.text }}><StatNum value={v||0} /></div>
+                                      <div style={{ fontSize:11, letterSpacing:2, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", marginTop:2 }}>{l}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="pcard-glow" />
+                            </div>
+
+                            {/* BACK FACE */}
+                            <div className="pcard-back" style={{ background: themeMode==="dark" ? "linear-gradient(155deg, #1a1a1f 0%, #0d0d10 100%)" : "linear-gradient(155deg, #ffffff 0%, #f1efec 100%)", border: cardBorder, boxShadow: "0 18px 46px rgba(232,0,45,0.2)" }}>
+                              <div style={{ height:3, background:topStrip }} />
+                              <div style={{ padding: isMobile ? "12px" : "16px", flex:1, display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                                <div>
+                                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8, paddingBottom:8, borderBottom:`1px solid ${T.borderLight}` }}>
+                                    <div style={{ minWidth:0 }}>
+                                      <div className="bebas" style={{ fontSize: isMobile?17:20, color:T.text, lineHeight:1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{p.name}</div>
+                                      <div style={{ fontSize:10, color:POS_COLOR[p.pos]||T_RED, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, marginTop:2 }}>{p.pos.toUpperCase()} · {p.jersey ? `#${p.jersey}` : "TBD"}</div>
+                                    </div>
+                                    {isMobile ? (
+                                      <button type="button" onClick={e => { e.stopPropagation(); setFlippedCards(prev => ({ ...prev, [p.id]: false })); }} style={{ background:T.hoverBg, border:`1px solid ${T.border}`, color:T.text, borderRadius:20, padding:"3px 8px", fontSize:10, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1, cursor:"pointer" }}>↻ FRONT</button>
+                                    ) : (
+                                      <span className="bebas" style={{ fontSize:18, color: isElite ? "#fbbf24" : T.textDim }}>{pOvr} OVR</span>
+                                    )}
+                                  </div>
+
+                                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6, marginBottom:10 }}>
+                                    {(p.pos==="Goalkeeper" ? [
+                                      ["SAVES", p.saves||0, "#60a5fa"],
+                                      ["CLEAN SHT", p.cleanSheets||0, "#4ade80"],
+                                      ["APPS", p.appearances||0, T.text],
+                                      ["POTM", p.potmCount||0, T_GOLD]
+                                    ] : [
+                                      ["GOALS", p.goals||0, T_RED],
+                                      ["ASSISTS", p.assists||0, T_GOLD],
+                                      ["DEF ACT", totalDef, "#22c55e"],
+                                      ["G+A / M", gaPerMatch, "#38bdf8"]
+                                    ]).map(([lbl, val, col]) => (
+                                      <div key={lbl} style={{ background:T.bg2, border:`1px solid ${T.borderLight}`, borderRadius:8, padding:"6px 8px", textAlign:"center" }}>
+                                        <div className="bebas" style={{ fontSize: isMobile?17:20, color:col, lineHeight:1 }}>{val}</div>
+                                        <div style={{ fontSize:9.5, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, marginTop:2 }}>{lbl}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  {milestones.length > 0 && (
+                                    <div>
+                                      <div style={{ fontSize:9.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, color:T.textDim, marginBottom:4 }}>MILESTONES</div>
+                                      <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
+                                        {milestones.slice(0, 4).map(b => (
+                                          <span key={b.label} style={{ display:"inline-flex", alignItems:"center", gap:3, background:`${b.color}18`, border:`1px solid ${b.color}45`, color:b.color, padding:"2px 6px", borderRadius:12, fontSize:9.5, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>
+                                            <span>{b.icon}</span>
+                                            <span>{b.label}</span>
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="bebas" style={{ textAlign:"center", padding:"7px 0", background:T_RED, color:"#fff", borderRadius:8, fontSize:12, letterSpacing:2, marginTop:8 }}>
+                                  VIEW FULL PROFILE →
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div className="pcard-glow" />
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                   </div>
               }
             </div>
@@ -2376,7 +2550,7 @@ function AppShell() {
           const totalDef = (sel.blocks||0) + (sel.interceptions||0) + (sel.clearances||0);
           const hasDefStats = totalDef > 0;
           return (
-            <div style={{ background:T.bg, minHeight:"100vh" }}>
+            <div className="page-transition" key={`profile-${sel.id}`} style={{ background:T.bg, minHeight:"100vh" }}>
               <div className="player-profile-grid" style={{ position:"relative", overflow: isMobile?"visible":"hidden" }}>
                 {/* Left: Info card */}
                 <div style={{ position:"relative", zIndex:3, display:"flex", flexDirection:"column", justifyContent:"center", padding: isMobile?`76px 18px 36px`:isTablet?`80px 28px 100px`:`96px 48px 120px 56px`, background:"linear-gradient(135deg,#18181b 0%,#202024 60%,#18181b 100%)", overflow:"hidden" }}>
@@ -2480,6 +2654,25 @@ function AppShell() {
                   {/* Player Form Guide */}
                   <PlayerFormGuide player={sel} played={played} T={T} isMobile={isMobile} />
 
+                  {/* Club Milestone Badges */}
+                  {(() => {
+                    const milestones = getPlayerMilestones(sel);
+                    if (!milestones.length) return null;
+                    return (
+                      <div style={{ background:T.cardBg, border:`1px solid ${T.border}`, borderRadius:14, padding:"16px 18px", marginBottom:20 }}>
+                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:12, letterSpacing:2.5, color:T.textDim, marginBottom:10 }}>🏅 CLUB MILESTONES & HONOURS</div>
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+                          {milestones.map(b => (
+                            <div key={b.label} style={{ display:"inline-flex", alignItems:"center", gap:7, background:`${b.color}16`, border:`1px solid ${b.color}45`, color:b.color, padding:"6px 14px", borderRadius:24, fontSize:13, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, boxShadow:`0 2px 10px ${b.color}15` }}>
+                              <span style={{ fontSize:15 }}>{b.icon}</span>
+                              <span>{b.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:20 }}>
                     <button onClick={() => setCompareModal({ a: sel, b: plrs.find(x => x.id !== sel.id) || sel })} className="bebas" style={{ background:T.subtleBg, border:`1px solid ${T.border}`, color:T.text, padding:"8px 20px", borderRadius:8, fontSize:13, letterSpacing:2, cursor:"pointer", display:"flex", alignItems:"center", gap:8, transition:"all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.borderColor=T_RED;e.currentTarget.style.color=T_RED;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.color=T.text;}}>
                       ⚖️ COMPARE WITH TEAMMATE
@@ -2567,7 +2760,7 @@ function AppShell() {
 
         {/* ══════════════ FIXTURES ══════════════ */}
         {pg === "Fixtures" && (
-          <div style={{ background:T.bg, minHeight:"100vh", paddingBottom:60 }}>
+          <div className="page-transition" key="page-Fixtures" style={{ background:T.bg, minHeight:"100vh", paddingBottom:60 }}>
             <div style={{ background:T.headerGrad, borderBottom:`1px solid ${T.border}`, padding:`${isMobile?"36px":"52px"} ${px}`, position:"relative", overflow:"hidden" }}>
               <div style={{ position:"absolute", inset:0, backgroundImage:`repeating-linear-gradient(45deg,transparent,transparent 24px,${T.borderLight} 24px,${T.borderLight} 25px)` }} />
               <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg,${T_RED},#ff4060,transparent)` }} />
@@ -2578,7 +2771,7 @@ function AppShell() {
                   <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                     {[["WINS",wins,"#16a34a","rgba(22,163,74,0.15)"],["DRAWS",draws,T_GOLD,"rgba(217,119,6,0.15)"],["LOSSES",losses,T_RED,"rgba(232,0,45,0.15)"],["PLAYED",played.length,T.text,T.subtleBg]].map(([l,v,c,bg]) => (
                       <div key={l} style={{ display:"flex", alignItems:"center", gap:8, background:bg, border:`1px solid ${c}30`, borderRadius:10, padding: isMobile?"7px 14px":"10px 22px" }}>
-                        <div className="bebas" style={{ fontSize: isMobile?26:34, color:c, lineHeight:1 }}>{v}</div>
+                        <div className="bebas" style={{ fontSize: isMobile?26:34, color:c, lineHeight:1 }}><StatNum value={v} /></div>
                         <div style={{ fontSize:12, letterSpacing:2, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif" }}>{l}</div>
                       </div>
                     ))}
@@ -2588,7 +2781,11 @@ function AppShell() {
             </div>
 
             <div style={{ maxWidth:900, margin:"0 auto", padding:`${isMobile?"20px":"32px"} ${px} 0` }}>
-              {mtchs.length === 0
+              {!mtchsLoaded
+                ? <div style={{ display:"flex", flexDirection:"column", gap:isMobile?10:14 }}>
+                    {[0,1,2,3,4].map(i => <SkeletonFixture key={i} T={T} />)}
+                  </div>
+                : mtchs.length === 0
                 ? <div style={{ textAlign:"center", padding:60, color:T.textDim, fontSize:15 }}>No matches scheduled.</div>
                 : <div style={{ display:"flex", flexDirection:"column", gap:isMobile?10:14 }}>
                     {mtchs.map((m,i) => {
@@ -2596,7 +2793,7 @@ function AppShell() {
                       const ac=isUpc?"#2563eb":isW?"#16a34a":isD?T_GOLD:T_RED;
                       const rl=isUpc?"UPCOMING":isW?"WIN":isD?"DRAW":"LOSS";
                       return (
-                        <div key={m.id} className="fx-timeline-card" onClick={() => setSelMatch(m)} style={{ animation:`fadeUp 0.3s ${i*0.05}s ease both` }}>
+                        <div key={m.id} className="fx-timeline-card" onClick={() => setSelMatch(m)} style={{ animation:`fadeUp 0.3s ${i*0.05}s ease both`, borderLeft:`4px solid ${ac}`, background:`linear-gradient(90deg, ${ac}0e 0%, ${T.cardBg} 32%)` }}>
                           <div style={{ height:3, background:`linear-gradient(90deg,${ac},${ac}50,transparent)` }} />
                           <div style={{ padding: isMobile?"16px 14px":"20px 24px" }}>
                             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14, flexWrap:"wrap", gap:6 }}>
@@ -2695,7 +2892,7 @@ function AppShell() {
 
         {/* ══════════════ STATS ══════════════ */}
         {pg === "Stats" && (
-          <div style={{ background:T.bg, minHeight:"100vh", paddingBottom:60 }}>
+          <div className="page-transition" key="page-Stats" style={{ background:T.bg, minHeight:"100vh", paddingBottom:60 }}>
             <div style={{ background:T.headerGrad, borderBottom:`1px solid ${T.border}`, padding:`${isMobile?"28px":"46px"} ${px} ${isMobile?"20px":"32px"}`, position:"relative", overflow:"hidden" }}>
               <div style={{ position:"absolute", inset:0, backgroundImage:`repeating-linear-gradient(0deg,transparent,transparent 59px,${T.borderLight} 59px,${T.borderLight} 60px),repeating-linear-gradient(90deg,transparent,transparent 59px,${T.borderLight} 59px,${T.borderLight} 60px)` }} />
               <div style={{ maxWidth:1100, margin:"0 auto", position:"relative", zIndex:1 }}>
@@ -3093,6 +3290,63 @@ function AppShell() {
                     ))}
                   </div>
 
+                  {/* Club Milestone Honours (50 Goals / 50 Assists / 50 Apps / 50 Def) */}
+                  <div style={{ marginBottom:28 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                      <span style={{ fontSize:20 }}>🏅</span>
+                      <span className="bebas" style={{ fontSize:22, color:T.text, letterSpacing:1.5 }}>THE 50 CLUB & SEASON MILESTONES</span>
+                    </div>
+                    <div className="stat-grid-4" style={{ display:"grid", gap:isMobile?10:14 }}>
+                      {[
+                        { title:"50 GOALS CLUB", icon:"🔥", target:50, color:T_RED, getVal: p => p.goals||0, unit:"G" },
+                        { title:"50 ASSISTS CLUB", icon:"🎯", target:50, color:T_GOLD, getVal: p => p.assists||0, unit:"A" },
+                        { title:"50 APPS CLUB", icon:"🎖️", target:50, color:"#2563eb", getVal: p => p.appearances||0, unit:"M" },
+                        { title:"50 DEF ACTIONS CLUB", icon:"🛡️", target:50, color:"#22c55e", getVal: p => (p.blocks||0)+(p.interceptions||0)+(p.clearances||0), unit:"DEF" }
+                      ].map(club => {
+                        const members = [...plrs].filter(p => club.getVal(p) >= club.target).sort((a,b) => club.getVal(b) - club.getVal(a));
+                        const closest = !members.length ? [...plrs].sort((a,b) => club.getVal(b) - club.getVal(a))[0] : null;
+                        const closestVal = closest ? club.getVal(closest) : 0;
+                        const closestPct = Math.min(100, Math.round((closestVal / club.target) * 100));
+                        return (
+                          <div key={club.title} className="stat-card" style={{ borderTop:`3px solid ${club.color}`, padding:"16px 18px", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                            <div>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                                <span className="bebas" style={{ fontSize:16, color:T.text, letterSpacing:1.5 }}>{club.title}</span>
+                                <span style={{ fontSize:18 }}>{club.icon}</span>
+                              </div>
+                              {members.length > 0 ? (
+                                <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                                  {members.map(m => (
+                                    <div key={m.id} onClick={() => setSelStatPlayer(m)} style={{ display:"inline-flex", alignItems:"center", gap:6, background:`${club.color}16`, border:`1px solid ${club.color}40`, borderRadius:20, padding:"4px 10px", cursor:"pointer" }}>
+                                      <span style={{ fontSize:12, fontWeight:700, color:T.text }}>{m.name}</span>
+                                      <span className="bebas" style={{ fontSize:12, color:club.color }}>{club.getVal(m)}{club.unit}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : closest && closestVal > 0 ? (
+                                <div>
+                                  <div style={{ fontSize:11, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, marginBottom:4 }}>NEXT IN LINE</div>
+                                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:6 }}>
+                                    <span onClick={() => setSelStatPlayer(closest)} style={{ fontWeight:700, fontSize:14, color:T.text, cursor:"pointer" }}>{closest.name}</span>
+                                    <span className="bebas" style={{ fontSize:14, color:club.color }}>{closestVal} / {club.target} {club.unit}</span>
+                                  </div>
+                                  <div style={{ height:6, borderRadius:3, background:T.subtleBg, overflow:"hidden" }}>
+                                    <div style={{ width:`${closestPct}%`, height:"100%", background:club.color, borderRadius:3, transition:"width 0.8s ease" }} />
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={{ fontSize:12.5, color:T.textDim }}>No members yet.</div>
+                              )}
+                            </div>
+                            <div style={{ fontSize:11, color:T.textDim, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1.5, marginTop:12 }}>
+                              {members.length > 0 ? `${members.length} INDUCTED` : `${closestPct}% TO MILESTONE`}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* Season All-Time Leaderboards */}
                   <div className="leaderboard-grid-4">
                     {[
@@ -3198,7 +3452,7 @@ function AppShell() {
 
         {/* ══════════════ GALLERY ══════════════ */}
         {pg === "Gallery" && (
-          <div style={{ background:T.bg, minHeight:"100vh" }}>
+          <div className="page-transition" key="page-Gallery" style={{ background:T.bg, minHeight:"100vh" }}>
             {lightbox !== null && (
               <div onClick={() => setLightbox(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.95)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", cursor:"zoom-out" }}>
                 <button onClick={e=>{e.stopPropagation();setLightbox(ii=>(ii-1+gal.length)%gal.length);}} style={{ position:"absolute", left: isMobile?8:20, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.15)", color:"#fff", fontSize:24, width:44, height:44, borderRadius:"50%", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
@@ -3233,7 +3487,7 @@ function AppShell() {
 
         {/* ══════════════ NEWS & TOURNAMENT HUB ══════════════ */}
         {pg === "News" && (
-          <div style={{ background:T.bg, minHeight:"100vh", paddingBottom:70 }}>
+          <div className="page-transition" key="page-News" style={{ background:T.bg, minHeight:"100vh", paddingBottom:70 }}>
             <div style={{ background:T.headerGrad, borderBottom:`1px solid ${T.border}`, padding:`${isMobile?"28px":isTablet?"36px":"50px"} ${px} ${isMobile?"20px":"32px"}`, position:"relative", overflow:"hidden" }}>
               <div style={{ position:"absolute", inset:0, backgroundImage:`repeating-linear-gradient(0deg,transparent,transparent 59px,${T.borderLight} 59px,${T.borderLight} 60px),repeating-linear-gradient(90deg,transparent,transparent 59px,${T.borderLight} 59px,${T.borderLight} 60px)` }} />
               <div style={{ maxWidth:1100, margin:"0 auto", position:"relative", zIndex:1 }}>
