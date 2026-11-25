@@ -1547,7 +1547,7 @@ function PotmRulesModal({ onClose, T = THEMES.dark, isMobile = false }) {
               {
                 icon: "🛡️",
                 title: "DEFENSIVE ACTION",
-                pts: "+0.15 PTS",
+                pts: "+0.20 PTS",
                 col: "#22c55e",
                 desc: "Blocks, interceptions, and clearances. All positions earn baseline credit for pressing & tracking, while defenders & DMs earn higher volume."
               },
@@ -1791,7 +1791,7 @@ function AppShell() {
       monthAppearances: appearances,
       monthContributions: goals + assists,
       monthPotmCount: potmCount,
-      monthScore: (potmCount * 5.0) + (goals * 2.5) + (assists * 2.0) + (monthDefActions * 0.15) + (appearances * 0.3)
+      monthScore: (potmCount * 5.0) + (goals * 2.5) + (assists * 2.0) + (monthDefActions * 0.2) + (appearances * 0.3)
     };
   });
 
@@ -1873,7 +1873,7 @@ function AppShell() {
         defActions: def,
         potmCount: potm,
         appearances: apps,
-        score: (potm * 5.0) + (g * 2.5) + (a * 2.0) + (def * 0.15) + (apps * 0.3)
+        score: (potm * 5.0) + (g * 2.5) + (a * 2.0) + (def * 0.2) + (apps * 0.3)
       };
     });
 
